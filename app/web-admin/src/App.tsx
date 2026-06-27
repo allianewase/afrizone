@@ -1,0 +1,43 @@
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { ProtectedRoute } from './auth/AuthContext'
+import AppShell from './components/AppShell'
+import Login from './pages/Login'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
+import Dashboard from './pages/Dashboard'
+import Tasks from './pages/Tasks'
+import Payments from './pages/Payments'
+import Workers from './pages/Workers'
+import Applications from './pages/Applications'
+import Timesheets from './pages/Timesheets'
+import Hiring from './pages/Hiring'
+import Reports from './pages/Reports'
+import Settings from './pages/Settings'
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route
+        element={
+          <ProtectedRoute>
+            <AppShell />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/tasks" element={<Tasks />} />
+        <Route path="/applications" element={<Applications />} />
+        <Route path="/timesheets" element={<Timesheets />} />
+        <Route path="/payments" element={<Payments />} />
+        <Route path="/workers" element={<Workers />} />
+        <Route path="/hiring" element={<Hiring />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/settings" element={<Settings />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}

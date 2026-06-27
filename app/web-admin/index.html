@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Afrizone Part Time — Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body style="margin: 0; background: #1e2643">
+    <div id="root">
+      <!-- Static boot splash — replaced by React on mount (no white flash) -->
+      <div style="position: fixed; inset: 0; display: grid; place-items: center; background: #1e2643; font-family: 'Bricolage Grotesque', Inter, sans-serif">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 26px">
+          <div style="display: flex; align-items: center; gap: 12px">
+            <span style="width: 52px; height: 52px; border-radius: 15px; background: #1e2643; display: grid; place-items: center; box-shadow: 0 8px 22px -6px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06)">
+              <svg width="34" height="34" viewBox="0 0 100 100"><path d="M26 79 L50 23 L74 79" fill="none" stroke="#f2a93b" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/><path d="M37 60 H63" fill="none" stroke="#f2a93b" stroke-width="12" stroke-linecap="round"/></svg>
+            </span>
+            <span style="font-weight: 800; font-size: 22px; letter-spacing: -.02em"><span style="color:#fff">Afrizone</span><span style="color:#f2a93b">&nbsp;Part&nbsp;Time</span></span>
+          </div>
+          <div style="width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(255,255,255,.15); border-top-color: #f2a93b; animation: azspin .8s linear infinite"></div>
+        </div>
+      </div>
+      <style>@keyframes azspin { to { transform: rotate(360deg) } }</style>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,77 @@
+// Paystack Transfers integration — payouts to worker bank accounts.
+//
+// Env-driven: set PAYSTACK_SECRET in .env to go live. With no key, `enabled` is
+// false and the withdraw flow runs in SIMULATED mode (no real money moves).
+//
+// Live flow: create a transfer recipient (NUBAN + bank code) → initiate transfer
+// (amount in kobo) → Paystack settles async → webhook flips status to PAID/FAILED.
+// Docs: https://paystack.com/docs/transfers
+
+import crypto from "crypto";
+
+const SECRET = process.env.PAYSTACK_SECRET || "";
+const BASE = process.env.PAYSTACK_BASE || "https://api.paystack.co";
+
+export const paystack = {
+  /** True when a secret key is configured — gates all real network calls. */
+  get enabled(): boolean {
+    return SECRET.length > 0;
+  },
+
+  /** Low-level authenticated call to the Paystack API. */
+  async call(path: string, method: "GET" | "POST", body?: unknown): Promise<any> {
+    if (!SECRET) throw new Error("PAYSTACK_SECRET is not set");
+    const res = await fetch(`${BASE}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${SECRET}`,
+        "Content-Type": "application/json",
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const json = (await res.json().catch(() => ({}))) as any;
+    if (!res.ok || json.status === false) {
+      throw new Error(json.message || `Paystack ${path} failed (${res.status})`);
+    }
+    return json.data;
+  },
+
+  /** Create (or reuse) a transfer recipient for a NUBAN account. Returns recipient_code. */
+  async createRecipient(input: { name: string; accountNumber: string; bankCode: string }): Promise<string> {
+    const data = await this.call("/transferrecipient", "POST", {
+      type: "nuban",
+      name: input.name,
+      account_number: input.accountNumber,
+      bank_code: input.bankCode,
+      currency: "NGN",
+    });
+    return data.recipient_code as string;
+  },
+
+  /** Initiate a transfer. `amountNaira` is whole Naira; Paystack expects kobo. */
+  async initiateTransfer(input: {
+    amountNaira: number;
+    recipientCode: string;
+    reference: string;
+    reason?: string;
+  }): Promise<{ status: string; transferCode: string }> {
+    const data = await this.call("/transfer", "POST", {
+      source: "balance",
+      amount: input.amountNaira * 100,
+      recipient: input.recipientCode,
+      reference: input.reference,
+      reason: input.reason || "Afrizone Part Time payout",
+    });
+    return { status: data.status as string, transferCode: data.transfer_code as string };
+  },
+
+  /** Verify the X-Paystack-Signature header (HMAC-SHA512 of the raw body). */
+  verifyWebhook(rawBody: Buffer, signature: string | undefined): boolean {
+    if (!SECRET || !signature) return false;
+    const hash = crypto.createHmac("sha512", SECRET).update(rawBody).digest("hex");
+    // timing-safe compare
+    const a = Buffer.from(hash);
+    const b = Buffer.from(signature);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  },
+};

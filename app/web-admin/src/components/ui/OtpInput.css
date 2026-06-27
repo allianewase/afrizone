@@ -1,0 +1,39 @@
+.otp {
+  display: flex;
+  gap: 9px;
+  justify-content: center;
+}
+.otp-cell {
+  width: 48px;
+  height: 56px;
+  min-height: 48px;
+  padding: 0;
+  text-align: center;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  caret-color: var(--gold);
+}
+.otp-cell:focus {
+  border-color: var(--gold);
+  background: var(--glass-2);
+  box-shadow: 0 0 0 3px rgba(233, 162, 59, 0.18);
+}
+
+@media (max-width: 420px) {
+  .otp {
+    gap: 6px;
+  }
+  .otp-cell {
+    width: 42px;
+    height: 52px;
+    font-size: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .otp-cell {
+    transition: none;
+  }
+}

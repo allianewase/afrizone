@@ -1,0 +1,140 @@
+.taskgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.tcard {
+  padding: 20px;
+  transition: transform 0.25s var(--ease), border-color 0.25s;
+  cursor: default;
+  position: relative;
+  overflow: hidden;
+}
+.tcard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.35s;
+  background: radial-gradient(
+    340px circle at var(--mx, 50%) var(--my, 0%),
+    rgba(233, 162, 59, 0.12),
+    transparent 60%
+  );
+}
+.tcard:hover {
+  transform: translateY(-4px);
+  border-color: var(--line-2);
+}
+.tcard:hover::before {
+  opacity: 1;
+}
+.tcard .tc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  position: relative;
+}
+.tcard h4 {
+  font-size: 16px;
+  margin-top: 10px;
+  position: relative;
+}
+.tcard .pay {
+  font-family: 'Bricolage Grotesque';
+  font-weight: 800;
+  font-size: 20px;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  white-space: nowrap;
+}
+.tcard .mrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 13px;
+  margin-top: 13px;
+  color: var(--muted);
+  font-size: 12.5px;
+  position: relative;
+}
+.tcard .mrow span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tcard .mrow svg {
+  width: 14px;
+  height: 14px;
+}
+.tcard .fillbar {
+  margin-top: 15px;
+  height: 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+.tcard .fillbar i {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: var(--grad);
+  width: 0;
+  transition: width 1s var(--ease);
+}
+.tcard .tc-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 9px;
+  font-size: 12px;
+  color: var(--muted);
+  position: relative;
+}
+
+.tcard-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  min-height: 180px;
+  cursor: pointer;
+  text-align: center;
+}
+.tcard-add .add-inner {
+  color: var(--muted);
+}
+.tcard-add .add-ic {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--glass-2);
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  margin: 0 auto 12px;
+}
+.tcard-add b {
+  color: var(--text);
+  font-size: 14px;
+  display: block;
+}
+.tcard-add span {
+  font-size: 12px;
+  margin-top: 3px;
+  display: block;
+}
+
+@media (max-width: 1080px) {
+  .taskgrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .taskgrid {
+    grid-template-columns: 1fr;
+  }
+}

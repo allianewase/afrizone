@@ -1,0 +1,104 @@
+import { Router, Response } from "express";
+import { prisma } from "../prisma";
+import { requireAuth, requireRole, AuthedRequest, publicUser } from "../auth";
+import { tiersToArray } from "../types";
+import { writeAudit } from "../util/audit";
+
+const router = Router();
+
+// Derived wallet for a worker (matches GET /me/wallet semantics).
+function wallet(
+  payments: { net: number; status: string }[],
+  withdrawals: { amount: number; status: string }[]
+) {
+  const pending = payments
+    .filter((p) => p.status === "PENDING" || p.status === "APPROVED")
+    .reduce((s, p) => s + p.net, 0);
+  const released = payments.filter((p) => p.status === "RELEASED").reduce((s, p) => s + p.net, 0);
+  const withdrawn = withdrawals
+    .filter((w) => w.status !== "FAILED")
+    .reduce((s, w) => s + w.amount, 0);
+  return { pending, available: released - withdrawn, withdrawn };
+}
+
+// GET /api/workers → users where role=WORKER
+router.get("/", requireAuth, async (_req: AuthedRequest, res: Response) => {
+  const workers = await prisma.user.findMany({
+    where: { role: "WORKER" },
+    orderBy: { name: "asc" },
+  });
+  res.json(
+    workers.map((w) => ({
+      id: w.id,
+      name: w.name,
+      email: w.email,
+      tiers: tiersToArray(w.tiers),
+      kycStatus: w.kycStatus,
+      completedCount: w.completedCount,
+      rating: w.rating,
+    }))
+  );
+});
+
+// GET /api/workers/:id → full worker + applications/payments summary + wallet
+router.get("/:id", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const worker = await prisma.user.findUnique({
+    where: { id: req.params.id },
+    include: {
+      applications: { include: { task: true }, orderBy: { createdAt: "desc" } },
+      payments: { include: { task: true }, orderBy: { createdAt: "desc" } },
+      withdrawals: true,
+    },
+  });
+  if (!worker || worker.role !== "WORKER") return res.status(404).json({ error: "Worker not found" });
+
+  res.json({
+    ...publicUser(worker),
+    applications: worker.applications.map((a) => ({
+      id: a.id,
+      taskId: a.taskId,
+      status: a.status,
+      pitch: a.pitch,
+      reason: a.reason,
+      createdAt: a.createdAt,
+      task: { id: a.task.id, title: a.task.title },
+    })),
+    payments: worker.payments.map((p) => ({
+      id: p.id,
+      taskId: p.taskId,
+      gross: p.gross,
+      whtRate: p.whtRate,
+      whtAmount: p.whtAmount,
+      net: p.net,
+      status: p.status,
+      createdAt: p.createdAt,
+      task: { id: p.task.id, title: p.task.title },
+    })),
+    wallet: wallet(worker.payments, worker.withdrawals),
+  });
+});
+
+// POST /api/workers/:id/kyc → body {decision:"TIER_APPROVED"|"REJECTED"}
+// KYC overrides are Super Admin per design spec; HR_ADMIN also allowed to review.
+router.post(
+  "/:id/kyc",
+  requireAuth,
+  requireRole("SUPER_ADMIN", "HR_ADMIN"),
+  async (req: AuthedRequest, res: Response) => {
+    const { decision } = req.body || {};
+    if (decision !== "TIER_APPROVED" && decision !== "REJECTED") {
+      return res.status(400).json({ error: "decision must be 'TIER_APPROVED' or 'REJECTED'" });
+    }
+    const worker = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!worker || worker.role !== "WORKER") return res.status(404).json({ error: "Worker not found" });
+
+    const updated = await prisma.user.update({
+      where: { id: worker.id },
+      data: { kycStatus: decision },
+    });
+    await writeAudit(req.user!.id, "KYC_DECISION", "User", worker.id, { decision });
+    res.json(publicUser(updated));
+  }
+);
+
+export default router;

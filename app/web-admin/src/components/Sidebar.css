@@ -1,0 +1,121 @@
+.side {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(8, 15, 13, 0.55);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+}
+.side nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 10px 16px;
+}
+.mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--grad);
+  display: grid;
+  place-items: center;
+  box-shadow: var(--grad-glow);
+  flex: none;
+}
+.brand b {
+  font-family: 'Bricolage Grotesque';
+  font-weight: 800;
+  font-size: 18px;
+}
+.brand .sub {
+  font-size: 11px;
+  color: var(--muted);
+}
+.navlabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+  text-transform: uppercase;
+  padding: 14px 12px 6px;
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, transform 0.15s var(--ease);
+  position: relative;
+}
+.nav svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.nav:hover {
+  background: var(--glass);
+  color: var(--text);
+}
+.nav.on {
+  color: var(--text);
+  background: linear-gradient(100deg, rgba(210, 105, 30, 0.22), rgba(233, 162, 59, 0.08));
+  border: 1px solid rgba(233, 162, 59, 0.25);
+}
+.nav.on::before {
+  content: '';
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 22px;
+  border-radius: 3px;
+  background: var(--grad);
+}
+.nav .badge {
+  margin-left: auto;
+  background: var(--clay-deep);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 100px;
+}
+.side .userbox {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 13px;
+  background: var(--glass);
+  border: 1px solid var(--line);
+}
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--indigo), #7c5cff);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex: none;
+  color: #fff;
+}

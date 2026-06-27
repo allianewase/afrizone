@@ -1,0 +1,75 @@
+.kpi {
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.kpi::after {
+  content: '';
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.5;
+  top: -40px;
+  right: -30px;
+}
+.kpi.k1::after {
+  background: var(--clay);
+}
+.kpi.k2::after {
+  background: var(--money);
+}
+.kpi.k3::after {
+  background: var(--gold);
+}
+.kpi.k4::after {
+  background: var(--indigo);
+}
+.kpi .kh {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+.kpi .kic {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: var(--glass-2);
+  border: 1px solid var(--line);
+}
+.kpi .kic svg {
+  width: 19px;
+  height: 19px;
+}
+.kpi .kt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.kpi .kv {
+  font-family: 'Bricolage Grotesque';
+  font-weight: 800;
+  font-size: 34px;
+  margin-top: 14px;
+  position: relative;
+}
+.kpi .kd {
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.up {
+  color: var(--money);
+}
+.down {
+  color: var(--danger);
+}
+.warn {
+  color: var(--amber);
+}

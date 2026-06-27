@@ -1,0 +1,31 @@
+.gbtn-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.gbtn {
+  width: 100%;
+  justify-content: center;
+  gap: 10px;
+}
+.gbtn:disabled {
+  opacity: 0.6;
+}
+.gbtn-holder {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+.gbtn-holder.on {
+  min-height: auto;
+}
+.gbtn-note {
+  font-size: 12px;
+  color: var(--faint);
+}
+.gbtn-note.err {
+  color: #ff9f96;
+}

@@ -1,0 +1,501 @@
+import "dotenv/config";
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import { computeWht } from "../src/util/tax";
+
+const prisma = new PrismaClient();
+
+// Default worker password (all demo workers share it).
+const WORKER_PW = "worker123";
+
+async function main() {
+  console.log("Seeding Afrizone database...");
+
+  // Clear existing data (idempotent re-seed). Order respects FKs.
+  await prisma.auditLog.deleteMany();
+  // v3 tables (delete before payments/tasks/users they reference)
+  await prisma.clockEvent.deleteMany();
+  await prisma.withdrawal.deleteMany();
+  await prisma.contract.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.timesheet.deleteMany();
+  await prisma.application.deleteMany();
+  await prisma.task.deleteMany();
+  // auth tables (PasswordReset FKs User; OtpCode is standalone but clear too)
+  await prisma.passwordReset.deleteMany();
+  await prisma.otpCode.deleteMany();
+  await prisma.user.deleteMany();
+  // v2 tables
+  await prisma.jobApplication.deleteMany();
+  await prisma.job.deleteMany();
+  await prisma.taxRate.deleteMany();
+  await prisma.category.deleteMany();
+  await prisma.setting.deleteMany();
+
+  const adminHash = await bcrypt.hash("afrizone123", 10);
+  const workerHash = await bcrypt.hash(WORKER_PW, 10);
+
+  // ── Admin ──────────────────────────────────────────────────────────────
+  const admin = await prisma.user.create({
+    data: {
+      name: "Afrizone Admin",
+      email: "admin@afrizone.work",
+      passwordHash: adminHash,
+      role: "SUPER_ADMIN",
+      tiers: "",
+      kycStatus: "VERIFIED",
+      location: "Lagos, NG",
+    },
+  });
+
+  // ── Workers (from contract Seed data) ────────────────────────────────────
+  // Amaka Obi (PROMO, VERIFIED, 47, 4.9)
+  const amaka = await prisma.user.create({
+    data: {
+      name: "Amaka Obi",
+      email: "amaka.obi@afrizone.work",
+      phone: "+2348030000001",
+      passwordHash: workerHash,
+      role: "WORKER",
+      tiers: "PROMO",
+      kycStatus: "VERIFIED",
+      location: "Ikeja, Lagos",
+      rating: 4.9,
+      completedCount: 47,
+      bankMasked: "****1234",
+      bankAccountNumber: "0001234567", // demo NUBAN for Paystack live mode
+      bankCode: "058", // GTBank
+      bankName: "GTBank",
+    },
+  });
+  // Tunde Bello (DISPATCH, VERIFIED, 89, 4.8)
+  const tunde = await prisma.user.create({
+    data: {
+      name: "Tunde Bello",
+      email: "tunde.bello@afrizone.work",
+      phone: "+2348030000002",
+      passwordHash: workerHash,
+      role: "WORKER",
+      tiers: "DISPATCH",
+      kycStatus: "VERIFIED",
+      location: "Yaba, Lagos",
+      rating: 4.8,
+      completedCount: 89,
+      bankMasked: "****5678",
+    },
+  });
+  // Ngozi Eze (REMOTE, PENDING, 12, 4.7)
+  const ngozi = await prisma.user.create({
+    data: {
+      name: "Ngozi Eze",
+      email: "ngozi.eze@afrizone.work",
+      phone: "+2348030000003",
+      passwordHash: workerHash,
+      role: "WORKER",
+      tiers: "REMOTE",
+      kycStatus: "PENDING",
+      location: "Remote",
+      rating: 4.7,
+      completedCount: 12,
+      bankMasked: "****9012",
+    },
+  });
+  // Ibrahim Kola (DISPATCH, VERIFIED)
+  const ibrahim = await prisma.user.create({
+    data: {
+      name: "Ibrahim Kola",
+      email: "ibrahim.kola@afrizone.work",
+      phone: "+2348030000004",
+      passwordHash: workerHash,
+      role: "WORKER",
+      tiers: "DISPATCH",
+      kycStatus: "VERIFIED",
+      location: "Surulere, Lagos",
+      rating: 4.6,
+      completedCount: 31,
+      bankMasked: "****3456",
+    },
+  });
+  // Funke Ade (PROMO)
+  const funke = await prisma.user.create({
+    data: {
+      name: "Funke Ade",
+      email: "funke.ade@afrizone.work",
+      phone: "+2348030000005",
+      passwordHash: workerHash,
+      role: "WORKER",
+      tiers: "PROMO",
+      kycStatus: "TIER_APPROVED",
+      location: "Lekki, Lagos",
+      rating: 4.5,
+      completedCount: 18,
+      bankMasked: "****7890",
+    },
+  });
+
+  const day = 24 * 3600 * 1000;
+  const now = Date.now();
+  const d = (offsetDays: number) => new Date(now + offsetDays * day);
+
+  // ── Tasks (from contract Seed data) ───────────────────────────────────────
+  const tDispatch = await prisma.task.create({
+    data: {
+      title: "Same-day parcel runs — Yaba",
+      description: "Pick up and deliver same-day parcels around Yaba. Own bike preferred.",
+      category: "Dispatch",
+      tier: "DISPATCH",
+      payModel: "HOURLY",
+      rate: 2500,
+      startDate: d(1),
+      endDate: d(8),
+      locationType: "PHYSICAL",
+      address: "Yaba, Lagos",
+      geofenceRadius: 150,
+      slots: 3,
+      status: "OPEN",
+      deadline: d(2),
+      createdById: admin.id,
+    },
+  });
+  const tPromo = await prisma.task.create({
+    data: {
+      title: "Weekend mall activation — Ikeja",
+      description: "Brand activation at Ikeja City Mall. Promo staff, fixed weekend fee.",
+      category: "Promo",
+      tier: "PROMO",
+      payModel: "FIXED",
+      budget: 18000,
+      startDate: d(3),
+      endDate: d(5),
+      locationType: "PHYSICAL",
+      address: "Ikeja City Mall, Lagos",
+      geofenceRadius: 100,
+      slots: 5,
+      status: "OPEN",
+      deadline: d(2),
+      createdById: admin.id,
+    },
+  });
+  const tRemote = await prisma.task.create({
+    data: {
+      title: "Product data cleanup — 20h",
+      description: "Clean and normalise product catalogue data. Fully remote, ~20 hours.",
+      category: "Remote",
+      tier: "REMOTE",
+      payModel: "HOURLY",
+      rate: 1800,
+      startDate: d(1),
+      endDate: d(10),
+      locationType: "REMOTE",
+      address: null,
+      geofenceRadius: 100,
+      slots: 2,
+      status: "OPEN",
+      deadline: d(3),
+      createdById: admin.id,
+    },
+  });
+  const tTrade = await prisma.task.create({
+    data: {
+      title: "AC servicing — Lekki",
+      description: "Service 4 split-unit air conditioners at a Lekki residence. Certified technicians only.",
+      category: "Trade",
+      tier: "TRADE",
+      payModel: "FIXED",
+      budget: 45000,
+      startDate: d(2),
+      endDate: d(2),
+      locationType: "PHYSICAL",
+      address: "Lekki Phase 1, Lagos",
+      geofenceRadius: 80,
+      slots: 1,
+      status: "OPEN",
+      deadline: d(1),
+      createdById: admin.id,
+    },
+  });
+  const tCampus = await prisma.task.create({
+    data: {
+      title: "Campus survey — UNILAG",
+      description: "Conduct on-campus consumer surveys at UNILAG. Students welcome.",
+      category: "Student",
+      tier: "STUDENT",
+      payModel: "HOURLY",
+      rate: 1200,
+      startDate: d(4),
+      endDate: d(6),
+      locationType: "PHYSICAL",
+      address: "University of Lagos, Akoka",
+      geofenceRadius: 200,
+      slots: 10,
+      status: "OPEN",
+      deadline: d(3),
+      createdById: admin.id,
+    },
+  });
+
+  // ── Applications ──────────────────────────────────────────────────────────
+  await prisma.application.create({
+    data: { taskId: tPromo.id, workerId: amaka.id, pitch: "Done 47 activations, top-rated promo.", status: "APPROVED" },
+  });
+  await prisma.application.create({
+    data: { taskId: tDispatch.id, workerId: tunde.id, pitch: "Yaba local, own bike, 89 deliveries.", status: "APPROVED" },
+  });
+  await prisma.application.create({
+    data: { taskId: tDispatch.id, workerId: ibrahim.id, pitch: "Reliable dispatch rider.", status: "APPLIED" },
+  });
+  await prisma.application.create({
+    data: { taskId: tRemote.id, workerId: ngozi.id, pitch: "Strong with spreadsheets and data tools.", status: "APPLIED" },
+  });
+  await prisma.application.create({
+    data: { taskId: tPromo.id, workerId: funke.id, pitch: "Available all weekend, promo experience.", status: "APPLIED" },
+  });
+  await prisma.application.create({
+    data: { taskId: tCampus.id, workerId: ngozi.id, pitch: "UNILAG alumna, knows the campus.", status: "APPLIED" },
+  });
+
+  // ── Timesheets (a couple submitted, for the approval queue) ───────────────
+  await prisma.timesheet.create({
+    data: {
+      taskId: tDispatch.id,
+      workerId: tunde.id,
+      periodStart: d(-2),
+      periodEnd: d(-1),
+      hours: 6,
+      status: "SUBMITTED",
+      gpsNote: "Clocked in within Yaba geofence.",
+    },
+  });
+  await prisma.timesheet.create({
+    data: {
+      taskId: tRemote.id,
+      workerId: ngozi.id,
+      periodStart: d(-3),
+      periodEnd: d(-1),
+      hours: 10,
+      status: "SUBMITTED",
+      gpsNote: "Remote — no geofence.",
+    },
+  });
+
+  // ── Payments (from contract Seed data) ────────────────────────────────────
+  // Net = gross − 5% WHT.
+  const mkPay = (workerId: string, taskId: string, gross: number, status: string) => {
+    const { whtAmount, net } = computeWht(gross, 0.05);
+    return prisma.payment.create({
+      data: { workerId, taskId, gross, whtRate: 0.05, whtAmount, net, status },
+    });
+  };
+  // Amaka ₦18,000 (RELEASED — she has a withdrawal against it, so the wallet is coherent)
+  await mkPay(amaka.id, tPromo.id, 18000, "RELEASED");
+  // Tunde ₦12,500 (review/PENDING)
+  await mkPay(tunde.id, tDispatch.id, 12500, "PENDING");
+  // Ngozi ₦36,000 (APPROVED)
+  await mkPay(ngozi.id, tRemote.id, 36000, "APPROVED");
+  // Ibrahim ₦9,000 (APPROVED)
+  await mkPay(ibrahim.id, tDispatch.id, 9000, "APPROVED");
+  // Funke ₦24,000 (DISPUTED)
+  await mkPay(funke.id, tPromo.id, 24000, "DISPUTED");
+
+  // ── v3: Amaka's worker journey (mobile app demo data) ─────────────────────
+  // Amaka already has: APPROVED application on tPromo + ₦18,000 APPROVED Payment.
+  // PENDING_SIGNATURE Contract for the approved mall activation.
+  await prisma.contract.create({
+    data: { taskId: tPromo.id, workerId: amaka.id, status: "PENDING_SIGNATURE" },
+  });
+  // A second PROMO task so Amaka has a tier-matching "Applied" item.
+  const tPromo2 = await prisma.task.create({
+    data: {
+      title: "Brand sampling — Lekki Mall",
+      description: "In-store product sampling and customer engagement over a long weekend.",
+      category: "Promo",
+      tier: "PROMO",
+      payModel: "FIXED",
+      budget: 22000,
+      startDate: d(6),
+      endDate: d(8),
+      locationType: "PHYSICAL",
+      address: "Lekki Mall, Lagos",
+      geofenceRadius: 100,
+      slots: 4,
+      status: "OPEN",
+      deadline: d(4),
+      createdById: admin.id,
+    },
+  });
+  // An APPLIED application on the second promo task (matches her PROMO tier).
+  await prisma.application.create({
+    data: { taskId: tPromo2.id, workerId: amaka.id, pitch: "Promo pro, available all weekend.", status: "APPLIED" },
+  });
+  // One IN ClockEvent within fence on her active (physical) task.
+  await prisma.clockEvent.create({
+    data: {
+      workerId: amaka.id,
+      taskId: tPromo.id,
+      type: "IN",
+      lat: 6.6018,
+      lng: 3.3515,
+      withinFence: true,
+      note: "Clocked in at Ikeja City Mall.",
+    },
+  });
+  // One SUBMITTED timesheet for the active task.
+  await prisma.timesheet.create({
+    data: {
+      taskId: tPromo.id,
+      workerId: amaka.id,
+      periodStart: d(-1),
+      periodEnd: d(0),
+      hours: 8,
+      status: "SUBMITTED",
+      gpsNote: "On-site mall activation shift.",
+    },
+  });
+  // One example Withdrawal (₦10,000, PROCESSING).
+  await prisma.withdrawal.create({
+    data: {
+      workerId: amaka.id,
+      amount: 10000,
+      bankMasked: amaka.bankMasked ?? "****1234",
+      status: "PROCESSING",
+      provider: "simulated",
+      reference: "afz_wd_seed_amaka_1",
+    },
+  });
+
+  // ── v2: Hiring — Jobs ─────────────────────────────────────────────────────
+  const jobOps = await prisma.job.create({
+    data: {
+      title: "Operations Associate",
+      department: "Logistics",
+      location: "Lagos, NG",
+      employmentType: "FULL_TIME",
+      salaryMin: 250000,
+      salaryMax: 400000,
+      description: "Coordinate daily dispatch operations and rider logistics.",
+      needsCv: true,
+      needsCover: false,
+      needsPortfolio: false,
+      closingDate: d(21),
+      status: "OPEN",
+      createdById: admin.id,
+    },
+  });
+  const jobMkt = await prisma.job.create({
+    data: {
+      title: "Field Marketing Lead",
+      department: "Marketing",
+      location: "Lagos, NG",
+      employmentType: "FULL_TIME",
+      salaryMin: 350000,
+      salaryMax: 500000,
+      description: "Lead promo activations and field marketing campaigns.",
+      needsCv: true,
+      needsCover: true,
+      needsPortfolio: true,
+      closingDate: d(28),
+      status: "OPEN",
+      createdById: admin.id,
+    },
+  });
+  const jobSupport = await prisma.job.create({
+    data: {
+      title: "Customer Support (Remote)",
+      department: "Support",
+      location: "Remote",
+      employmentType: "PART_TIME",
+      salaryMin: 120000,
+      salaryMax: 180000,
+      description: "Handle worker and client support tickets remotely.",
+      needsCv: true,
+      needsCover: false,
+      needsPortfolio: false,
+      closingDate: d(14),
+      status: "OPEN",
+      createdById: admin.id,
+    },
+  });
+
+  // ── v2: Candidates (spread across stages) ──────────────────────────────────
+  const candidates: Array<{ jobId: string; name: string; email: string; phone?: string; stage: string; cvNote?: string; rating?: number }> = [
+    { jobId: jobOps.id, name: "Chidi Okafor", email: "chidi.okafor@example.com", phone: "+2348030000001", stage: "SCREENING", cvNote: "5y logistics ops." },
+    { jobId: jobOps.id, name: "Bukola Adeyemi", email: "bukola.adeyemi@example.com", phone: "+2348030000002", stage: "INTERVIEW", cvNote: "Dispatch coordinator.", rating: 4.2 },
+    { jobId: jobOps.id, name: "Emeka Nwosu", email: "emeka.nwosu@example.com", phone: "+2348030000003", stage: "OFFER", cvNote: "Strong ops background.", rating: 4.6 },
+    { jobId: jobMkt.id, name: "Aisha Bello", email: "aisha.bello@example.com", phone: "+2348030000004", stage: "SCREENING", cvNote: "Promo team lead." },
+    { jobId: jobMkt.id, name: "Tobi Adewale", email: "tobi.adewale@example.com", phone: "+2348030000005", stage: "INTERVIEW", cvNote: "Field campaigns.", rating: 4.4 },
+    { jobId: jobMkt.id, name: "Zainab Yusuf", email: "zainab.yusuf@example.com", phone: "+2348030000006", stage: "HIRED", cvNote: "Top candidate, accepted.", rating: 4.9 },
+    { jobId: jobSupport.id, name: "Femi Olawale", email: "femi.olawale@example.com", phone: "+2348030000007", stage: "SCREENING", cvNote: "Remote support exp." },
+    { jobId: jobSupport.id, name: "Grace Eze", email: "grace.eze@example.com", phone: "+2348030000008", stage: "REJECTED", cvNote: "Not enough experience.", rating: 3.1 },
+  ];
+  for (const c of candidates) {
+    await prisma.jobApplication.create({
+      data: {
+        jobId: c.jobId,
+        name: c.name,
+        email: c.email,
+        phone: c.phone ?? null,
+        stage: c.stage,
+        cvNote: c.cvNote ?? null,
+        rating: c.rating ?? null,
+      },
+    });
+  }
+
+  // ── v2: Settings — Tax rates ───────────────────────────────────────────────
+  await prisma.taxRate.create({
+    data: { jurisdiction: "Federal", category: "Services", whtRate: 0.05, vatRate: 0.075, active: true },
+  });
+  await prisma.taxRate.create({
+    data: { jurisdiction: "Lagos", category: "default", whtRate: 0.05, vatRate: 0, active: true },
+  });
+
+  // ── v2: Settings — Categories ──────────────────────────────────────────────
+  const cats: Array<{ name: string; tier: string; defaultPayModel: string }> = [
+    { name: "Dispatch", tier: "DISPATCH", defaultPayModel: "HOURLY" },
+    { name: "Promo", tier: "PROMO", defaultPayModel: "FIXED" },
+    { name: "Remote", tier: "REMOTE", defaultPayModel: "HOURLY" },
+    { name: "Trade", tier: "TRADE", defaultPayModel: "FIXED" },
+    { name: "Student", tier: "STUDENT", defaultPayModel: "HOURLY" },
+  ];
+  for (const cat of cats) {
+    await prisma.category.create({ data: { ...cat, active: true } });
+  }
+
+  // ── v2: Settings — Templates ───────────────────────────────────────────────
+  const templates: Array<{ key: string; value: string }> = [
+    { key: "contract.default", value: "This agreement is between Afrizone and {{worker}} for {{task}}." },
+    { key: "notify.application_approved", value: "Hi {{worker}}, your application for {{task}} was approved." },
+    { key: "notify.payment_available", value: "Hi {{worker}}, your payment of {{amount}} is now available." },
+  ];
+  for (const t of templates) {
+    await prisma.setting.create({ data: t });
+  }
+
+  const counts = {
+    users: await prisma.user.count(),
+    tasks: await prisma.task.count(),
+    applications: await prisma.application.count(),
+    timesheets: await prisma.timesheet.count(),
+    payments: await prisma.payment.count(),
+    jobs: await prisma.job.count(),
+    candidates: await prisma.jobApplication.count(),
+    taxRates: await prisma.taxRate.count(),
+    categories: await prisma.category.count(),
+    settings: await prisma.setting.count(),
+    clockEvents: await prisma.clockEvent.count(),
+    withdrawals: await prisma.withdrawal.count(),
+    contracts: await prisma.contract.count(),
+  };
+  console.log("Seed complete:", counts);
+  console.log("Admin login: admin@afrizone.work / afrizone123");
+  console.log(`Worker logins: <name>@afrizone.work / ${WORKER_PW}`);
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

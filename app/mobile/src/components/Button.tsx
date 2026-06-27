@@ -1,0 +1,88 @@
+import React from 'react';
+import {
+  Pressable,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  View,
+  ViewStyle,
+} from 'react-native';
+import { colors, radii, layout, type } from '../theme';
+import { Icon, IconName } from './Icon';
+
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+
+interface ButtonProps {
+  label: string;
+  onPress?: () => void;
+  variant?: Variant;
+  disabled?: boolean;
+  loading?: boolean;
+  icon?: IconName;
+  full?: boolean;
+  style?: ViewStyle;
+}
+
+export function Button({
+  label,
+  onPress,
+  variant = 'primary',
+  disabled,
+  loading,
+  icon,
+  full = true,
+  style,
+}: ButtonProps) {
+  const isDisabled = disabled || loading;
+  const v = VARIANTS[variant];
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
+      accessibilityLabel={label}
+      style={({ pressed }) => [
+        styles.base,
+        { backgroundColor: v.bg, borderColor: v.border },
+        full && styles.full,
+        pressed && !isDisabled && styles.pressed,
+        isDisabled && styles.disabled,
+        style,
+      ]}
+    >
+      {loading ? (
+        <ActivityIndicator color={v.fg} />
+      ) : (
+        <View style={styles.content}>
+          {icon && <Icon name={icon} size={18} color={v.fg} />}
+          <Text style={[styles.label, { color: v.fg }]}>{label}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+const VARIANTS: Record<Variant, { bg: string; fg: string; border: string }> = {
+  primary: { bg: colors.clay, fg: colors.white, border: colors.clay },
+  secondary: { bg: colors.surface, fg: colors.text, border: colors.line },
+  ghost: { bg: 'transparent', fg: colors.clay, border: 'transparent' },
+  danger: { bg: colors.danger, fg: colors.white, border: colors.danger },
+};
+
+const styles = StyleSheet.create({
+  base: {
+    minHeight: layout.hitTarget,
+    paddingHorizontal: 18,
+    borderRadius: radii.button,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  full: { alignSelf: 'stretch' },
+  content: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  label: { fontSize: type.size.md, fontWeight: '700' },
+  pressed: { opacity: 0.85 },
+  disabled: { opacity: 0.45 },
+});

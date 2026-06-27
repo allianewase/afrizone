@@ -1,0 +1,302 @@
+// Afrizone Part Time — Prisma schema
+//
+// DEFAULT: SQLite (zero external services, runs on Windows with no DB install).
+//
+// ── SWITCH TO POSTGRESQL FOR PRODUCTION ──────────────────────────────────────
+// 1. Change the datasource block below to:
+//        datasource db {
+//          provider = "postgresql"
+//          url      = env("DATABASE_URL")
+//        }
+// 2. Set DATABASE_URL in .env to a Postgres URL, e.g.
+//        DATABASE_URL="postgresql://user:pass@localhost:5432/afrizone?schema=public"
+// 3. On Postgres you MAY replace the String enum/list fields with real Prisma
+//    enums (Role, Tier, KycStatus, ...) and a `tiers Tier[]` scalar list.
+//    They are modelled as String here ONLY because SQLite supports neither
+//    native enums nor scalar lists. See notes on each field.
+// 4. Re-run: prisma generate && prisma db push (or prisma migrate dev).
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// NOTE ON ENUMS: SQLite does not support native enums, so enum-typed columns
+// are stored as `String`. The allowed values live as TS union types in
+// src/types.ts and are validated in the route handlers. On Postgres these can
+// become real `enum` blocks.
+//
+// NOTE ON `tiers`: SQLite does not support scalar lists (`Tier[]`), so a
+// worker's tiers are stored as a single comma-separated String (e.g.
+// "PROMO,DISPATCH"). The API always exposes `tiers` as a real string[] array.
+// Helpers tiersToString / tiersToArray in src/types.ts do the conversion.
+
+model User {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  phone          String?  @unique           // worker OTP login (E.164, e.g. +2348030000001)
+  passwordHash   String?                     // nullable — workers are passwordless (phone OTP)
+  totpSecret     String?                     // pending or active TOTP secret (RFC 6238)
+  totpEnabled    Boolean  @default(false)
+  googleId       String?  @unique            // Google SSO subject (admin)
+  role           String   @default("WORKER") // Role enum
+  tiers          String   @default("")        // comma-separated Tier[] — see note above
+  kycStatus      String   @default("PENDING") // KycStatus enum
+  location       String?
+  rating         Float?
+  completedCount Int      @default(0)
+  bankMasked     String?
+  bankAccountNumber String? // real payout account (NUBAN) — required for live Paystack transfers
+  bankCode          String? // Paystack bank code, e.g. "058" (GTBank)
+  bankName          String?
+  pushToken         String? // Expo push token (ExponentPushToken[...]) — updated on each login
+  createdAt      DateTime @default(now())
+
+  tasksCreated Task[]        @relation("TaskCreatedBy")
+  applications Application[]
+  timesheets   Timesheet[]
+  payments     Payment[]
+  auditLogs    AuditLog[]
+  clockEvents  ClockEvent[]
+  withdrawals  Withdrawal[]
+  contracts    Contract[]
+  passwordResets PasswordReset[]
+  kycDocuments   KycDocument[]
+}
+
+model Task {
+  id             String   @id @default(cuid())
+  title          String
+  description    String
+  category       String
+  tier           String // Tier enum
+  payModel       String // PayModel enum (HOURLY | FIXED)
+  rate           Int? // ₦/hour for HOURLY
+  budget         Int? // fixed ₦ for FIXED
+  startDate      DateTime
+  endDate        DateTime
+  locationType   String // LocationType enum (PHYSICAL | REMOTE)
+  address        String?
+  geofenceRadius Int      @default(100)
+  slots          Int
+  status         String   @default("OPEN") // TaskStatus enum
+  deadline       DateTime
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  createdBy    User          @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  applications Application[]
+  timesheets   Timesheet[]
+  payments     Payment[]
+  clockEvents  ClockEvent[]
+  contracts    Contract[]
+}
+
+model Application {
+  id        String   @id @default(cuid())
+  taskId    String
+  workerId  String
+  pitch     String?
+  status    String   @default("APPLIED") // AppStatus enum
+  reason    String?
+  createdAt DateTime @default(now())
+
+  task   Task @relation(fields: [taskId], references: [id])
+  worker User @relation(fields: [workerId], references: [id])
+}
+
+model Timesheet {
+  id          String   @id @default(cuid())
+  taskId      String
+  workerId    String
+  periodStart DateTime
+  periodEnd   DateTime
+  hours       Float
+  status      String   @default("SUBMITTED") // TimesheetStatus enum
+  gpsNote     String?
+  createdAt   DateTime @default(now())
+
+  task   Task @relation(fields: [taskId], references: [id])
+  worker User @relation(fields: [workerId], references: [id])
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  workerId  String
+  taskId    String
+  gross     Int
+  whtRate   Float    @default(0.05)
+  whtAmount Int
+  net       Int
+  status    String   @default("PENDING") // PaymentStatus enum
+  createdAt DateTime @default(now())
+
+  worker User @relation(fields: [workerId], references: [id])
+  task   Task @relation(fields: [taskId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  action    String
+  entity    String
+  entityId  String
+  meta      String? // JSON serialized as String (SQLite has no Json type)
+  createdAt DateTime @default(now())
+
+  actor User @relation(fields: [actorId], references: [id])
+}
+
+// ── v2: Hiring ────────────────────────────────────────────────────────────────
+
+model Job {
+  id             String   @id @default(cuid())
+  title          String
+  department     String
+  location       String
+  employmentType String // EmploymentType enum (FULL_TIME | PART_TIME | CONTRACT)
+  salaryMin      Int?
+  salaryMax      Int?
+  description    String
+  needsCv        Boolean  @default(true)
+  needsCover     Boolean  @default(false)
+  needsPortfolio Boolean  @default(false)
+  closingDate    DateTime
+  status         String   @default("OPEN") // JobStatus enum (OPEN | CLOSED)
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  candidates JobApplication[]
+}
+
+model JobApplication {
+  id        String   @id @default(cuid())
+  jobId     String
+  name      String
+  email     String
+  phone     String?
+  stage     String   @default("SCREENING") // Stage enum
+  cvNote    String?
+  rating    Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  job Job @relation(fields: [jobId], references: [id])
+}
+
+// ── v2: Settings ──────────────────────────────────────────────────────────────
+
+model TaxRate {
+  id           String  @id @default(cuid())
+  jurisdiction String // e.g. "Federal", "Lagos"
+  category     String // e.g. "Services", "default"
+  whtRate      Float
+  vatRate      Float
+  active       Boolean @default(true)
+}
+
+model Category {
+  id              String  @id @default(cuid())
+  name            String
+  tier            String // Tier enum
+  defaultPayModel String // PayModel enum (HOURLY | FIXED)
+  active          Boolean @default(true)
+}
+
+model Setting {
+  key   String @id @unique
+  value String // String/JSON value
+}
+
+// ── v3: Worker-facing (mobile app) ──────────────────────────────────────────
+
+model ClockEvent {
+  id          String   @id @default(cuid())
+  workerId    String
+  taskId      String
+  type        String // ClockType enum (IN | OUT)
+  lat         Float?
+  lng         Float?
+  withinFence Boolean
+  note        String?
+  createdAt   DateTime @default(now())
+
+  worker User @relation(fields: [workerId], references: [id])
+  task   Task @relation(fields: [taskId], references: [id])
+}
+
+model Withdrawal {
+  id            String   @id @default(cuid())
+  workerId      String
+  amount        Int
+  bankMasked    String
+  status        String   @default("PROCESSING") // WithdrawalStatus enum (PROCESSING | PAID | FAILED)
+  provider      String?  // "paystack" | "simulated"
+  reference     String?  @unique // our idempotency key, also sent to Paystack
+  providerRef   String?  // Paystack transfer_code
+  failureReason String?
+  createdAt     DateTime @default(now())
+
+  worker User @relation(fields: [workerId], references: [id])
+}
+
+model Contract {
+  id        String    @id @default(cuid())
+  taskId    String
+  workerId  String
+  status    String    @default("PENDING_SIGNATURE") // ContractStatus enum (PENDING_SIGNATURE | SIGNED)
+  signedAt  DateTime?
+  createdAt DateTime  @default(now())
+
+  task   Task @relation(fields: [taskId], references: [id])
+  worker User @relation(fields: [workerId], references: [id])
+}
+
+// ── Auth: phone OTP + password reset (hashed at rest, single-use, time-boxed) ──
+
+model OtpCode {
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String // sha256 of the 6-digit code
+  purpose    String    @default("login") // OtpPurpose enum (login)
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone])
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String // sha256 of the reset token
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model KycDocument {
+  id           String   @id @default(cuid())
+  userId       String
+  docType      String   // "ID" | "SELFIE" | "DOCS"
+  filename     String   // stored filename on disk
+  originalName String?
+  mimeType     String?
+  path         String   // absolute path on disk
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}

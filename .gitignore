@@ -1,0 +1,33 @@
+# ── Node ──────────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Server ────────────────────────────────────────────────────────────────────
+app/server/dist/
+app/server/prisma/dev.db
+app/server/prisma/dev.db-journal
+app/server/prisma/dev.db-wal
+app/server/prisma/dev.db-shm
+app/server/uploads/
+app/server/.env
+
+# ── Web admin (Vite) ──────────────────────────────────────────────────────────
+app/web-admin/dist/
+app/web-admin/.env
+
+# ── Mobile (Expo) ─────────────────────────────────────────────────────────────
+app/mobile/.expo/
+app/mobile/android/
+app/mobile/ios/
+app/mobile/.env
+app/mobile/.env.local
+
+# ── OS / editors ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.user

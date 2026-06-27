@@ -1,0 +1,181 @@
+/* ===== tabs ===== */
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 100px;
+  color: var(--muted);
+  background: var(--glass);
+  border: 1px solid var(--line);
+  transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.18s var(--ease);
+}
+.tab svg {
+  width: 16px;
+  height: 16px;
+}
+.tab:hover {
+  color: var(--text);
+  transform: translateY(-1px);
+}
+.tab.on {
+  color: #fff;
+  background: var(--grad);
+  border-color: transparent;
+  box-shadow: var(--grad-glow);
+}
+
+/* ===== tab head ===== */
+.tabhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.tabhint {
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 60ch;
+}
+.tabhint code {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  background: var(--glass-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+
+/* ===== inline editable table cells ===== */
+.input.cell {
+  min-height: 36px;
+  width: 88px;
+  padding: 6px 10px;
+}
+
+/* ===== toggle switch ===== */
+.toggle {
+  width: 44px;
+  height: 25px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--line);
+  position: relative;
+  transition: background 0.22s var(--ease);
+  flex: none;
+}
+.toggle .knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.22s var(--ease);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+}
+.toggle.on {
+  background: var(--money);
+  border-color: transparent;
+}
+.toggle.on .knob {
+  transform: translateX(19px);
+}
+.toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== templates grid ===== */
+.tpl-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.tpl-grid .textarea {
+  min-height: 120px;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .tpl-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== security / 2FA ===== */
+.twofa-ic {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: var(--glass-2);
+  border: 1px solid var(--line);
+  flex: none;
+}
+.twofa-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 5px 12px;
+  border-radius: 100px;
+  background: var(--glass);
+  border: 1px solid var(--line);
+}
+.twofa-status .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+.twofa-status.on {
+  color: #8ee0b9;
+  border-color: rgba(39, 192, 138, 0.32);
+  background: rgba(39, 192, 138, 0.1);
+}
+.twofa-status.on .dot {
+  background: var(--money);
+  box-shadow: 0 0 0 3px rgba(39, 192, 138, 0.18);
+}
+
+.twofa-setup {
+  display: flex;
+  flex-direction: column;
+}
+.twofa-qr {
+  align-self: center;
+  padding: 12px;
+  border-radius: var(--r-sm);
+  background: #fff;
+  margin-bottom: 16px;
+  line-height: 0;
+}
+.twofa-secret {
+  display: block;
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  word-break: break-all;
+  background: var(--glass-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 10px 13px;
+  color: var(--gold-soft);
+  margin-top: 6px;
+}
