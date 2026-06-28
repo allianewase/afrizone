@@ -132,6 +132,7 @@ export default function RootLayout() {
               <Stack.Screen name="active/[id]" />
               <Stack.Screen name="security" />
               <Stack.Screen name="support" options={{ presentation: 'card' }} />
+              <Stack.Screen name="contract/[id]" options={{ presentation: 'card' }} />
             </Stack>
           </AuthGate>
         </AuthProvider>

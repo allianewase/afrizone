@@ -15,6 +15,7 @@ import type {
   Transaction,
   Withdrawal,
   Contract,
+  ContractDetail,
   LoginResponse,
   AuthSuccess,
   TwoFactorSetup,
@@ -347,6 +348,11 @@ export const api = {
   /** GET /api/me/contracts — my contracts, joined with a task summary. */
   myContracts(signal?: AbortSignal): Promise<Contract[]> {
     return request<Contract[]>('/me/contracts', { signal });
+  },
+
+  /** GET /api/me/contracts/:id — full contract detail with rendered sections. */
+  myContractDetail(id: string, signal?: AbortSignal): Promise<ContractDetail> {
+    return request<ContractDetail>(`/me/contracts/${id}`, { signal });
   },
 
   /** POST /api/contracts/:id/sign — sign a contract. */

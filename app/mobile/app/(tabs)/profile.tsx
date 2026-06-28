@@ -165,7 +165,7 @@ export default function ProfileScreen() {
           ) : (
             (contracts.data ?? []).map((c, i) => (
               <View key={c.id}>
-                <ContractRow contract={c} onSigned={contracts.reload} />
+                <ContractRow contract={c} />
                 {i < (contracts.data?.length ?? 0) - 1 ? <Divider /> : null}
               </View>
             ))
@@ -512,40 +512,34 @@ function SheetField({ label, hint, children }: { label: string; hint?: string; c
   );
 }
 
-function ContractRow({ contract, onSigned }: { contract: Contract; onSigned: () => void }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+function ContractRow({ contract }: { contract: Contract }) {
+  const router = useRouter();
   const signed = contract.status === 'SIGNED';
 
-  async function sign() {
-    setBusy(true);
-    setError(null);
-    try {
-      await api.signContract(contract.id);
-      onSigned();
-    } catch (e) {
-      const msg = e instanceof ApiError || e instanceof Error ? e.message : 'Could not sign contract.';
-      setError(msg);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
-    <View style={styles.contractRow}>
+    <Pressable
+      style={styles.contractRow}
+      onPress={() => router.push(`/contract/${contract.id}`)}
+      accessibilityRole="button"
+    >
       <Icon name="id" size={20} color={colors.clay} />
       <View style={styles.contractBody}>
         <Text style={styles.contractTitle} numberOfLines={2}>
           {contract.task?.title ?? 'Service agreement'}
         </Text>
-        {error ? <Text style={styles.contractError}>{error}</Text> : null}
+        <Text style={styles.contractSub}>
+          {signed ? 'Tap to view' : 'Review & sign'}
+        </Text>
       </View>
       {signed ? (
         <StatusPill status="paid" small label="Signed" />
       ) : (
-        <Button label="Sign" full={false} onPress={sign} loading={busy} />
+        <View style={styles.contractCta}>
+          <Text style={styles.contractCtaText}>Sign</Text>
+          <Icon name="chevron-right" size={16} color={colors.clay} />
+        </View>
       )}
-    </View>
+    </Pressable>
   );
 }
 
@@ -617,7 +611,9 @@ const styles = StyleSheet.create({
   contractRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   contractBody: { flex: 1, gap: 2 },
   contractTitle: { color: colors.text, fontSize: type.size.base, fontWeight: '700' },
-  contractError: { color: colors.danger, fontSize: type.size.xs },
+  contractSub: { color: colors.textMuted, fontSize: type.size.xs },
+  contractCta: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  contractCtaText: { color: colors.clay, fontWeight: '700', fontSize: type.size.base },
   notif: { gap: 0 },
   notifError: { color: colors.danger, fontSize: type.size.sm, marginTop: spacing.xs },
   notifRow: {

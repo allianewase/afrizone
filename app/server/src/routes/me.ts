@@ -217,6 +217,107 @@ router.get("/contracts", requireAuth, async (req: AuthedRequest, res: Response) 
   );
 });
 
+// Builds the rendered contract section array from task + worker data.
+function buildContractSections(
+  task: any,
+  worker: any,
+  signedAt: Date | null
+): { heading: string; body: string }[] {
+  const fmt = (d: Date | null | undefined) =>
+    d ? new Date(d).toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" }) : "TBD";
+  const fmtMoney = (n: number) =>
+    new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(n);
+
+  const pay =
+    task.payModel === "HOURLY"
+      ? `${fmtMoney(task.rate ?? 0)} per hour`
+      : `${fmtMoney(task.budget ?? 0)} fixed price`;
+
+  const location =
+    task.locationType === "REMOTE"
+      ? "Remote — no fixed site required"
+      : task.address
+      ? `Physical site: ${task.address}`
+      : "Physical site (address to be confirmed)";
+
+  const workerName = worker.name ?? "The Contractor";
+  const workerContact = worker.email ?? worker.phone ?? "on file";
+
+  return [
+    {
+      heading: "1. Parties",
+      body: `This Independent Contractor Service Agreement ("Agreement") is entered into between:\n\n• Afrizone Part Time ("Afrizone", "the Platform"), acting as the service marketplace; and\n• ${workerName} ("Contractor"), contact: ${workerContact}.\n\nThis Agreement governs the Contractor's engagement on the task described below.`,
+    },
+    {
+      heading: "2. Scope of Work",
+      body: `Task: ${task.title}\nCategory: ${task.category}\nTier: ${task.tier}\n\n${task.description ?? "The Contractor shall perform all duties assigned under this task to the standard required by Afrizone and the task requester."}`,
+    },
+    {
+      heading: "3. Location",
+      body: location,
+    },
+    {
+      heading: "4. Schedule",
+      body: `Start date: ${fmt(task.startDate)}\nEnd date:   ${fmt(task.endDate)}\n\nThe Contractor must clock in and clock out via the Afrizone mobile app at the start and end of each shift. Failure to record attendance may affect payment.`,
+    },
+    {
+      heading: "5. Compensation",
+      body: `Rate: ${pay}\nWithholding Tax (WHT): 5% of gross earnings will be deducted and remitted to the FIRS on the Contractor's behalf. Net earnings are credited to the Contractor's wallet upon timesheet approval.\n\nPayment is released within 3 business days of an approved timesheet.`,
+    },
+    {
+      heading: "6. Independent Contractor Status",
+      body: `The Contractor is engaged as an independent contractor and not as an employee of Afrizone or the task requester. The Contractor is responsible for their own professional indemnity, health and safety compliance, and any taxes beyond WHT already remitted by Afrizone. No employment benefits, pension contributions, or leave entitlements arise under this Agreement.`,
+    },
+    {
+      heading: "7. Contractor Obligations",
+      body: `The Contractor agrees to:\n• Arrive punctually and complete all scheduled shifts.\n• Clock in/out accurately via the Afrizone app for each shift.\n• Submit a timesheet at the end of the engagement period.\n• Maintain professional conduct and comply with the task requester's site rules.\n• Notify Afrizone Support at least 24 hours in advance if unable to attend a shift.`,
+    },
+    {
+      heading: "8. Termination",
+      body: `Either party may terminate this Agreement with 24 hours' written notice. Afrizone may terminate immediately for gross misconduct, fraudulent clock events, or material breach of this Agreement. Earnings accrued for completed, approved shifts will be paid regardless of early termination.`,
+    },
+    {
+      heading: "9. Confidentiality",
+      body: `The Contractor shall not disclose any confidential information belonging to Afrizone, the task requester, or their customers that is encountered during the engagement. This obligation survives termination of this Agreement.`,
+    },
+    {
+      heading: "10. Governing Law",
+      body: `This Agreement is governed by the laws of the Federal Republic of Nigeria. Any dispute shall first be subject to good-faith negotiation; failing resolution, the parties submit to the jurisdiction of the courts of Lagos State.`,
+    },
+    {
+      heading: "11. Entire Agreement",
+      body: `This Agreement constitutes the entire agreement between the parties regarding the task and supersedes all prior discussions. It may only be amended in writing signed by both parties.\n\n${signedAt ? `Digitally signed by ${workerName} on ${fmt(signedAt)}.` : "This Agreement takes effect upon the Contractor's digital signature via the Afrizone app."}`,
+    },
+  ];
+}
+
+// GET /api/me/contracts/:id → full contract detail with generated sections.
+router.get("/contracts/:id", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const contract = await prisma.contract.findUnique({
+    where: { id: req.params.id },
+    include: { task: true, worker: true },
+  });
+  if (!contract) return res.status(404).json({ error: "Contract not found" });
+  if (contract.workerId !== req.user!.id) {
+    return res.status(403).json({ error: "Not your contract" });
+  }
+
+  const sections = buildContractSections(contract.task, contract.worker, contract.signedAt);
+  res.json({
+    id: contract.id,
+    status: contract.status,
+    signedAt: contract.signedAt,
+    createdAt: contract.createdAt,
+    task: {
+      id: contract.task.id,
+      title: contract.task.title,
+      category: contract.task.category,
+      tier: contract.task.tier,
+    },
+    sections,
+  });
+});
+
 // PATCH /api/me/push-token → body {pushToken}. Upserts the Expo push token for this worker.
 router.patch("/push-token", requireAuth, async (req: AuthedRequest, res: Response) => {
   const { pushToken } = req.body || {};

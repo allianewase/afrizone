@@ -273,3 +273,19 @@ export interface Contract {
   signedAt?: string | null;
   task?: Pick<Task, 'id' | 'title'>;
 }
+
+/** One section of the rendered contract document. */
+export interface ContractSection {
+  heading: string;
+  body: string;
+}
+
+/** Full contract detail — GET /api/me/contracts/:id */
+export interface ContractDetail {
+  id: string;
+  status: ContractStatus;
+  signedAt?: string | null;
+  createdAt: string;
+  task: Pick<Task, 'id' | 'title' | 'category' | 'tier'>;
+  sections: ContractSection[];
+}
