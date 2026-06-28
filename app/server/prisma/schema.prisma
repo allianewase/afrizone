@@ -55,7 +55,11 @@ model User {
   bankAccountNumber String? // real payout account (NUBAN) — required for live Paystack transfers
   bankCode          String? // Paystack bank code, e.g. "058" (GTBank)
   bankName          String?
+  tin               String? // Tax Identification Number — stored from KYC / profile edit
   pushToken         String? // Expo push token (ExponentPushToken[...]) — updated on each login
+  notifTasks     Boolean  @default(true)  // push: task matches & approval status changes
+  notifPay       Boolean  @default(true)  // push: payment releases & withdrawal updates
+  notifEmail     Boolean  @default(false) // email summary digest (future)
   createdAt      DateTime @default(now())
 
   tasksCreated Task[]        @relation("TaskCreatedBy")

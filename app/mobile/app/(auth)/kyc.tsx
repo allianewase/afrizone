@@ -158,7 +158,7 @@ export default function KycScreen() {
       case 'docs':
         return !!docsDocId;
       case 'tin':
-        return tin.length >= 8;
+        return tin.length === 0 || tin.length >= 8;
       case 'bank':
         return !!bankCode && acct.replace(/\D/g, '').length === 10;
       default:
@@ -286,12 +286,12 @@ export default function KycScreen() {
         )}
 
         {step === 'tin' && (
-          <Field label="Tax Identification Number (TIN)" hint="Used for WHT statements.">
+          <Field label="Tax Identification Number (TIN)" hint="Optional — you can add this later in Profile. Required for WHT statements.">
             <TextInput
               value={tin}
               onChangeText={setTin}
               keyboardType="number-pad"
-              placeholder="12345678-0001"
+              placeholder="12345678-0001 (optional)"
               placeholderTextColor={colors.textMuted}
               style={styles.input}
             />

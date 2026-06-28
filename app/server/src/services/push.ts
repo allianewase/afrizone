@@ -40,43 +40,48 @@ export function sendPush(messages: PushMessage[]): void {
   }).catch((e) => console.error("[push] delivery error:", e));
 }
 
+export type NotifPref = "notifTasks" | "notifPay";
+
 /**
  * Convenience: look up a single worker's push token and send if present.
- * Pass `prisma` to avoid a circular import from this service layer.
+ * Pass `pref` to gate on the worker's saved preference (default: always send).
  */
 export async function notifyWorker(
   prismaClient: import("@prisma/client").PrismaClient,
   workerId: string,
   title: string,
   body: string,
-  data?: Record<string, unknown>
+  data?: Record<string, unknown>,
+  pref?: NotifPref
 ): Promise<void> {
   const user = await prismaClient.user.findUnique({
     where: { id: workerId },
-    select: { pushToken: true },
+    select: { pushToken: true, notifTasks: true, notifPay: true },
   });
   if (!user?.pushToken) return;
+  if (pref && !user[pref]) return;
   sendPush([{ to: user.pushToken, title, body, data, sound: "default" }]);
 }
 
 /**
  * Convenience: notify a batch of workers (e.g. release-all).
- * Each worker gets their own notification.
+ * Workers with the relevant pref disabled are silently skipped.
  */
 export async function notifyWorkers(
   prismaClient: import("@prisma/client").PrismaClient,
   workerIds: string[],
   title: string,
   body: string,
-  data?: Record<string, unknown>
+  data?: Record<string, unknown>,
+  pref?: NotifPref
 ): Promise<void> {
   if (workerIds.length === 0) return;
   const users = await prismaClient.user.findMany({
     where: { id: { in: workerIds }, pushToken: { not: null } },
-    select: { pushToken: true },
+    select: { pushToken: true, notifTasks: true, notifPay: true },
   });
   const messages = users
-    .filter((u) => u.pushToken)
+    .filter((u) => u.pushToken && (!pref || u[pref]))
     .map((u) => ({ to: u.pushToken!, title, body, data, sound: "default" as const }));
   sendPush(messages);
 }

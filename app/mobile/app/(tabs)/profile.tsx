@@ -1,5 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Switch, Alert, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Switch,
+  Alert,
+  Platform,
+  Modal,
+  Pressable,
+  TextInput,
+  FlatList,
+  KeyboardAvoidingView,
+  ScrollView,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { Card } from '../../src/components/Card';
@@ -8,27 +21,49 @@ import { Button } from '../../src/components/Button';
 import { TierBadge } from '../../src/components/TierBadge';
 import { StatusPill, toCanonical } from '../../src/components/StatusPill';
 import { Icon } from '../../src/components/Icon';
-import { LoadingState } from '../../src/components/Feedback';
-import { colors, spacing, type } from '../../src/theme';
+import { Banner, LoadingState } from '../../src/components/Feedback';
+import { colors, spacing, type, radii, layout } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
+import { NIGERIAN_BANKS } from '../../src/lib/banks';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { User, Contract } from '../../src/api/types';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user: authUser, signOut } = useAuth();
-  const [notifTasks, setNotifTasks] = useState(true);
-  const [notifPay, setNotifPay] = useState(true);
-  const [notifEmail, setNotifEmail] = useState(false);
+  const { user: authUser, signOut, updateUser } = useAuth();
+  const [notifTasks, setNotifTasks] = useState<boolean | null>(null);
+  const [notifPay, setNotifPay] = useState<boolean | null>(null);
+  const [notifEmail, setNotifEmail] = useState<boolean | null>(null);
+  const [notifSaveError, setNotifSaveError] = useState<string | null>(null);
 
-  // REAL: GET /api/me — fresh profile (falls back to the cached auth user).
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [editBankOpen, setEditBankOpen] = useState(false);
+  const [editTinOpen, setEditTinOpen] = useState(false);
+
   const me = useAsync<User>((signal) => api.meWorker(signal), []);
-  // REAL: GET /api/me/contracts
   const contracts = useAsync<Contract[]>((signal) => api.myContracts(signal), []);
 
   const user = me.data ?? authUser;
   const kyc = user?.kycStatus ?? 'PENDING';
+
+  // Sync notification prefs from server once the user object is available.
+  React.useEffect(() => {
+    if (!user) return;
+    if (notifTasks === null) setNotifTasks(user.notifTasks ?? true);
+    if (notifPay === null) setNotifPay(user.notifPay ?? true);
+    if (notifEmail === null) setNotifEmail(user.notifEmail ?? false);
+  }, [user]);
+
+  async function saveNotif(patch: { notifTasks?: boolean; notifPay?: boolean; notifEmail?: boolean }) {
+    setNotifSaveError(null);
+    try {
+      await api.patchMe(patch);
+    } catch {
+      setNotifSaveError('Could not save — check your connection.');
+    }
+  }
 
   function confirmLogout() {
     if (Platform.OS === 'web') {
@@ -41,42 +76,47 @@ export default function ProfileScreen() {
     ]);
   }
 
+  function onSaved(updated: User) {
+    me.reload();
+    void updateUser(updated);
+  }
+
   return (
     <Screen
       title="Profile"
       subtitle={user?.email ?? undefined}
-      onRefresh={() => {
-        me.reload();
-        contracts.reload();
-      }}
+      onRefresh={() => { me.reload(); contracts.reload(); }}
       refreshing={me.loading && !!me.data}
     >
       {/* Identity card */}
       <Card style={styles.identity}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
-            {(user?.name ?? 'A')
-              .split(' ')
-              .map((p) => p[0])
-              .slice(0, 2)
-              .join('')
-              .toUpperCase()}
+            {(user?.name ?? 'A').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
           </Text>
         </View>
         <View style={styles.identityBody}>
           <Text style={styles.name}>{user?.name ?? 'Worker'}</Text>
           <View style={styles.tiers}>
-            {(user?.tiers ?? []).map((t) => (
-              <TierBadge key={t} tier={t} small />
-            ))}
+            {(user?.tiers ?? []).map((t) => <TierBadge key={t} tier={t} small />)}
           </View>
         </View>
-        {user?.rating ? (
-          <View style={styles.rating}>
-            <Text style={styles.ratingValue}>{user.rating.toFixed(1)}</Text>
-            <Text style={styles.ratingLabel}>rating</Text>
-          </View>
-        ) : null}
+        <View style={styles.identityRight}>
+          {user?.rating ? (
+            <View style={styles.rating}>
+              <Text style={styles.ratingValue}>{user.rating.toFixed(1)}</Text>
+              <Text style={styles.ratingLabel}>rating</Text>
+            </View>
+          ) : null}
+          <Pressable
+            onPress={() => setEditProfileOpen(true)}
+            hitSlop={10}
+            style={styles.editBtn}
+            accessibilityLabel="Edit profile"
+          >
+            <Icon name="key" size={16} color={colors.clay} />
+          </Pressable>
+        </View>
       </Card>
 
       <Section title="Verification">
@@ -88,8 +128,6 @@ export default function ProfileScreen() {
             right={<StatusPill status={toCanonical(kyc)} small label={kyc} />}
             chevron={false}
           />
-          <Divider />
-          <ListRow icon="id" title="Documents" subtitle="ID, certifications" onPress={() => {}} />
         </Card>
       </Section>
 
@@ -121,7 +159,7 @@ export default function ProfileScreen() {
             <ListRow
               icon="id"
               title="No contracts yet"
-              subtitle="Service agreements appear once you’re approved for a task."
+              subtitle="Service agreements appear once you're approved for a task."
               chevron={false}
             />
           ) : (
@@ -140,27 +178,47 @@ export default function ProfileScreen() {
           <ListRow
             icon="bank"
             title="Bank account"
-            subtitle={user?.bankMasked ?? 'Add a payout account'}
-            onPress={() => {}}
+            subtitle={user?.bankMasked ?? 'Tap to add your payout account'}
+            onPress={() => setEditBankOpen(true)}
           />
           <Divider />
-          <ListRow icon="wallet" title="Tax info (TIN)" subtitle="For WHT statements" onPress={() => {}} />
+          <ListRow
+            icon="wallet"
+            title="Tax ID (TIN)"
+            subtitle={user?.tin ?? 'Tap to add your TIN for WHT statements'}
+            onPress={() => setEditTinOpen(true)}
+          />
         </Card>
       </Section>
 
       <Section title="Notifications">
         <Card style={styles.notif}>
-          <NotifRow label="Task matches & approvals" value={notifTasks} onChange={setNotifTasks} />
+          <NotifRow
+            label="Task matches & approvals"
+            value={notifTasks ?? true}
+            onChange={(v) => { setNotifTasks(v); void saveNotif({ notifTasks: v }); }}
+          />
           <Divider />
-          <NotifRow label="Payments & withdrawals" value={notifPay} onChange={setNotifPay} />
+          <NotifRow
+            label="Payments & withdrawals"
+            value={notifPay ?? true}
+            onChange={(v) => { setNotifPay(v); void saveNotif({ notifPay: v }); }}
+          />
           <Divider />
-          <NotifRow label="Email summaries" value={notifEmail} onChange={setNotifEmail} />
+          <NotifRow
+            label="Email summaries"
+            value={notifEmail ?? false}
+            onChange={(v) => { setNotifEmail(v); void saveNotif({ notifEmail: v }); }}
+          />
         </Card>
+        {notifSaveError ? (
+          <Text style={styles.notifError}>{notifSaveError}</Text>
+        ) : null}
       </Section>
 
       <Section title="Support">
         <Card padded={false} style={styles.list}>
-          <ListRow icon="bell" title="Help & support" onPress={() => {}} />
+          <ListRow icon="bell" title="Help & support" onPress={() => router.push('/support')} />
         </Card>
       </Section>
 
@@ -168,7 +226,289 @@ export default function ProfileScreen() {
         <Button label="Log out" variant="secondary" icon="logout" onPress={confirmLogout} />
       </View>
       <Text style={styles.version}>Afrizone Part Time · v1.0.0</Text>
+
+      {/* Edit sheets */}
+      <EditProfileSheet
+        visible={editProfileOpen}
+        user={user}
+        onClose={() => setEditProfileOpen(false)}
+        onSaved={onSaved}
+      />
+      <EditBankSheet
+        visible={editBankOpen}
+        user={user}
+        onClose={() => setEditBankOpen(false)}
+        onSaved={onSaved}
+      />
+      <EditTinSheet
+        visible={editTinOpen}
+        user={user}
+        onClose={() => setEditTinOpen(false)}
+        onSaved={onSaved}
+      />
     </Screen>
+  );
+}
+
+// ─── Edit Profile (name + email) ─────────────────────────────────────────────
+
+function EditProfileSheet({
+  visible,
+  user,
+  onClose,
+  onSaved,
+}: {
+  visible: boolean;
+  user: User | null | undefined;
+  onClose: () => void;
+  onSaved: (u: User) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const [name, setName] = useState(user?.name ?? '');
+  const [email, setEmail] = useState(user?.email ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const canSave = name.trim().length >= 2 && /^\S+@\S+\.\S+$/.test(email.trim());
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await api.patchMe({ name: name.trim(), email: email.trim() });
+      onSaved(updated);
+      onClose();
+    } catch (e) {
+      setError(e instanceof ApiError || e instanceof Error ? e.message : 'Could not save.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
+          <View style={styles.grabber} />
+          <Text style={styles.sheetTitle}>Edit profile</Text>
+          <View style={styles.fields}>
+            <SheetField label="Full name">
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                placeholder="Your full name"
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+                autoCapitalize="words"
+              />
+            </SheetField>
+            <SheetField label="Email">
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholder="you@email.com"
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+              />
+            </SheetField>
+          </View>
+          {error ? <Banner tone="danger" title="Error" message={error} /> : null}
+          <Button label="Save changes" onPress={save} loading={busy} disabled={!canSave || busy} />
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// ─── Edit Bank Account ────────────────────────────────────────────────────────
+
+function EditBankSheet({
+  visible,
+  user,
+  onClose,
+  onSaved,
+}: {
+  visible: boolean;
+  user: User | null | undefined;
+  onClose: () => void;
+  onSaved: (u: User) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const [bankCode, setBankCode] = useState(user?.bankCode ?? '');
+  const [acct, setAcct] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const selectedBank = NIGERIAN_BANKS.find((b) => b.code === bankCode);
+  const canSave = !!bankCode && acct.replace(/\D/g, '').length === 10;
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    const nuban = acct.replace(/\D/g, '');
+    try {
+      const updated = await api.patchMe({
+        bankCode,
+        bankAccountNumber: nuban,
+        bankName: selectedBank?.name,
+      });
+      onSaved(updated);
+      onClose();
+    } catch (e) {
+      setError(e instanceof ApiError || e instanceof Error ? e.message : 'Could not save.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
+          <View style={styles.grabber} />
+          <Text style={styles.sheetTitle}>Payout account</Text>
+          {user?.bankMasked ? (
+            <Text style={styles.sheetSub}>Current: {user.bankMasked}</Text>
+          ) : null}
+          <View style={styles.fields}>
+            <SheetField label="Bank">
+              <Pressable
+                onPress={() => setPickerOpen(true)}
+                style={[styles.input, styles.pickerTrigger]}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.pickerTriggerText, !selectedBank && { color: colors.textMuted }]}>
+                  {selectedBank ? selectedBank.name : 'Select your bank…'}
+                </Text>
+                <Icon name="chevron-down" size={18} color={colors.textMuted} />
+              </Pressable>
+            </SheetField>
+            <SheetField label="Account number (NUBAN)" hint="10-digit number — payouts go here">
+              <TextInput
+                value={acct}
+                onChangeText={(t) => setAcct(t.replace(/\D/g, '').slice(0, 10))}
+                keyboardType="number-pad"
+                placeholder="0123456789"
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+                maxLength={10}
+              />
+              {acct.length > 0 && acct.length < 10 ? (
+                <Text style={styles.fieldHint}>{10 - acct.length} more digits needed</Text>
+              ) : acct.length === 10 ? (
+                <Text style={[styles.fieldHint, { color: colors.money }]}>✓ Valid NUBAN</Text>
+              ) : null}
+            </SheetField>
+          </View>
+          {error ? <Banner tone="danger" title="Error" message={error} /> : null}
+          <Button label="Save account" onPress={save} loading={busy} disabled={!canSave || busy} />
+        </View>
+      </KeyboardAvoidingView>
+
+      {/* Bank picker modal */}
+      <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setPickerOpen(false)} />
+        <View style={[styles.pickerSheet, { paddingBottom: insets.bottom + spacing.md }]}>
+          <View style={styles.grabber} />
+          <Text style={styles.sheetTitle}>Select bank</Text>
+          <FlatList
+            data={NIGERIAN_BANKS}
+            keyExtractor={(b) => b.code}
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => { setBankCode(item.code); setPickerOpen(false); }}
+                style={[styles.bankItem, bankCode === item.code && styles.bankItemActive]}
+              >
+                <Text style={[styles.bankItemText, bankCode === item.code && { color: colors.clay, fontWeight: '700' }]}>
+                  {item.name}
+                </Text>
+                {bankCode === item.code ? <Icon name="check" size={18} color={colors.clay} /> : null}
+              </Pressable>
+            )}
+            ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.line }} />}
+          />
+        </View>
+      </Modal>
+    </Modal>
+  );
+}
+
+// ─── Edit TIN ─────────────────────────────────────────────────────────────────
+
+function EditTinSheet({
+  visible,
+  user,
+  onClose,
+  onSaved,
+}: {
+  visible: boolean;
+  user: User | null | undefined;
+  onClose: () => void;
+  onSaved: (u: User) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const [tin, setTin] = useState(user?.tin ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const canSave = tin.trim().length === 0 || tin.trim().length >= 8;
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await api.patchMe({ tin: tin.trim() });
+      onSaved(updated);
+      onClose();
+    } catch (e) {
+      setError(e instanceof ApiError || e instanceof Error ? e.message : 'Could not save.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
+          <View style={styles.grabber} />
+          <Text style={styles.sheetTitle}>Tax ID (TIN)</Text>
+          <Text style={styles.sheetSub}>Used on WHT deduction statements issued to you.</Text>
+          <View style={styles.fields}>
+            <SheetField label="TIN" hint="e.g. 12345678-0001">
+              <TextInput
+                value={tin}
+                onChangeText={setTin}
+                placeholder="12345678-0001"
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+                autoCapitalize="none"
+              />
+            </SheetField>
+          </View>
+          {error ? <Banner tone="danger" title="Error" message={error} /> : null}
+          <Button label="Save TIN" onPress={save} loading={busy} disabled={!canSave || busy} />
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// ─── Shared sub-components ────────────────────────────────────────────────────
+
+function SheetField({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      {children}
+      {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
+    </View>
   );
 }
 
@@ -181,7 +521,6 @@ function ContractRow({ contract, onSigned }: { contract: Contract; onSigned: () 
     setBusy(true);
     setError(null);
     try {
-      // REAL: POST /api/contracts/:id/sign
       await api.signContract(contract.id);
       onSigned();
     } catch (e) {
@@ -219,15 +558,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function NotifRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
-}) {
+function NotifRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
     <View style={styles.notifRow}>
       <Text style={styles.notifLabel}>{label}</Text>
@@ -246,6 +577,8 @@ function Divider() {
   return <View style={styles.divider} />;
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   avatar: {
@@ -258,11 +591,20 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: colors.gold, fontSize: type.size.lg, fontWeight: '800' },
   identityBody: { flex: 1, gap: spacing.xs },
+  identityRight: { alignItems: 'center', gap: spacing.sm },
   name: { color: colors.text, fontSize: type.size.lg, fontWeight: '800' },
   tiers: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   rating: { alignItems: 'center' },
   ratingValue: { color: colors.clay, fontSize: type.size.xl, fontWeight: '800' },
   ratingLabel: { color: colors.textMuted, fontSize: type.size.xs },
+  editBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.claySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sectionTitle: {
     color: colors.textMuted,
     fontSize: type.size.sm,
@@ -277,8 +619,68 @@ const styles = StyleSheet.create({
   contractTitle: { color: colors.text, fontSize: type.size.base, fontWeight: '700' },
   contractError: { color: colors.danger, fontSize: type.size.xs },
   notif: { gap: 0 },
-  notifRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md, minHeight: 44 },
+  notifError: { color: colors.danger, fontSize: type.size.sm, marginTop: spacing.xs },
+  notifRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    minHeight: 44,
+  },
   notifLabel: { color: colors.text, fontSize: type.size.md, fontWeight: '600', flex: 1, paddingRight: spacing.md },
   divider: { height: 1, backgroundColor: colors.line },
   version: { color: colors.textMuted, fontSize: type.size.sm, textAlign: 'center', marginTop: spacing.lg },
+  // sheets
+  backdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
+  sheet: {
+    backgroundColor: colors.bg,
+    borderTopLeftRadius: radii.sheet,
+    borderTopRightRadius: radii.sheet,
+    padding: layout.screenPadding,
+    gap: spacing.md,
+  },
+  grabber: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 100,
+    backgroundColor: colors.line,
+    marginBottom: spacing.sm,
+  },
+  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontWeight: '800' },
+  sheetSub: { color: colors.textMuted, fontSize: type.size.base, marginTop: -spacing.xs },
+  fields: { gap: spacing.md },
+  fieldLabel: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
+  fieldHint: { color: colors.textMuted, fontSize: type.size.sm },
+  input: {
+    minHeight: layout.hitTarget,
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderWidth: 1,
+    borderRadius: radii.input,
+    paddingHorizontal: spacing.md,
+    fontSize: type.size.md,
+    color: colors.text,
+  },
+  pickerTrigger: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  pickerTriggerText: { fontSize: type.size.md, color: colors.text, flex: 1 },
+  pickerSheet: {
+    backgroundColor: colors.bg,
+    borderTopLeftRadius: radii.card,
+    borderTopRightRadius: radii.card,
+    padding: layout.screenPadding,
+    maxHeight: '70%',
+  },
+  bankItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+  },
+  bankItemActive: {
+    backgroundColor: colors.claySoft,
+    marginHorizontal: -layout.screenPadding,
+    paddingHorizontal: layout.screenPadding,
+  },
+  bankItemText: { fontSize: type.size.base, color: colors.text },
 });

@@ -25,29 +25,41 @@ function walletFrom(
   return { pending, available, withdrawn };
 }
 
-// GET /api/me → the authed worker profile.
-router.get("/", requireAuth, async (req: AuthedRequest, res: Response) => {
-  const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
-  if (!user) return res.status(404).json({ error: "User not found" });
-  res.json({
+// Shared response shape for all /api/me endpoints that return the worker profile.
+function formatUser(user: any) {
+  return {
     id: user.id,
     name: user.name,
     email: user.email,
+    phone: user.phone ?? null,
     tiers: tiersToArray(user.tiers),
     kycStatus: user.kycStatus,
     location: user.location,
     bankMasked: user.bankMasked,
+    bankCode: user.bankCode ?? null,
+    bankName: user.bankName ?? null,
+    tin: user.tin ?? null,
     rating: user.rating,
     completedCount: user.completedCount,
-  });
+    totpEnabled: user.totpEnabled,
+    notifTasks: user.notifTasks,
+    notifPay: user.notifPay,
+    notifEmail: user.notifEmail,
+  };
+}
+
+// GET /api/me → the authed worker profile.
+router.get("/", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+  if (!user) return res.status(404).json({ error: "User not found" });
+  res.json(formatUser(user));
 });
 
-// PATCH /api/me → update the authed user's profile (name / email). Used after a
-// phone-OTP or Google signup (which start with placeholder name/email) and for
-// profile edits. Email must stay unique.
+// PATCH /api/me → update profile fields: name, email, tin, bank details.
+// Used after phone-OTP/Google signup and for profile edits in the mobile app.
 router.patch("/", requireAuth, async (req: AuthedRequest, res: Response) => {
-  const { name, email } = req.body || {};
-  const data: { name?: string; email?: string } = {};
+  const { name, email, tin, bankCode, bankAccountNumber, bankName, notifTasks, notifPay, notifEmail } = req.body || {};
+  const data: Record<string, unknown> = {};
 
   if (name !== undefined) {
     const n = String(name).trim();
@@ -65,22 +77,38 @@ router.patch("/", requireAuth, async (req: AuthedRequest, res: Response) => {
     }
     data.email = e;
   }
+  if (tin !== undefined) {
+    const t = String(tin).trim();
+    if (t.length > 0 && t.length < 8) {
+      return res.status(400).json({ error: "TIN must be at least 8 characters" });
+    }
+    data.tin = t || null;
+  }
+  if (bankCode !== undefined) data.bankCode = String(bankCode).trim() || null;
+  if (bankName !== undefined) data.bankName = String(bankName).trim() || null;
+  if (bankAccountNumber !== undefined) {
+    const acct = String(bankAccountNumber).replace(/\D/g, "");
+    if (acct && acct.length !== 10) {
+      return res.status(400).json({ error: "Account number must be exactly 10 digits" });
+    }
+    data.bankAccountNumber = acct || null;
+    // Recompute masked form: "BankName ••XX"
+    if (acct && (bankName || data.bankName)) {
+      const bName = String(bankName ?? data.bankName ?? "");
+      data.bankMasked = `${bName} ••${acct.slice(-2)}`;
+    }
+  }
+
+  if (notifTasks !== undefined) data.notifTasks = Boolean(notifTasks);
+  if (notifPay !== undefined) data.notifPay = Boolean(notifPay);
+  if (notifEmail !== undefined) data.notifEmail = Boolean(notifEmail);
+
   if (Object.keys(data).length === 0) {
     return res.status(400).json({ error: "Nothing to update" });
   }
 
   const user = await prisma.user.update({ where: { id: req.user!.id }, data });
-  res.json({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    tiers: tiersToArray(user.tiers),
-    kycStatus: user.kycStatus,
-    location: user.location,
-    bankMasked: user.bankMasked,
-    rating: user.rating,
-    completedCount: user.completedCount,
-  });
+  res.json(formatUser(user));
 });
 
 // GET /api/me/applications → worker's applications joined with task summary.
@@ -204,7 +232,7 @@ router.patch("/push-token", requireAuth, async (req: AuthedRequest, res: Respons
 
 // POST /api/me/kyc/submit → body {tin?, bankMasked?, bankCode?, bankAccountNumber?, bankName?, tier?}.
 router.post("/kyc/submit", requireAuth, async (req: AuthedRequest, res: Response) => {
-  const { bankMasked, bankCode, bankAccountNumber, bankName, tier } = req.body || {};
+  const { tin, bankMasked, bankCode, bankAccountNumber, bankName, tier } = req.body || {};
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
   if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -216,6 +244,7 @@ router.post("/kyc/submit", requireAuth, async (req: AuthedRequest, res: Response
   const updated = await prisma.user.update({
     where: { id: user.id },
     data: {
+      tin: tin != null ? String(tin) : user.tin,
       bankMasked: bankMasked != null ? String(bankMasked) : user.bankMasked,
       bankCode: bankCode != null ? String(bankCode) : user.bankCode,
       bankAccountNumber: bankAccountNumber != null ? String(bankAccountNumber) : user.bankAccountNumber,
@@ -224,17 +253,60 @@ router.post("/kyc/submit", requireAuth, async (req: AuthedRequest, res: Response
       kycStatus: "PENDING",
     },
   });
-  res.json({
-    id: updated.id,
-    name: updated.name,
-    email: updated.email,
-    tiers: tiersToArray(updated.tiers),
-    kycStatus: updated.kycStatus,
-    location: updated.location,
-    bankMasked: updated.bankMasked,
-    rating: updated.rating,
-    completedCount: updated.completedCount,
-  });
+  res.json(formatUser(updated));
+});
+
+// GET /api/me/tax-statement?year=YYYY → CSV of released WHT payments for that year.
+router.get("/tax-statement", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const year = parseInt(String(req.query.year ?? new Date().getFullYear()), 10);
+  if (isNaN(year) || year < 2020 || year > 2099) {
+    return res.status(400).json({ error: "Invalid year" });
+  }
+  const from = new Date(`${year}-01-01T00:00:00.000Z`);
+  const to = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+
+  const [user, payments] = await Promise.all([
+    prisma.user.findUnique({ where: { id: req.user!.id } }),
+    prisma.payment.findMany({
+      where: { workerId: req.user!.id, status: "RELEASED", createdAt: { gte: from, lt: to } },
+      include: { task: true },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  const totalGross = payments.reduce((s, p) => s + p.gross, 0);
+  const totalWht = payments.reduce((s, p) => s + p.whtAmount, 0);
+  const totalNet = payments.reduce((s, p) => s + p.net, 0);
+
+  const rows = [
+    "Afrizone Part Time - Annual WHT Statement",
+    `Worker:,${user.name ?? "-"}`,
+    `Email/Phone:,${user.email ?? user.phone ?? "-"}`,
+    `TIN:,${user.tin ?? "Not provided"}`,
+    `Year:,${year}`,
+    "",
+    "Date,Task,Gross (NGN),WHT 5% (NGN),Net (NGN)",
+    ...payments.map((p) =>
+      [
+        new Date(p.createdAt).toISOString().slice(0, 10),
+        `"${p.task.title.replace(/"/g, '""')}"`,
+        p.gross,
+        p.whtAmount,
+        p.net,
+      ].join(",")
+    ),
+    "",
+    `TOTAL,,${totalGross},${totalWht},${totalNet}`,
+  ];
+
+  const safeName = (user.name ?? "statement")
+    .replace(/\s+/g, "_")
+    .replace(/[^a-zA-Z0-9_-]/g, "");
+  const filename = `afrizone-wht-${year}-${safeName}.csv`;
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.send(rows.join("\r\n"));
 });
 
 export default router;

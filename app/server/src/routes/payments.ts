@@ -52,7 +52,8 @@ router.post("/:id/release", requireAuth, async (req: AuthedRequest, res: Respons
     payment.workerId,
     "Payment released 💰",
     `₦${payment.net.toLocaleString()} has been added to your wallet.`,
-    { screen: "wallet" }
+    { screen: "wallet" },
+    "notifPay"
   );
 
   res.json(updated);
@@ -85,7 +86,8 @@ router.post("/release-all", requireAuth, async (req: AuthedRequest, res: Respons
     workerIds,
     "Payments released 💰",
     "Your earnings have been released to your wallet.",
-    { screen: "wallet" }
+    { screen: "wallet" },
+    "notifPay"
   );
 
   res.json({ released: approved.length, totalNet });

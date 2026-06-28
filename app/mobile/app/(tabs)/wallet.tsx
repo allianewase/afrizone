@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Modal, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { Screen } from '../../src/components/Screen';
 import { WalletBalanceCard } from '../../src/components/WalletBalanceCard';
 import { Card } from '../../src/components/Card';
@@ -22,6 +24,9 @@ const WITHDRAW_MIN = 5000;
 export default function WalletScreen() {
   const { user } = useAuth();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [yearSheetOpen, setYearSheetOpen] = useState(false);
+  const [dlBusy, setDlBusy] = useState(false);
+  const [dlError, setDlError] = useState<string | null>(null);
 
   // REAL: GET /api/me/wallet → derived balances
   const wallet = useAsync<Wallet>((signal) => api.myWallet(signal), []);
@@ -30,6 +35,27 @@ export default function WalletScreen() {
 
   const balances = wallet.data ?? { pending: 0, available: 0, withdrawn: 0 };
   const belowMin = balances.available < WITHDRAW_MIN;
+
+  async function downloadStatement(year: number) {
+    setYearSheetOpen(false);
+    setDlBusy(true);
+    setDlError(null);
+    try {
+      const { csv, filename } = await api.taxStatement(year);
+      const path = (FileSystem.cacheDirectory ?? '') + filename;
+      await FileSystem.writeAsStringAsync(path, csv, { encoding: FileSystem.EncodingType.UTF8 });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(path, { mimeType: 'text/csv', dialogTitle: `WHT Statement ${year}` });
+      } else {
+        setDlError('Sharing is not available on this device.');
+      }
+    } catch (e) {
+      setDlError(e instanceof Error ? e.message : 'Download failed.');
+    } finally {
+      setDlBusy(false);
+    }
+  }
 
   return (
     <Screen title="Wallet" subtitle="Your earnings, paid to your bank" onRefresh={() => { wallet.reload(); txns.reload(); }} refreshing={wallet.loading && !!wallet.data}>
@@ -83,11 +109,20 @@ export default function WalletScreen() {
             </Card>
           )}
 
-          <Pressable style={styles.statement} accessibilityRole="button">
+          <Pressable
+            style={styles.statement}
+            accessibilityRole="button"
+            onPress={() => setYearSheetOpen(true)}
+            disabled={dlBusy}
+          >
             <Icon name="id" size={18} color={colors.clay} />
             <Text style={styles.statementText}>Download annual tax statement</Text>
-            <Icon name="chevron-right" size={16} color={colors.textMuted} />
+            {dlBusy
+              ? <ActivityIndicator size="small" color={colors.textMuted} />
+              : <Icon name="chevron-right" size={16} color={colors.textMuted} />
+            }
           </Pressable>
+          {dlError ? <Text style={styles.dlError}>{dlError}</Text> : null}
         </>
       )}
 
@@ -100,6 +135,11 @@ export default function WalletScreen() {
           wallet.reload();
           txns.reload();
         }}
+      />
+      <YearSheet
+        visible={yearSheetOpen}
+        onClose={() => setYearSheetOpen(false)}
+        onSelect={downloadStatement}
       />
     </Screen>
   );
@@ -228,6 +268,44 @@ function WithdrawSheet({
   );
 }
 
+function YearSheet({
+  visible,
+  onClose,
+  onSelect,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSelect: (year: number) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear, currentYear - 1, currentYear - 2];
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose} />
+      <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
+        <View style={styles.grabber} />
+        <Text style={styles.sheetTitle}>Select tax year</Text>
+        <Text style={styles.sheetSub}>Your WHT statement will be downloaded as a CSV file.</Text>
+        <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
+          {years.map((y) => (
+            <Pressable
+              key={y}
+              style={styles.yearRow}
+              onPress={() => onSelect(y)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.yearText}>{y}</Text>
+              <Icon name="chevron-right" size={18} color={colors.textMuted} />
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 const styles = StyleSheet.create({
   actions: { marginTop: spacing.lg },
   minNote: { color: colors.textMuted, fontSize: type.size.sm, marginTop: spacing.sm, textAlign: 'center' },
@@ -257,6 +335,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   statementText: { flex: 1, color: colors.text, fontWeight: '600', fontSize: type.size.base },
+  dlError: { color: colors.danger, fontSize: type.size.sm, marginTop: spacing.xs },
   // sheet
   backdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
   sheet: {
@@ -281,6 +360,19 @@ const styles = StyleSheet.create({
   },
   naira: { fontSize: type.size.xxl, fontWeight: '800', color: colors.text },
   amountInput: { flex: 1, fontSize: type.size.display, fontWeight: '800', color: colors.text, paddingVertical: spacing.md },
+  yearRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    minHeight: 52,
+  },
+  yearText: { color: colors.text, fontSize: type.size.lg, fontWeight: '700' },
   sheetDone: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.lg },
   doneIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.moneySoft, alignItems: 'center', justifyContent: 'center' },
 });

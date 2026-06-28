@@ -30,8 +30,14 @@ export interface User {
   rating?: number | null;
   completedCount?: number;
   bankMasked?: string | null;
+  bankCode?: string | null;
+  bankName?: string | null;
+  tin?: string | null;
   /** Whether the user has TOTP 2FA enabled. */
   totpEnabled?: boolean;
+  notifTasks?: boolean;
+  notifPay?: boolean;
+  notifEmail?: boolean;
   createdAt?: string;
 }
 

@@ -98,7 +98,8 @@ router.post("/:id/approve", requireAuth, async (req: AuthedRequest, res: Respons
     app.workerId,
     "Application approved 🎉",
     `You've been selected for "${app.task.title}". A contract is ready to sign.`,
-    { screen: "tasks" }
+    { screen: "tasks" },
+    "notifTasks"
   );
 
   res.json(updated);
@@ -127,7 +128,8 @@ router.post("/:id/reject", requireAuth, async (req: AuthedRequest, res: Response
       app.workerId,
       "Application update",
       `Your application for "${appWithTask.task.title}" was not selected this time. Keep applying!`,
-      { screen: "tasks" }
+      { screen: "tasks" },
+      "notifTasks"
     );
   }
 

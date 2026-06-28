@@ -139,9 +139,44 @@ export const api = {
     });
   },
 
-  /** PATCH /api/me — persist profile name/email (auth). Returns the updated user. */
-  patchMe(input: { name?: string; email?: string }): Promise<User> {
+  /** PATCH /api/me — update profile fields. Returns the updated user. */
+  patchMe(input: {
+    name?: string;
+    email?: string;
+    tin?: string;
+    bankCode?: string;
+    bankAccountNumber?: string;
+    bankName?: string;
+    notifTasks?: boolean;
+    notifPay?: boolean;
+    notifEmail?: boolean;
+  }): Promise<User> {
     return request<User>('/me', { method: 'PATCH', body: input });
+  },
+
+  /** GET /api/me/tax-statement?year=YYYY → { csv: string, filename: string } */
+  async taxStatement(year: number): Promise<{ csv: string; filename: string }> {
+    const token = await getItem(SECURE_TOKEN_KEY);
+    const headers: Record<string, string> = { Accept: 'text/csv' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE_URL}/me/tax-statement?year=${year}`, { headers });
+    } catch {
+      throw new ApiError('Could not reach the Afrizone server. Check your connection.', 0);
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new ApiError(
+        (body as { error?: string }).error ?? `Request failed (${res.status})`,
+        res.status
+      );
+    }
+    const csv = await res.text();
+    const disposition = res.headers.get('Content-Disposition') ?? '';
+    const match = disposition.match(/filename="([^"]+)"/);
+    const filename = match?.[1] ?? `afrizone-wht-${year}.csv`;
+    return { csv, filename };
   },
 
   /** POST /api/auth/2fa/verify — exchange a challenge + code for a session. */
