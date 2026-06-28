@@ -274,6 +274,22 @@ export interface Contract {
   task?: Pick<Task, 'id' | 'title'>;
 }
 
+export type DisputeStatus = 'OPEN' | 'RESOLVED' | 'CLOSED';
+export type DisputeEntityType = 'PAYMENT' | 'TIMESHEET';
+
+/** Dispute raised by a worker against a payment or timesheet. */
+export interface Dispute {
+  id: string;
+  entityType: DisputeEntityType;
+  entityId: string;
+  reason: string;
+  status: DisputeStatus;
+  resolution?: string | null;
+  createdAt: string;
+  /** Entity summary joined server-side. */
+  entity?: { title: string; gross?: number; net?: number } | null;
+}
+
 /** One section of the rendered contract document. */
 export interface ContractSection {
   heading: string;

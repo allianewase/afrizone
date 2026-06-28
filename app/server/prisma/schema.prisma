@@ -72,6 +72,7 @@ model User {
   contracts    Contract[]
   passwordResets PasswordReset[]
   kycDocuments   KycDocument[]
+  disputes     Dispute[]
 }
 
 model Task {
@@ -290,6 +291,23 @@ model PasswordReset {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+model Dispute {
+  id         String   @id @default(cuid())
+  workerId   String
+  entityType String   // PAYMENT | TIMESHEET
+  entityId   String
+  reason     String
+  status     String   @default("OPEN") // DisputeStatus: OPEN | RESOLVED | CLOSED
+  resolution String?  // admin note when resolving / closing
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  worker User @relation(fields: [workerId], references: [id])
+
+  @@index([workerId])
+  @@index([entityId])
 }
 
 model KycDocument {

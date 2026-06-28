@@ -218,6 +218,8 @@ export default function ProfileScreen() {
 
       <Section title="Support">
         <Card padded={false} style={styles.list}>
+          <ListRow icon="alert" title="Disputes" onPress={() => router.push('/disputes')} />
+          <Divider />
           <ListRow icon="bell" title="Help & support" onPress={() => router.push('/support')} />
         </Card>
       </Section>

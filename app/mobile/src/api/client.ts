@@ -16,6 +16,7 @@ import type {
   Withdrawal,
   Contract,
   ContractDetail,
+  Dispute,
   LoginResponse,
   AuthSuccess,
   TwoFactorSetup,
@@ -343,6 +344,20 @@ export const api = {
       method: 'POST',
       body: { amount },
     });
+  },
+
+  /** GET /api/me/disputes — worker's disputes with entity summary. */
+  myDisputes(signal?: AbortSignal): Promise<Dispute[]> {
+    return request<Dispute[]>('/me/disputes', { signal });
+  },
+
+  /** POST /api/me/disputes — raise a dispute on a payment or timesheet. */
+  raiseDispute(input: {
+    entityType: 'PAYMENT' | 'TIMESHEET';
+    entityId: string;
+    reason: string;
+  }): Promise<Dispute> {
+    return request<Dispute>('/me/disputes', { method: 'POST', body: input });
   },
 
   /** GET /api/me/contracts — my contracts, joined with a task summary. */

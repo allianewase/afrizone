@@ -18,6 +18,7 @@ import meRouter from "./routes/me";
 import clockRouter from "./routes/clock";
 import walletRouter from "./routes/wallet";
 import contractsRouter from "./routes/contracts";
+import disputesRouter from "./routes/disputes";
 import webhooksRouter from "./routes/webhooks";
 import kycDocumentsRouter from "./routes/kycDocuments";
 
@@ -65,6 +66,7 @@ app.use("/api/me/kyc/documents", kycDocumentsRouter);
 app.use("/api/clock", clockRouter);
 app.use("/api/wallet", walletRouter);
 app.use("/api/contracts", contractsRouter);
+app.use("/api/me/disputes", disputesRouter);
 app.use("/api/webhooks", webhooksRouter);
 
 // Serve uploaded KYC documents (dev only; use signed S3 URLs in prod).

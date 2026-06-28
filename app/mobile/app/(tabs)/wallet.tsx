@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Screen } from '../../src/components/Screen';
@@ -25,6 +26,7 @@ export default function WalletScreen() {
   const { user } = useAuth();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [yearSheetOpen, setYearSheetOpen] = useState(false);
+  const [disputeTx, setDisputeTx] = useState<Transaction | null>(null);
   const [dlBusy, setDlBusy] = useState(false);
   const [dlError, setDlError] = useState<string | null>(null);
 
@@ -102,7 +104,10 @@ export default function WalletScreen() {
             <Card padded={false} style={styles.txCard}>
               {(txns.data ?? []).map((tx, i) => (
                 <View key={tx.id}>
-                  <TransactionRow tx={tx} />
+                  <TransactionRow
+                    tx={tx}
+                    onPress={tx.kind === 'earning' ? () => setDisputeTx(tx) : undefined}
+                  />
                   {i < (txns.data?.length ?? 0) - 1 ? <View style={styles.divider} /> : null}
                 </View>
               ))}
@@ -141,21 +146,24 @@ export default function WalletScreen() {
         onClose={() => setYearSheetOpen(false)}
         onSelect={downloadStatement}
       />
+      <DisputeSheet
+        tx={disputeTx}
+        onClose={() => setDisputeTx(null)}
+        onFiled={() => { setDisputeTx(null); txns.reload(); wallet.reload(); }}
+      />
     </Screen>
   );
 }
 
-function TransactionRow({ tx }: { tx: Transaction }) {
+function TransactionRow({ tx, onPress }: { tx: Transaction; onPress?: () => void }) {
   const out = tx.kind === 'withdrawal';
-  return (
+  const row = (
     <View style={styles.txRow}>
       <View style={[styles.txIcon, { backgroundColor: out ? colors.surfaceSand : colors.moneySoft }]}>
         <Icon name={out ? 'arrow-up' : 'arrow-down'} size={18} color={out ? colors.textMuted : colors.money} />
       </View>
       <View style={styles.txBody}>
-        <Text style={styles.txTitle} numberOfLines={1}>
-          {tx.title}
-        </Text>
+        <Text style={styles.txTitle} numberOfLines={1}>{tx.title}</Text>
         <Text style={styles.txSub}>{formatDate(tx.createdAt)} · {out ? 'Withdrawal' : 'Earning'}</Text>
       </View>
       <View style={styles.txRight}>
@@ -165,10 +173,17 @@ function TransactionRow({ tx }: { tx: Transaction }) {
           color={out ? colors.text : colors.money}
           signed={out ? 'out' : 'in'}
         />
-        <StatusPill status={tx.status} small />
+        <View style={styles.txPillRow}>
+          <StatusPill status={tx.status} small />
+          {!out && <Icon name="chevron-right" size={14} color={colors.line} />}
+        </View>
       </View>
     </View>
   );
+  if (onPress) {
+    return <Pressable onPress={onPress} accessibilityRole="button">{row}</Pressable>;
+  }
+  return row;
 }
 
 function WithdrawSheet({
@@ -306,6 +321,130 @@ function YearSheet({
   );
 }
 
+function DisputeSheet({
+  tx,
+  onClose,
+  onFiled,
+}: {
+  tx: Transaction | null;
+  onClose: () => void;
+  onFiled: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function close() {
+    setReason('');
+    setBusy(false);
+    setDone(false);
+    setError(null);
+    onClose();
+  }
+
+  async function submit() {
+    if (!tx) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.raiseDispute({ entityType: 'PAYMENT', entityId: tx.id, reason });
+      setDone(true);
+      onFiled();
+    } catch (e) {
+      setError(e instanceof ApiError || e instanceof Error ? e.message : 'Could not file dispute.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const alreadyDisputed = tx?.status === 'DISPUTED';
+  const canDispute = tx?.status === 'APPROVED' || tx?.status === 'RELEASED';
+
+  return (
+    <Modal visible={!!tx} transparent animationType="slide" onRequestClose={close}>
+      <Pressable style={styles.backdrop} onPress={close} />
+      <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
+        <View style={styles.grabber} />
+
+        {done ? (
+          <View style={styles.doneWrap}>
+            <View style={styles.doneIcon}>
+              <Icon name="check-circle" size={32} color={colors.money} strokeWidth={2} />
+            </View>
+            <Text style={styles.sheetTitle}>Dispute filed</Text>
+            <Text style={styles.sheetSub}>
+              Our team will review within 2 business days. Track progress in Disputes.
+            </Text>
+            <Button label="View disputes" icon="list" onPress={() => { close(); router.push('/disputes'); }} />
+            <Button label="Done" variant="glass" onPress={close} />
+          </View>
+        ) : alreadyDisputed ? (
+          <>
+            <Text style={styles.sheetTitle}>Dispute filed</Text>
+            <Text style={styles.sheetSub}>{tx?.title}</Text>
+            <Banner
+              tone="amber"
+              icon="shield"
+              title="A dispute is open on this payment"
+              message="Our team is reviewing it. Check Disputes for updates and any admin response."
+            />
+            <Button label="View disputes" icon="list" onPress={() => { close(); router.push('/disputes'); }} />
+          </>
+        ) : (
+          <>
+            <Text style={styles.sheetTitle}>Report an issue</Text>
+            <Text style={styles.sheetSub}>{tx?.title}</Text>
+            {canDispute ? (
+              <>
+                <View style={styles.disputeAmounts}>
+                  <View style={styles.disputeAmountItem}>
+                    <Text style={styles.disputeAmountLabel}>Amount paid</Text>
+                    <Text style={styles.disputeAmountValue}>{formatNaira(tx?.amount ?? 0)}</Text>
+                  </View>
+                  <Text style={styles.disputeAmountSep}>·</Text>
+                  <View style={styles.disputeAmountItem}>
+                    <Text style={styles.disputeAmountLabel}>Status</Text>
+                    <StatusPill status={tx?.status ?? ''} small />
+                  </View>
+                </View>
+                <Text style={styles.disputeLabel}>Describe the issue</Text>
+                <TextInput
+                  style={styles.disputeInput}
+                  value={reason}
+                  onChangeText={setReason}
+                  placeholder="e.g. I worked 6 hours but was paid for 4. My timesheet shows the correct hours."
+                  placeholderTextColor={colors.textMuted}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+                {error ? <Text style={styles.disputeError}>{error}</Text> : null}
+                <Button
+                  label="Submit dispute"
+                  icon="alert"
+                  onPress={submit}
+                  loading={busy}
+                  disabled={reason.trim().length < 10}
+                />
+              </>
+            ) : (
+              <Banner
+                tone="amber"
+                icon="alert"
+                title="Can't dispute this payment"
+                message="Only approved or released payments can be disputed."
+              />
+            )}
+          </>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
 const styles = StyleSheet.create({
   actions: { marginTop: spacing.lg },
   minNote: { color: colors.textMuted, fontSize: type.size.sm, marginTop: spacing.sm, textAlign: 'center' },
@@ -322,6 +461,7 @@ const styles = StyleSheet.create({
   txTitle: { color: colors.text, fontSize: type.size.base, fontWeight: '700' },
   txSub: { color: colors.textMuted, fontSize: type.size.xs },
   txRight: { alignItems: 'flex-end', gap: 4 },
+  txPillRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   divider: { height: 1, backgroundColor: colors.line },
   statement: {
     flexDirection: 'row',
@@ -375,4 +515,23 @@ const styles = StyleSheet.create({
   yearText: { color: colors.text, fontSize: type.size.lg, fontWeight: '700' },
   sheetDone: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.lg },
   doneIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.moneySoft, alignItems: 'center', justifyContent: 'center' },
+  doneWrap: { alignItems: 'center', gap: spacing.md },
+  disputeAmounts: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
+  disputeAmountItem: { gap: 4 },
+  disputeAmountLabel: { color: colors.textMuted, fontSize: type.size.xs, fontWeight: '600' },
+  disputeAmountValue: { color: colors.text, fontSize: type.size.base, fontWeight: '700' },
+  disputeAmountSep: { color: colors.line, fontSize: type.size.lg },
+  disputeLabel: { color: colors.text, fontSize: type.size.sm, fontWeight: '700', marginBottom: spacing.xs },
+  disputeInput: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radii.input,
+    padding: spacing.md,
+    color: colors.text,
+    fontSize: type.size.sm,
+    minHeight: 100,
+    marginBottom: spacing.sm,
+  },
+  disputeError: { color: colors.danger, fontSize: type.size.sm, marginBottom: spacing.sm },
 });
