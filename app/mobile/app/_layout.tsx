@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
+import * as Linking from 'expo-linking';
 import { AuthProvider, useAuth } from '../src/auth/AuthContext';
 import { colors } from '../src/theme';
 import Splash from '../src/components/Splash';
@@ -72,6 +73,31 @@ function NotificationHandler() {
 }
 
 /**
+ * Handles password-reset deep links of the form:
+ *   afrizone:///reset?token=<jwt>
+ * The reset screen already reads params.token, so we just navigate there.
+ */
+function DeepLinkHandler() {
+  const router = useRouter();
+  const url = Linking.useURL();
+
+  useEffect(() => {
+    if (!url) return;
+    const { path, queryParams } = Linking.parse(url);
+    const token = queryParams?.token;
+    if (
+      typeof token === 'string' &&
+      token.length > 0 &&
+      (path === 'reset' || (typeof path === 'string' && path.endsWith('/reset')))
+    ) {
+      router.push({ pathname: '/(auth)/reset', params: { token } });
+    }
+  }, [url, router]);
+
+  return null;
+}
+
+/**
  * Auth gate: shows the branded splash on boot, then routes. Signed-out users
  * land on the WELCOME carousel (the front door → Sign in); signed-in users go
  * to the tabs. The splash is held for a short minimum so it's actually visible.
@@ -117,6 +143,7 @@ export default function RootLayout() {
         <AuthProvider>
           <StatusBar style="dark" />
           <NotificationHandler />
+          <DeepLinkHandler />
           <AuthGate>
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
               <Stack.Screen name="(auth)" />

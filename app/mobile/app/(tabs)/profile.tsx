@@ -134,9 +134,20 @@ export default function ProfileScreen() {
           <ListRow
             icon="shield"
             title="KYC status"
-            subtitle="Identity & tier verification"
+            subtitle={
+              kyc === 'PENDING' || kyc === 'VERIFIED'
+                ? 'Under review — we\'ll notify you when done'
+                : kyc === 'TIER_APPROVED'
+                  ? 'Verified · tap to add a tier or re-verify'
+                  : 'Identity & tier verification'
+            }
             right={<StatusPill status={toCanonical(kyc)} small label={kyc} />}
-            chevron={false}
+            onPress={
+              kyc === 'PENDING' || kyc === 'VERIFIED'
+                ? undefined
+                : () => router.push('/(auth)/kyc')
+            }
+            chevron={kyc !== 'PENDING' && kyc !== 'VERIFIED'}
           />
         </Card>
       </Section>
