@@ -54,6 +54,8 @@ export interface Task {
   endDate?: string | null;
   locationType: LocationType;
   address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   geofenceRadius?: number;
   slots: number;
   status: TaskStatus;

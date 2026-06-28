@@ -5,16 +5,25 @@ import { ClockType, CLOCK_TYPES } from "../types";
 
 const router = Router();
 
-// GEOFENCE DECISION:
-// The Task model stores geofenceRadius (metres) and an address, but NOT a
-// canonical lat/lng for the task location. For this demo we therefore treat any
-// provided coords on a PHYSICAL task as in-fence (withinFence = true), since we
-// have no reference point to measure distance against. Rules applied:
-//   - REMOTE task                       → withinFence = true (no geofence)
-//   - PHYSICAL task, lat & lng provided  → withinFence = true (demo: trust coords)
-//   - PHYSICAL task, coords missing      → withinFence = false (cannot verify)
-// If/when Task gains lat/lng, swap the PHYSICAL branch for a haversine check
-// against task.geofenceRadius.
+/** Great-circle distance in metres between two WGS-84 points (Haversine). */
+function haversineMetres(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6_371_000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// GEOFENCE DECISION (applied per clock event):
+//   - REMOTE task                                → withinFence = true  (no zone)
+//   - PHYSICAL task, task has lat/lng, worker has coords
+//                                                → haversine check vs task.geofenceRadius
+//   - PHYSICAL task, task has lat/lng, no worker coords
+//                                                → withinFence = false (can't verify)
+//   - PHYSICAL task, task has NO lat/lng         → withinFence = true  (zone not configured)
 
 // POST /api/clock → body {taskId, type:"IN"|"OUT", lat?, lng?}.
 // Acting worker = req.user.id. → {event, clockedIn, elapsedSeconds}.
@@ -29,15 +38,18 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
   const task = await prisma.task.findUnique({ where: { id: String(taskId) } });
   if (!task) return res.status(404).json({ error: "Task not found" });
 
-  const hasCoords = lat != null && lng != null;
+  const hasWorkerCoords = lat != null && lng != null;
+  const hasTaskCoords = task.lat != null && task.lng != null;
   let withinFence: boolean;
   if (task.locationType === "REMOTE") {
     withinFence = true;
-  } else if (hasCoords) {
-    // Demo: provided coords on a physical task are treated as in-fence.
-    withinFence = true;
+  } else if (!hasTaskCoords) {
+    withinFence = true; // geofence not configured for this task
+  } else if (!hasWorkerCoords) {
+    withinFence = false; // task has a zone but worker didn't share location
   } else {
-    withinFence = false;
+    const dist = haversineMetres(Number(lat), Number(lng), task.lat!, task.lng!);
+    withinFence = dist <= task.geofenceRadius;
   }
 
   const event = await prisma.clockEvent.create({

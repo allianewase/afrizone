@@ -87,6 +87,8 @@ interface FormState {
   endDate: string
   locationType: LocationType
   address: string
+  lat: string
+  lng: string
   geofenceRadius: string
   slots: string
   deadline: string
@@ -104,6 +106,8 @@ const EMPTY_FORM: FormState = {
   endDate: '',
   locationType: 'PHYSICAL',
   address: '',
+  lat: '',
+  lng: '',
   geofenceRadius: '100',
   slots: '1',
   deadline: '',
@@ -142,6 +146,8 @@ function NewTaskModal({
       endDate: form.endDate || new Date().toISOString(),
       locationType: form.locationType,
       address: form.locationType === 'PHYSICAL' ? form.address.trim() : undefined,
+      lat: form.locationType === 'PHYSICAL' && form.lat ? Number(form.lat) : undefined,
+      lng: form.locationType === 'PHYSICAL' && form.lng ? Number(form.lng) : undefined,
       geofenceRadius: Number(form.geofenceRadius) || 100,
       slots: Number(form.slots) || 1,
       deadline: form.deadline || new Date().toISOString(),
@@ -280,7 +286,7 @@ function NewTaskModal({
           </div>
           {form.locationType === 'PHYSICAL' && (
             <>
-              <div className="field">
+              <div className="field span2">
                 <label htmlFor="t-addr">Address</label>
                 <input
                   id="t-addr"
@@ -288,6 +294,30 @@ function NewTaskModal({
                   value={form.address}
                   onChange={(e) => set('address', e.target.value)}
                   placeholder="Ikeja City Mall"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="t-lat">Latitude (optional)</label>
+                <input
+                  id="t-lat"
+                  className="input tnum"
+                  type="number"
+                  step="any"
+                  value={form.lat}
+                  onChange={(e) => set('lat', e.target.value)}
+                  placeholder="6.6018"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="t-lng">Longitude (optional)</label>
+                <input
+                  id="t-lng"
+                  className="input tnum"
+                  type="number"
+                  step="any"
+                  value={form.lng}
+                  onChange={(e) => set('lng', e.target.value)}
+                  placeholder="3.3515"
                 />
               </div>
               <div className="field">

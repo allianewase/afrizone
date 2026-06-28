@@ -172,7 +172,9 @@ export default function KycScreen() {
         <Pressable onPress={back} hitSlop={10} style={styles.backBtn} accessibilityLabel="Back">
           <Icon name="chevron-left" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.topTitle}>Get verified</Text>
+        <Text style={styles.topTitle}>
+          {user?.kycStatus === 'REJECTED' ? 'Re-verify' : 'Get verified'}
+        </Text>
         <View style={{ width: layout.hitTarget }} />
       </View>
 
@@ -191,12 +193,21 @@ export default function KycScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {step !== 'submitted' ? (
-          <Banner
-            tone="indigo"
-            icon="shield"
-            title="Secure verification"
-            message="Your documents are uploaded securely. Name, email, tier, TIN and bank are submitted on the final step."
-          />
+          user?.kycStatus === 'REJECTED' ? (
+            <Banner
+              tone="danger"
+              icon="shield"
+              title="Previous verification rejected"
+              message="Please update your documents and re-submit. Ensure your ID is clear and your selfie matches your ID photo."
+            />
+          ) : (
+            <Banner
+              tone="indigo"
+              icon="shield"
+              title="Secure verification"
+              message="Your documents are uploaded securely. Name, email, tier, TIN and bank are submitted on the final step."
+            />
+          )
         ) : null}
         {error ? <Banner tone="danger" icon="alert" title="Couldn’t submit" message={error} /> : null}
 

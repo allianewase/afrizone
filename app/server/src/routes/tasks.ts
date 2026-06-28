@@ -47,6 +47,8 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
         endDate: b.endDate ? new Date(b.endDate) : new Date(),
         locationType: b.locationType || "PHYSICAL",
         address: b.address ?? null,
+        lat: b.lat != null ? Number(b.lat) : null,
+        lng: b.lng != null ? Number(b.lng) : null,
         geofenceRadius: b.geofenceRadius ?? 100,
         slots: b.slots ?? 1,
         status: b.status || "OPEN",
@@ -106,6 +108,8 @@ router.patch("/:id", requireAuth, async (req: AuthedRequest, res: Response) => {
   for (const f of stringFields) if (b[f] !== undefined) data[f] = b[f];
   const intFields = ["rate", "budget", "geofenceRadius", "slots"];
   for (const f of intFields) if (b[f] !== undefined) data[f] = b[f];
+  if (b.lat !== undefined) data.lat = b.lat != null ? Number(b.lat) : null;
+  if (b.lng !== undefined) data.lng = b.lng != null ? Number(b.lng) : null;
   const dateFields = ["startDate", "endDate", "deadline"];
   for (const f of dateFields) if (b[f] !== undefined) data[f] = new Date(b[f]);
 

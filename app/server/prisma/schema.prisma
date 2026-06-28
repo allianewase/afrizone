@@ -87,6 +87,8 @@ model Task {
   endDate        DateTime
   locationType   String // LocationType enum (PHYSICAL | REMOTE)
   address        String?
+  lat            Float?   // task site latitude  — required for real geofence check
+  lng            Float?   // task site longitude — required for real geofence check
   geofenceRadius Int      @default(100)
   slots          Int
   status         String   @default("OPEN") // TaskStatus enum
