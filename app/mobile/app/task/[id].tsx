@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Modal, Pressable, TextInput, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
@@ -84,6 +84,22 @@ export default function TaskDetailScreen() {
             <Meta icon="list" label="Slots" value={`${Math.max(0, t.slots - (t.filledCount ?? 0))} of ${t.slots} left`} />
             <Meta icon="briefcase" label="Pay model" value={payLabel(t.payModel, t.rate, t.budget)} />
           </View>
+
+          {!remote && t.lat != null && t.lng != null ? (
+            <Pressable
+              style={styles.directions}
+              onPress={() =>
+                Linking.openURL(
+                  `https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`
+                )
+              }
+              accessibilityRole="button"
+            >
+              <Icon name="map-pin" size={15} color={colors.clay} />
+              <Text style={styles.directionsText}>Get directions</Text>
+              <Icon name="chevron-right" size={14} color={colors.clay} />
+            </Pressable>
+          ) : null}
 
           {!remote && t.geofenceRadius ? (
             <Card tinted style={styles.geofence}>
@@ -234,6 +250,18 @@ const styles = StyleSheet.create({
   metaItem: { flexDirection: 'row', gap: spacing.sm, width: '50%', paddingVertical: spacing.sm, alignItems: 'flex-start' },
   metaLabel: { color: colors.textMuted, fontSize: type.size.xs },
   metaValue: { color: colors.text, fontSize: type.size.base, fontWeight: '700' },
+  directions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radii.button,
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  directionsText: { color: colors.clay, fontWeight: '700', fontSize: type.size.sm },
   geofence: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
   geofenceText: { flex: 1, color: colors.text, fontSize: type.size.sm },
   section: { color: colors.text, fontSize: type.size.lg, fontWeight: '800', marginTop: spacing.xl, marginBottom: spacing.sm },

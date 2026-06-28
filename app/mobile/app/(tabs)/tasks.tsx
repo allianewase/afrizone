@@ -104,6 +104,10 @@ export default function MyTasksScreen() {
 
 function ApplicationCard({ app, onPress }: { app: Application; onPress: () => void }) {
   const t = app.task;
+  const router = useRouter();
+  const completed = t?.status === 'CLOSED' || t?.status === 'ARCHIVED';
+  const hasPayment = completed && app.status === 'APPROVED' && !!app.paymentId;
+
   return (
     <Pressable onPress={onPress} accessibilityRole="button">
       <Card>
@@ -132,11 +136,22 @@ function ApplicationCard({ app, onPress }: { app: Application; onPress: () => vo
           )}
           <View style={styles.cta}>
             <Text style={styles.ctaText}>
-              {app.status === 'APPROVED' ? 'Open & clock in' : 'View'}
+              {app.status === 'APPROVED' && !completed ? 'Open & clock in' : 'View'}
             </Text>
             <Icon name="chevron-right" size={16} color={colors.clay} />
           </View>
         </View>
+        {hasPayment ? (
+          <Pressable
+            style={styles.paymentLink}
+            onPress={(e) => { e.stopPropagation?.(); router.push(`/payment/${app.paymentId}`); }}
+            accessibilityRole="button"
+          >
+            <Icon name="dollar" size={14} color={colors.money} />
+            <Text style={styles.paymentLinkText}>View payment breakdown</Text>
+            <Icon name="chevron-right" size={14} color={colors.money} />
+          </Pressable>
+        ) : null}
       </Card>
     </Pressable>
   );
@@ -155,5 +170,20 @@ const styles = StyleSheet.create({
     fontSize: type.size.sm,
     marginBottom: spacing.xs,
     fontStyle: 'italic',
+  },
+  paymentLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: spacing.xs,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  paymentLinkText: {
+    flex: 1,
+    color: colors.money,
+    fontSize: type.size.sm,
+    fontWeight: '700',
   },
 });

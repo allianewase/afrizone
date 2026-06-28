@@ -111,13 +111,20 @@ router.patch("/", requireAuth, async (req: AuthedRequest, res: Response) => {
   res.json(formatUser(user));
 });
 
-// GET /api/me/applications → worker's applications joined with task summary.
+// GET /api/me/applications → worker's applications joined with task summary + paymentId.
 router.get("/applications", requireAuth, async (req: AuthedRequest, res: Response) => {
-  const apps = await prisma.application.findMany({
-    where: { workerId: req.user!.id },
-    orderBy: { createdAt: "desc" },
-    include: { task: true },
-  });
+  const [apps, payments] = await Promise.all([
+    prisma.application.findMany({
+      where: { workerId: req.user!.id },
+      orderBy: { createdAt: "desc" },
+      include: { task: true },
+    }),
+    prisma.payment.findMany({
+      where: { workerId: req.user!.id },
+      select: { id: true, taskId: true },
+    }),
+  ]);
+  const paymentByTask = Object.fromEntries(payments.map((p) => [p.taskId, p.id]));
   res.json(
     apps.map((a) => ({
       id: a.id,
@@ -126,6 +133,7 @@ router.get("/applications", requireAuth, async (req: AuthedRequest, res: Respons
       status: a.status,
       reason: a.reason,
       createdAt: a.createdAt,
+      paymentId: paymentByTask[a.taskId] ?? null,
       task: {
         id: a.task.id,
         title: a.task.title,

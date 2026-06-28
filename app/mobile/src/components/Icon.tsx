@@ -39,7 +39,8 @@ export type IconName =
   | 'search'
   | 'close'
   | 'filter'
-  | 'star';
+  | 'star'
+  | 'dollar';
 
 interface IconProps {
   name: IconName;
@@ -293,6 +294,13 @@ function renderGlyph(
           strokeLinejoin="round"
           fill={c.fill}
         />
+      );
+    case 'dollar':
+      return (
+        <>
+          <Circle cx="12" cy="12" r="9" {...c} />
+          <Path d="M12 7v10M9.5 9.5h3a1.5 1.5 0 0 1 0 3h-1a1.5 1.5 0 0 0 0 3H15" {...c} />
+        </>
       );
     default:
       return null;

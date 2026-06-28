@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Screen } from '../src/components/Screen';
 import { Card } from '../src/components/Card';
 import { Segmented } from '../src/components/Segmented';
@@ -75,6 +76,7 @@ export default function DisputesScreen() {
 
 function DisputeCard({ dispute: d }: { dispute: Dispute }) {
   const cfg = STATUS_CONFIG[d.status] ?? STATUS_CONFIG.OPEN;
+  const router = useRouter();
   return (
     <Card style={styles.card}>
       <View style={styles.cardTop}>
@@ -113,7 +115,24 @@ function DisputeCard({ dispute: d }: { dispute: Dispute }) {
         </Text>
       ) : null}
 
-      <Text style={styles.date}>Filed {formatDate(d.createdAt)}</Text>
+      <View style={styles.bottom}>
+        <Text style={styles.date}>Filed {formatDate(d.createdAt)}</Text>
+        <Pressable
+          style={styles.entityLink}
+          onPress={() =>
+            d.entityType === 'PAYMENT'
+              ? router.push(`/payment/${d.entityId}`)
+              : router.push('/timesheets')
+          }
+          accessibilityRole="button"
+        >
+          <Icon name={d.entityType === 'PAYMENT' ? 'dollar' : 'clock'} size={13} color={colors.clay} />
+          <Text style={styles.entityLinkText}>
+            {d.entityType === 'PAYMENT' ? 'View payment' : 'View timesheets'}
+          </Text>
+          <Icon name="chevron-right" size={13} color={colors.clay} />
+        </Pressable>
+      </View>
     </Card>
   );
 }
@@ -155,5 +174,15 @@ const styles = StyleSheet.create({
   resolutionLabel: { color: colors.money, fontSize: type.size.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   resolutionText: { color: colors.text, fontSize: type.size.sm, lineHeight: 18 },
   pendingNote: { color: colors.textMuted, fontSize: type.size.xs, fontStyle: 'italic' },
-  date: { color: colors.textMuted, fontSize: type.size.xs, marginTop: spacing.xs },
+  bottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.xs,
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  date: { color: colors.textMuted, fontSize: type.size.xs },
+  entityLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  entityLinkText: { color: colors.clay, fontSize: type.size.xs, fontWeight: '700' },
 });

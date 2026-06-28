@@ -76,6 +76,7 @@ export interface Application {
   pitch?: string | null;
   status: AppStatus;
   reason?: string | null;
+  paymentId?: string | null;
   createdAt?: string;
   // task summary joined by GET /api/me/applications (v3) / client-side for "My Tasks"
   task?: Pick<

@@ -26,6 +26,7 @@ import type { PaymentDetail } from '../../src/api/types';
 
 export default function PaymentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [disputeOpen, setDisputeOpen] = useState(false);
 
   const paymentQ = useAsync<PaymentDetail>(
@@ -93,7 +94,7 @@ export default function PaymentDetailScreen() {
                   label="View disputes"
                   variant="secondary"
                   icon="list"
-                  onPress={() => {}}
+                  onPress={() => router.push('/disputes')}
                 />
               </>
             ) : canDispute ? (

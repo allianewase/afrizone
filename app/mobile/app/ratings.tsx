@@ -9,7 +9,7 @@ import { api } from '../src/api/client';
 import { useAsync } from '../src/lib/useAsync';
 import { useAuth } from '../src/auth/AuthContext';
 import { formatDate } from '../src/lib/format';
-import type { Rating } from '../src/api/types';
+import type { Rating, User } from '../src/api/types';
 
 function RatingCard({ r }: { r: Rating }) {
   return (
@@ -46,6 +46,7 @@ function AggregateHeader({ rating, count }: { rating?: number | null; count?: nu
 export default function RatingsScreen() {
   const { user } = useAuth();
   const ratings = useAsync<Rating[]>((signal) => api.myRatings(signal), []);
+  const me = useAsync<User>((signal) => api.meWorker(signal), []);
 
   return (
     <Screen
@@ -61,7 +62,10 @@ export default function RatingsScreen() {
         <ErrorState message={ratings.error} onRetry={ratings.reload} />
       ) : (
         <>
-          <AggregateHeader rating={user?.rating} count={user?.completedCount} />
+          <AggregateHeader
+            rating={me.data?.rating ?? user?.rating}
+            count={me.data?.completedCount ?? user?.completedCount}
+          />
           {(ratings.data ?? []).length === 0 ? (
             <EmptyState
               title="No ratings yet"
