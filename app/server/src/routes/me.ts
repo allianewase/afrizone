@@ -200,6 +200,25 @@ router.get("/clock/:taskId", requireAuth, async (req: AuthedRequest, res: Respon
   res.json({ clockedIn, lastEventAt: last.createdAt, elapsedSeconds });
 });
 
+// GET /api/me/ratings → worker's individual ratings, newest-first.
+router.get("/ratings", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const ratings = await prisma.rating.findMany({
+    where: { workerId: req.user!.id },
+    orderBy: { createdAt: "desc" },
+    include: { task: true },
+  });
+  res.json(
+    ratings.map((r) => ({
+      id: r.id,
+      taskId: r.taskId,
+      score: r.score,
+      note: r.note,
+      createdAt: r.createdAt,
+      task: { id: r.task.id, title: r.task.title },
+    }))
+  );
+});
+
 // GET /api/me/contracts → worker's contracts joined with task summary.
 router.get("/contracts", requireAuth, async (req: AuthedRequest, res: Response) => {
   const contracts = await prisma.contract.findMany({

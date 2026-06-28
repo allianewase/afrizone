@@ -17,6 +17,7 @@ import type {
   Contract,
   ContractDetail,
   Dispute,
+  Rating,
   LoginResponse,
   AuthSuccess,
   TwoFactorSetup,
@@ -344,6 +345,11 @@ export const api = {
       method: 'POST',
       body: { amount },
     });
+  },
+
+  /** GET /api/me/ratings — worker's individual rating history, newest-first. */
+  myRatings(signal?: AbortSignal): Promise<Rating[]> {
+    return request<Rating[]>('/me/ratings', { signal });
   },
 
   /** GET /api/me/disputes — worker's disputes with entity summary. */

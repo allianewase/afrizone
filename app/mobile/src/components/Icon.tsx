@@ -35,7 +35,11 @@ export type IconName =
   | 'stop'
   | 'mail'
   | 'lock'
-  | 'key';
+  | 'key'
+  | 'search'
+  | 'close'
+  | 'filter'
+  | 'star';
 
 interface IconProps {
   name: IconName;
@@ -255,6 +259,40 @@ function renderGlyph(
           <Circle cx="8" cy="8" r="4" {...c} />
           <Path d="M11 11l9 9M17 17l2-2M14 14l2-2" {...c} />
         </>
+      );
+    case 'search':
+      return (
+        <>
+          <Circle cx="11" cy="11" r="7" {...c} />
+          <Line x1="21" y1="21" x2="16.65" y2="16.65" {...c} />
+        </>
+      );
+    case 'close':
+      return (
+        <>
+          <Line x1="18" y1="6" x2="6" y2="18" {...c} />
+          <Line x1="6" y1="6" x2="18" y2="18" {...c} />
+        </>
+      );
+    case 'filter':
+      return (
+        <>
+          <Line x1="4" y1="6" x2="20" y2="6" {...c} />
+          <Line x1="7" y1="12" x2="17" y2="12" {...c} />
+          <Line x1="10" y1="18" x2="14" y2="18" {...c} />
+        </>
+      );
+    case 'star':
+      // Five-pointed star — filled when used with fill={color} override on the component.
+      return (
+        <Path
+          d="M12 2l2.9 6.3 6.8.6-5 4.7 1.5 6.8L12 17l-6.2 3.4 1.5-6.8-5-4.7 6.8-.6Z"
+          stroke={c.stroke}
+          strokeWidth={c.strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill={c.fill}
+        />
       );
     default:
       return null;

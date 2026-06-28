@@ -39,6 +39,8 @@ export interface Task {
   endDate: string
   locationType: LocationType
   address?: string | null
+  lat?: number | null
+  lng?: number | null
   geofenceRadius?: number
   slots: number
   status: TaskStatus
@@ -112,6 +114,10 @@ export interface Worker {
   kycStatus: KycStatus
   completedCount: number
   rating?: number | null
+}
+
+export interface WorkerDetail extends Worker {
+  applications?: Application[]
 }
 
 export interface SpendByCategory {

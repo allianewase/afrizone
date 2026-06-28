@@ -26,6 +26,7 @@ import type {
   TwoFactorStatus,
   User,
   Worker,
+  WorkerDetail,
 } from './types'
 
 const TOKEN_KEY = 'afz_token'
@@ -195,8 +196,15 @@ export const api = {
 
   // Workers
   workers: (signal?: AbortSignal) => request<Worker[]>('/workers', { signal }),
+  workerDetail: (id: string, signal?: AbortSignal) =>
+    request<WorkerDetail>(`/workers/${id}`, { signal }),
   reviewKyc: (id: string, decision: 'TIER_APPROVED' | 'REJECTED') =>
     request<Worker>(`/workers/${id}/kyc`, { method: 'POST', body: { decision } }),
+  rateWorker: (id: string, body: { taskId: string; score: number; note?: string }) =>
+    request<{ id: string; rating: number | null; completedCount: number }>(
+      `/workers/${id}/rate`,
+      { method: 'POST', body },
+    ),
 
   // ===== v2: Hiring =====
   jobs: (signal?: AbortSignal) => request<Job[]>('/jobs', { signal }),

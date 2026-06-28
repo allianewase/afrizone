@@ -72,7 +72,9 @@ model User {
   contracts    Contract[]
   passwordResets PasswordReset[]
   kycDocuments   KycDocument[]
-  disputes     Dispute[]
+  disputes        Dispute[]
+  ratingsReceived Rating[] @relation("WorkerRatings")
+  ratingsGiven    Rating[] @relation("RatingsGiven")
 }
 
 model Task {
@@ -103,6 +105,7 @@ model Task {
   payments     Payment[]
   clockEvents  ClockEvent[]
   contracts    Contract[]
+  ratings      Rating[]
 }
 
 model Application {
@@ -291,6 +294,23 @@ model PasswordReset {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+model Rating {
+  id          String   @id @default(cuid())
+  workerId    String
+  taskId      String
+  score       Int      // 1–5 stars
+  note        String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  worker    User @relation("WorkerRatings",  fields: [workerId],    references: [id])
+  task      Task @relation(                  fields: [taskId],      references: [id])
+  createdBy User @relation("RatingsGiven",   fields: [createdById], references: [id])
+
+  @@unique([workerId, taskId]) // one rating per worker per task
+  @@index([workerId])
 }
 
 model Dispute {

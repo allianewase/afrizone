@@ -21,6 +21,7 @@ import { Button } from '../../src/components/Button';
 import { TierBadge } from '../../src/components/TierBadge';
 import { StatusPill, toCanonical } from '../../src/components/StatusPill';
 import { Icon } from '../../src/components/Icon';
+import { StarRating } from '../../src/components/StarRating';
 import { Banner, LoadingState } from '../../src/components/Feedback';
 import { colors, spacing, type, radii, layout } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
@@ -102,11 +103,20 @@ export default function ProfileScreen() {
           </View>
         </View>
         <View style={styles.identityRight}>
-          {user?.rating ? (
-            <View style={styles.rating}>
-              <Text style={styles.ratingValue}>{user.rating.toFixed(1)}</Text>
-              <Text style={styles.ratingLabel}>rating</Text>
-            </View>
+          {user?.rating != null ? (
+            <Pressable
+              onPress={() => router.push('/ratings')}
+              style={styles.ratingBlock}
+              accessibilityLabel="View my ratings"
+            >
+              <StarRating score={user.rating} size={13} gap={2} />
+              <Text style={styles.ratingValue}>
+                {user.rating.toFixed(1)}
+                {user.completedCount ? (
+                  <Text style={styles.ratingCount}> · {user.completedCount} tasks</Text>
+                ) : null}
+              </Text>
+            </Pressable>
           ) : null}
           <Pressable
             onPress={() => setEditProfileOpen(true)}
@@ -219,6 +229,8 @@ export default function ProfileScreen() {
       <Section title="Support">
         <Card padded={false} style={styles.list}>
           <ListRow icon="alert" title="Disputes" onPress={() => router.push('/disputes')} />
+          <Divider />
+          <ListRow icon="star" title="My ratings" subtitle="See feedback from task managers" onPress={() => router.push('/ratings')} />
           <Divider />
           <ListRow icon="bell" title="Help & support" onPress={() => router.push('/support')} />
         </Card>
@@ -590,9 +602,9 @@ const styles = StyleSheet.create({
   identityRight: { alignItems: 'center', gap: spacing.sm },
   name: { color: colors.text, fontSize: type.size.lg, fontWeight: '800' },
   tiers: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  rating: { alignItems: 'center' },
-  ratingValue: { color: colors.clay, fontSize: type.size.xl, fontWeight: '800' },
-  ratingLabel: { color: colors.textMuted, fontSize: type.size.xs },
+  ratingBlock: { alignItems: 'center', gap: spacing.xs },
+  ratingValue: { color: colors.text, fontSize: type.size.sm, fontWeight: '700', marginTop: 1 },
+  ratingCount: { color: colors.textMuted, fontSize: type.size.xs, fontWeight: '400' },
   editBtn: {
     width: 32,
     height: 32,

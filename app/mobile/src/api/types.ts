@@ -274,6 +274,16 @@ export interface Contract {
   task?: Pick<Task, 'id' | 'title'>;
 }
 
+/** Individual rating record — GET /api/me/ratings */
+export interface Rating {
+  id: string;
+  taskId: string;
+  score: number; // 1–5
+  note?: string | null;
+  createdAt: string;
+  task: Pick<Task, 'id' | 'title'>;
+}
+
 export type DisputeStatus = 'OPEN' | 'RESOLVED' | 'CLOSED';
 export type DisputeEntityType = 'PAYMENT' | 'TIMESHEET';
 
