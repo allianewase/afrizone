@@ -17,6 +17,7 @@ import type {
   Contract,
   ContractDetail,
   Dispute,
+  PaymentDetail,
   Rating,
   Timesheet,
   LoginResponse,
@@ -346,6 +347,11 @@ export const api = {
       method: 'POST',
       body: { amount },
     });
+  },
+
+  /** GET /api/me/payments/:id — full payment detail (gross/WHT/net breakdown). */
+  myPaymentDetail(id: string, signal?: AbortSignal): Promise<PaymentDetail> {
+    return request<PaymentDetail>(`/me/payments/${id}`, { signal });
   },
 
   /** GET /api/me/timesheets — worker's timesheet history, newest-first. */

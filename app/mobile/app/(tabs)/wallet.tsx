@@ -24,9 +24,9 @@ const WITHDRAW_MIN = 5000;
 
 export default function WalletScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [yearSheetOpen, setYearSheetOpen] = useState(false);
-  const [disputeTx, setDisputeTx] = useState<Transaction | null>(null);
   const [dlBusy, setDlBusy] = useState(false);
   const [dlError, setDlError] = useState<string | null>(null);
 
@@ -106,7 +106,7 @@ export default function WalletScreen() {
                 <View key={tx.id}>
                   <TransactionRow
                     tx={tx}
-                    onPress={tx.kind === 'earning' ? () => setDisputeTx(tx) : undefined}
+                    onPress={tx.kind === 'earning' ? () => router.push(`/payment/${tx.id}`) : undefined}
                   />
                   {i < (txns.data?.length ?? 0) - 1 ? <View style={styles.divider} /> : null}
                 </View>
@@ -145,11 +145,6 @@ export default function WalletScreen() {
         visible={yearSheetOpen}
         onClose={() => setYearSheetOpen(false)}
         onSelect={downloadStatement}
-      />
-      <DisputeSheet
-        tx={disputeTx}
-        onClose={() => setDisputeTx(null)}
-        onFiled={() => { setDisputeTx(null); txns.reload(); wallet.reload(); }}
       />
     </Screen>
   );

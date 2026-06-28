@@ -200,6 +200,27 @@ router.get("/clock/:taskId", requireAuth, async (req: AuthedRequest, res: Respon
   res.json({ clockedIn, lastEventAt: last.createdAt, elapsedSeconds });
 });
 
+// GET /api/me/payments/:id → full payment detail for the authenticated worker.
+router.get("/payments/:id", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const payment = await prisma.payment.findUnique({
+    where: { id: req.params.id },
+    include: { task: true },
+  });
+  if (!payment) return res.status(404).json({ error: "Payment not found" });
+  if (payment.workerId !== req.user!.id) return res.status(403).json({ error: "Forbidden" });
+
+  res.json({
+    id: payment.id,
+    gross: payment.gross,
+    whtRate: payment.whtRate,
+    whtAmount: payment.whtAmount,
+    net: payment.net,
+    status: payment.status,
+    createdAt: payment.createdAt,
+    task: { id: payment.task.id, title: payment.task.title },
+  });
+});
+
 // GET /api/me/timesheets → worker's own timesheet history, newest-first.
 router.get("/timesheets", requireAuth, async (req: AuthedRequest, res: Response) => {
   const timesheets = await prisma.timesheet.findMany({

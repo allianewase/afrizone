@@ -136,6 +136,7 @@ export default function RootLayout() {
               <Stack.Screen name="disputes" options={{ presentation: 'card' }} />
               <Stack.Screen name="ratings" options={{ presentation: 'card' }} />
               <Stack.Screen name="timesheets" options={{ presentation: 'card' }} />
+              <Stack.Screen name="payment/[id]" options={{ presentation: 'card' }} />
             </Stack>
           </AuthGate>
         </AuthProvider>

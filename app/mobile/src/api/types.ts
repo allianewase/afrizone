@@ -229,6 +229,18 @@ export interface Transaction {
   createdAt: string;
 }
 
+/** Full payment detail — GET /api/me/payments/:id */
+export interface PaymentDetail {
+  id: string;
+  gross: number;
+  whtRate: number;
+  whtAmount: number;
+  net: number;
+  status: PaymentStatus;
+  createdAt: string;
+  task: Pick<Task, 'id' | 'title'>;
+}
+
 /** Worker's own timesheet — GET /api/me/timesheets */
 export interface Timesheet {
   id: string;
