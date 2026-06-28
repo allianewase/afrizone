@@ -13,7 +13,7 @@ import { colors, spacing, type, radii } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { formatElapsed, payLabel, formatDate } from '../../src/lib/format';
-import type { Task } from '../../src/api/types';
+import type { Task, Timesheet } from '../../src/api/types';
 
 function haversineMetres(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6_371_000;
@@ -47,14 +47,17 @@ export default function ActiveTaskScreen() {
   const periodStart = useRef<string | null>(null);
   const workerCoords = useRef<{ lat: number; lng: number } | null>(null);
 
-  // Resume clock state on mount.
+  // Resume clock state and check for a prior submitted timesheet on mount.
   useEffect(() => {
     if (!id) return;
     let active = true;
     const ctrl = new AbortController();
     (async () => {
       try {
-        const s = await api.clockState(id, ctrl.signal);
+        const [s, sheets] = await Promise.all([
+          api.clockState(id, ctrl.signal),
+          api.myTimesheets(ctrl.signal),
+        ]);
         if (!active) return;
         if (s.clockedIn) {
           startedAt.current = Date.now() - s.elapsedSeconds * 1000;
@@ -62,6 +65,11 @@ export default function ActiveTaskScreen() {
           setElapsed(s.elapsedSeconds);
           setClockedIn(true);
         }
+        // Show submitted state if a timesheet already exists for this task.
+        const prior = sheets.find(
+          (ts: Timesheet) => ts.taskId === id && (ts.status === 'SUBMITTED' || ts.status === 'APPROVED')
+        );
+        if (prior) setSubmitted(true);
       } catch (e) {
         if (e instanceof DOMException && e.name === 'AbortError') return;
       }
@@ -253,7 +261,7 @@ export default function ActiveTaskScreen() {
           tone="money"
           icon="check-circle"
           title="Timesheet submitted"
-          message="Awaiting approval — you'll be paid once approved."
+          message="Awaiting approval — check status in Profile › Timesheets."
         />
       ) : (
         <View style={{ marginTop: spacing.xxl, gap: spacing.md }}>

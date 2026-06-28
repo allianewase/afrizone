@@ -114,6 +114,9 @@ function ApplicationCard({ app, onPress }: { app: Application; onPress: () => vo
         <Text style={styles.title} numberOfLines={2}>
           {t?.title ?? 'Task'}
         </Text>
+        {app.status === 'REJECTED' && app.reason ? (
+          <Text style={styles.rejection} numberOfLines={2}>{app.reason}</Text>
+        ) : null}
         <View style={styles.foot}>
           {t ? (
             <View style={styles.payRow}>
@@ -147,4 +150,10 @@ const styles = StyleSheet.create({
   unit: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
   cta: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   ctaText: { color: colors.clay, fontWeight: '700', fontSize: type.size.base },
+  rejection: {
+    color: colors.textMuted,
+    fontSize: type.size.sm,
+    marginBottom: spacing.xs,
+    fontStyle: 'italic',
+  },
 });

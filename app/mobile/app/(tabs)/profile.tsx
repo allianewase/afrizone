@@ -230,6 +230,8 @@ export default function ProfileScreen() {
         <Card padded={false} style={styles.list}>
           <ListRow icon="alert" title="Disputes" onPress={() => router.push('/disputes')} />
           <Divider />
+          <ListRow icon="clock" title="Timesheets" subtitle="Track submitted hours and approval status" onPress={() => router.push('/timesheets')} />
+          <Divider />
           <ListRow icon="star" title="My ratings" subtitle="See feedback from task managers" onPress={() => router.push('/ratings')} />
           <Divider />
           <ListRow icon="bell" title="Help & support" onPress={() => router.push('/support')} />

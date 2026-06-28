@@ -21,9 +21,9 @@ export default function TaskDetailScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [applied, setApplied] = useState(false);
+  const [justApplied, setJustApplied] = useState(false);
 
-  // REAL: GET /api/tasks/:id
+  // REAL: GET /api/tasks/:id — includes applications[] for this task.
   const task = useAsync<Task | null>(
     (signal) => (id ? api.task(id, signal) : Promise.resolve(null)),
     [id]
@@ -34,6 +34,10 @@ export default function TaskDetailScreen() {
   const tierEligible = t ? (user?.tiers ?? []).includes(t.tier) : false;
   const kycOk = user?.kycStatus === 'TIER_APPROVED';
   const closed = t ? t.status !== 'OPEN' : false;
+
+  // Check server-side application state so "Apply" button reflects reality on fresh load.
+  const myApp = t?.applications?.find((a) => a.workerId === user?.id);
+  const applied = justApplied || (myApp != null && myApp.status !== 'REJECTED');
 
   return (
     <Screen title="Task" back scroll>
@@ -116,7 +120,12 @@ export default function TaskDetailScreen() {
       {t && !task.loading ? (
         <View style={{ marginTop: spacing.xl }}>
           {applied ? (
-            <Button label="Applied — awaiting approval" variant="secondary" icon="check" disabled />
+            <Button
+              label={myApp?.status === 'APPROVED' ? 'Approved — see My Tasks' : 'Applied — awaiting approval'}
+              variant="secondary"
+              icon={myApp?.status === 'APPROVED' ? 'check-circle' : 'check'}
+              disabled
+            />
           ) : closed ? (
             <Button label="Applications closed" variant="secondary" disabled />
           ) : (
@@ -136,7 +145,7 @@ export default function TaskDetailScreen() {
           task={t}
           onClose={() => setSheetOpen(false)}
           onApplied={() => {
-            setApplied(true);
+            setJustApplied(true);
             setSheetOpen(false);
             router.push('/(tabs)/tasks');
           }}

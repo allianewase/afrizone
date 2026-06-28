@@ -200,6 +200,27 @@ router.get("/clock/:taskId", requireAuth, async (req: AuthedRequest, res: Respon
   res.json({ clockedIn, lastEventAt: last.createdAt, elapsedSeconds });
 });
 
+// GET /api/me/timesheets → worker's own timesheet history, newest-first.
+router.get("/timesheets", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const timesheets = await prisma.timesheet.findMany({
+    where: { workerId: req.user!.id },
+    orderBy: { createdAt: "desc" },
+    include: { task: true },
+  });
+  res.json(
+    timesheets.map((ts) => ({
+      id: ts.id,
+      taskId: ts.taskId,
+      periodStart: ts.periodStart,
+      periodEnd: ts.periodEnd,
+      hours: ts.hours,
+      status: ts.status,
+      createdAt: ts.createdAt,
+      task: { id: ts.task.id, title: ts.task.title },
+    }))
+  );
+});
+
 // GET /api/me/ratings → worker's individual ratings, newest-first.
 router.get("/ratings", requireAuth, async (req: AuthedRequest, res: Response) => {
   const ratings = await prisma.rating.findMany({

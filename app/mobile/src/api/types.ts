@@ -229,6 +229,18 @@ export interface Transaction {
   createdAt: string;
 }
 
+/** Worker's own timesheet — GET /api/me/timesheets */
+export interface Timesheet {
+  id: string;
+  taskId: string;
+  periodStart: string;
+  periodEnd: string;
+  hours: number;
+  status: TimesheetStatus;
+  createdAt: string;
+  task: Pick<Task, 'id' | 'title'>;
+}
+
 /** ClockEvent persisted by POST /api/clock (v3). */
 export interface ClockEvent {
   id: string;

@@ -18,6 +18,7 @@ import type {
   ContractDetail,
   Dispute,
   Rating,
+  Timesheet,
   LoginResponse,
   AuthSuccess,
   TwoFactorSetup,
@@ -345,6 +346,11 @@ export const api = {
       method: 'POST',
       body: { amount },
     });
+  },
+
+  /** GET /api/me/timesheets — worker's timesheet history, newest-first. */
+  myTimesheets(signal?: AbortSignal): Promise<Timesheet[]> {
+    return request<Timesheet[]>('/me/timesheets', { signal });
   },
 
   /** GET /api/me/ratings — worker's individual rating history, newest-first. */
