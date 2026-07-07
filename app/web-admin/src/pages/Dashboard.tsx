@@ -117,10 +117,9 @@ function UrgentRow({ item, onGo }: { item: DashboardUrgent; onGo: (t: string) =>
           Review
         </Button>
       ) : (
-        <span className="pill danger">
-          <Icon name="alert" />
-          Dispute
-        </span>
+        <Button variant="glass" size="sm" onClick={() => onGo('/disputes')}>
+          Review
+        </Button>
       )}
     </div>
   )

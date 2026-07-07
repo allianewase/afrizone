@@ -449,7 +449,12 @@ export const api = {
     });
   },
 
-  /** POST /api/me/kyc/submit — worker KYC submission (sets kycStatus PENDING). */
+  /**
+   * POST /api/me/kyc/submit — worker KYC submission. Normally sets kycStatus
+   * PENDING for manual review; if Smile ID is configured server-side and
+   * `idType` is passed, the server also runs automated Document Verification
+   * and may return kycStatus VERIFIED or REJECTED (with `kycNote`) directly.
+   */
   submitKyc(input: {
     tin?: string;
     bankMasked?: string;
@@ -457,6 +462,7 @@ export const api = {
     bankAccountNumber?: string;
     bankName?: string;
     tier?: string;
+    idType?: string;
   }): Promise<User> {
     return request<User>('/me/kyc/submit', { method: 'POST', body: input });
   },

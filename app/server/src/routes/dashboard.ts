@@ -12,34 +12,111 @@ function ago(date: Date): string {
   return `${Math.round(hrs / 24)}d`;
 }
 
+const TONE_CYCLE = ["clay", "gold", "indigo", "forest", "money", "amber"];
+const CATEGORY_TONES: Record<string, string> = {
+  Dispatch: "clay",
+  Promo: "gold",
+  Remote: "indigo",
+  Trade: "forest",
+  Student: "money",
+};
+
+function monthBounds(year: number, month: number) {
+  return {
+    start: new Date(year, month, 1),
+    end: new Date(year, month + 1, 0, 23, 59, 59, 999),
+  };
+}
+
 // GET /api/dashboard/stats
 router.get("/stats", requireAuth, async (_req: AuthedRequest, res: Response) => {
-  const [activeTasks, filledTasks, approvedApps, totalApps, paymentsRows, recentApps] = await Promise.all([
+  const now = new Date();
+  const { start: monthStart, end: monthEnd } = monthBounds(now.getFullYear(), now.getMonth());
+
+  const [
+    activeTasks,
+    filledTasks,
+    totalTasks,
+    recentApps,
+    paymentsAll,
+    paymentsThisMonth,
+    openDisputes,
+    appliedQueue,
+    submittedSheets,
+    tasksWithFirstApproval,
+  ] = await Promise.all([
     prisma.task.count({ where: { status: "OPEN" } }),
     prisma.task.count({ where: { status: "FILLED" } }),
-    prisma.application.count({ where: { status: "APPROVED" } }),
-    prisma.application.count(),
-    prisma.payment.findMany(),
+    prisma.task.count(),
     prisma.application.findMany({
       where: { status: "APPROVED" },
       orderBy: { createdAt: "desc" },
       take: 5,
       include: { worker: true, task: true },
     }),
+    prisma.payment.findMany({ include: { task: { select: { category: true } } } }),
+    prisma.payment.findMany({
+      where: { createdAt: { gte: monthStart, lte: monthEnd } },
+      select: { gross: true },
+    }),
+    prisma.dispute.count({ where: { status: "OPEN" } }),
+    prisma.application.count({ where: { status: "APPLIED" } }),
+    prisma.timesheet.count({ where: { status: "SUBMITTED" } }),
+    // Avg time-to-fill: tasks that have at least one approved application.
+    prisma.task.findMany({
+      where: { applications: { some: { status: "APPROVED" } } },
+      select: {
+        createdAt: true,
+        applications: {
+          where: { status: "APPROVED" },
+          orderBy: { createdAt: "asc" },
+          take: 1,
+          select: { createdAt: true },
+        },
+      },
+    }),
   ]);
 
-  const totalTasks = await prisma.task.count();
+  // Fill rate
   const fillRate = totalTasks > 0 ? Math.round((filledTasks / totalTasks) * 100) : 0;
 
-  const releasedSpend = paymentsRows
+  // Avg time-to-fill in hours (task created → first approved application)
+  const ttfSamples = tasksWithFirstApproval
+    .filter((t) => t.applications.length > 0)
+    .map((t) => (t.applications[0].createdAt.getTime() - t.createdAt.getTime()) / 3_600_000);
+  const avgTimeToFillHours =
+    ttfSamples.length > 0
+      ? Math.round((ttfSamples.reduce((s, h) => s + h, 0) / ttfSamples.length) * 10) / 10
+      : 0;
+
+  // Spend this month (released > 0 ? released : all committed)
+  const releasedSpend = paymentsAll
     .filter((p) => p.status === "RELEASED")
     .reduce((s, p) => s + p.net, 0);
-  const allNetSpend = paymentsRows.reduce((s, p) => s + p.net, 0);
+  const allNetSpend = paymentsAll.reduce((s, p) => s + p.net, 0);
   const spendThisMonth = releasedSpend > 0 ? releasedSpend : allNetSpend;
 
-  const readyToRelease = paymentsRows.filter((p) => p.status === "APPROVED");
-  const readyNet = readyToRelease.reduce((s, p) => s + p.net, 0);
+  // Budget this month = total gross committed (all statuses) in the calendar month
+  const budgetThisMonth = paymentsThisMonth.reduce((s, p) => s + p.gross, 0);
 
+  // Spend by category from real payments
+  const byCategory = new Map<string, number>();
+  for (const p of paymentsAll) {
+    const label = p.task?.category || "Other";
+    byCategory.set(label, (byCategory.get(label) || 0) + p.gross);
+  }
+  const totalGross = paymentsAll.reduce((s, p) => s + p.gross, 0) || 1;
+  const spendByCategory = Array.from(byCategory.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, gross], i) => ({
+      label,
+      value: Math.round((gross / totalGross) * 100),
+      tone: CATEGORY_TONES[label] ?? TONE_CYCLE[i % TONE_CYCLE.length],
+    }));
+
+  // Urgent items
+  const readyToRelease = paymentsAll.filter((p) => p.status === "APPROVED");
+  const readyNet = readyToRelease.reduce((s, p) => s + p.net, 0);
   const urgent: any[] = [];
   if (readyToRelease.length > 0) {
     urgent.push({
@@ -49,7 +126,6 @@ router.get("/stats", requireAuth, async (_req: AuthedRequest, res: Response) => 
       count: readyToRelease.length,
     });
   }
-  const appliedQueue = await prisma.application.count({ where: { status: "APPLIED" } });
   if (appliedQueue > 0) {
     urgent.push({
       type: "applications",
@@ -58,7 +134,6 @@ router.get("/stats", requireAuth, async (_req: AuthedRequest, res: Response) => 
       count: appliedQueue,
     });
   }
-  const submittedSheets = await prisma.timesheet.count({ where: { status: "SUBMITTED" } });
   if (submittedSheets > 0) {
     urgent.push({
       type: "timesheets",
@@ -67,7 +142,16 @@ router.get("/stats", requireAuth, async (_req: AuthedRequest, res: Response) => 
       count: submittedSheets,
     });
   }
+  if (openDisputes > 0) {
+    urgent.push({
+      type: "dispute",
+      title: `${openDisputes} open dispute${openDisputes > 1 ? "s" : ""} raised`,
+      sub: "Worker-raised, needs review",
+      count: openDisputes,
+    });
+  }
 
+  // Activity feed
   const activity = recentApps.map((a) => ({
     icon: "check",
     title: `${a.worker.name} approved`,
@@ -78,17 +162,11 @@ router.get("/stats", requireAuth, async (_req: AuthedRequest, res: Response) => 
   res.json({
     activeTasks,
     fillRate,
-    avgTimeToFillHours: 6,
+    avgTimeToFillHours,
     spendThisMonth,
-    budgetThisMonth: 5400000,
-    // Chart breakdowns are illustrative (static-ish) per the contract note.
-    spendByCategory: [
-      { label: "Dispatch", value: 62, tone: "clay" },
-      { label: "Promo", value: 21, tone: "gold" },
-      { label: "Remote", value: 11, tone: "indigo" },
-      { label: "Trade", value: 6, tone: "forest" },
-    ],
-    fill: { filled: approvedApps, open: Math.max(0, totalApps - approvedApps) },
+    budgetThisMonth,
+    spendByCategory,
+    fill: { filled: filledTasks, open: activeTasks },
     urgent,
     activity,
   });

@@ -31,6 +31,9 @@
       "typedRoutes": false
     },
     "extra": {
+      "eas": {
+        "projectId": ""
+      },
       "googleWebClientId": "",
       "googleIosClientId": "",
       "googleAndroidClientId": "",

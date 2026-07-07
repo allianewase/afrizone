@@ -48,6 +48,7 @@ model User {
   role           String   @default("WORKER") // Role enum
   tiers          String   @default("")        // comma-separated Tier[] — see note above
   kycStatus      String   @default("PENDING") // KycStatus enum
+  kycNote        String?  // latest verification note (auto-reject reason from Smile ID, or admin note)
   location       String?
   rating         Float?
   completedCount Int      @default(0)
@@ -72,6 +73,7 @@ model User {
   contracts    Contract[]
   passwordResets PasswordReset[]
   kycDocuments   KycDocument[]
+  kycVerifications KycVerification[]
   disputes        Dispute[]
   ratingsReceived Rating[] @relation("WorkerRatings")
   ratingsGiven    Rating[] @relation("RatingsGiven")
@@ -343,4 +345,21 @@ model KycDocument {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+model KycVerification {
+  id         String   @id @default(cuid())
+  workerId   String
+  jobId      String   @unique // our id, sent to Smile as partner_params.job_id
+  smileJobId String? // Smile's SmileJobID, once assigned
+  status     String   @default("PENDING") // PENDING | APPROVED | REJECTED | ERROR
+  resultCode String?
+  resultText String?
+  raw        String? // JSON of the last Smile ID response, for audit/debugging
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  worker User @relation(fields: [workerId], references: [id])
+
+  @@index([workerId])
 }

@@ -18,10 +18,12 @@ import meRouter from "./routes/me";
 import clockRouter from "./routes/clock";
 import walletRouter from "./routes/wallet";
 import contractsRouter from "./routes/contracts";
-import disputesRouter from "./routes/disputes";
+import disputesRouter, { adminRouter as adminDisputesRouter } from "./routes/disputes";
 import ratingsRouter from "./routes/ratings";
 import webhooksRouter from "./routes/webhooks";
 import kycDocumentsRouter from "./routes/kycDocuments";
+import searchRouter from "./routes/search";
+import healthRouter from "./routes/health";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -43,13 +45,12 @@ app.use(
 app.use("/api/webhooks/paystack", express.raw({ type: "*/*" }));
 app.use(express.json());
 
-// Health check
-app.get("/api/health", (_req: Request, res: Response) => {
-  res.json({ status: "ok", service: "afrizone-server", time: new Date().toISOString() });
-});
+// Health + config
+app.use("/api/health", healthRouter);
 
 // Routers
 app.use("/api/auth", authRouter);
+app.use("/api/search", searchRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/tasks", tasksRouter);
 app.use("/api/applications", applicationsRouter);
@@ -67,6 +68,7 @@ app.use("/api/me/kyc/documents", kycDocumentsRouter);
 app.use("/api/clock", clockRouter);
 app.use("/api/wallet", walletRouter);
 app.use("/api/contracts", contractsRouter);
+app.use("/api/disputes", adminDisputesRouter);
 app.use("/api/me/disputes", disputesRouter);
 app.use("/api/workers", ratingsRouter);
 app.use("/api/webhooks", webhooksRouter);

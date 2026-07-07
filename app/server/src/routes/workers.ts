@@ -3,6 +3,7 @@ import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest, publicUser } from "../auth";
 import { tiersToArray } from "../types";
 import { writeAudit } from "../util/audit";
+import { resolveUrl } from "../services/storage";
 
 const router = Router();
 
@@ -98,6 +99,35 @@ router.post(
     });
     await writeAudit(req.user!.id, "KYC_DECISION", "User", worker.id, { decision });
     res.json(publicUser(updated));
+  }
+);
+
+// GET /api/workers/:id/kyc/documents — admin view of a worker's uploaded KYC docs.
+router.get(
+  "/:id/kyc/documents",
+  requireAuth,
+  requireRole("SUPER_ADMIN", "HR_ADMIN", "TASK_MANAGER"),
+  async (req: AuthedRequest, res: Response) => {
+    const worker = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!worker || worker.role !== "WORKER") return res.status(404).json({ error: "Worker not found" });
+
+    const docs = await prisma.kycDocument.findMany({
+      where: { userId: req.params.id },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const enriched = await Promise.all(
+      docs.map(async (d) => ({
+        id: d.id,
+        docType: d.docType,
+        filename: d.filename,
+        originalName: d.originalName,
+        mimeType: d.mimeType,
+        url: await resolveUrl(d.filename),
+        createdAt: d.createdAt,
+      }))
+    );
+    res.json(enriched);
   }
 );
 

@@ -1,8 +1,9 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
-import { requireAuth, AuthedRequest } from "../auth";
+import { requireAuth, requireRole, AuthedRequest } from "../auth";
 
 const router = Router();
+export const adminRouter = Router();
 
 const ENTITY_TYPES = ["PAYMENT", "TIMESHEET"] as const;
 type EntityType = (typeof ENTITY_TYPES)[number];
@@ -29,6 +30,104 @@ async function resolveEntity(
     return { title: t.task.title };
   }
 }
+
+/** Fetch the underlying entity by id only (no worker ownership check — for admin). */
+async function resolveEntityAdmin(
+  type: EntityType,
+  entityId: string
+): Promise<{ title: string; gross?: number; net?: number } | null> {
+  if (type === "PAYMENT") {
+    const p = await prisma.payment.findUnique({
+      where: { id: entityId },
+      include: { task: true },
+    });
+    if (!p) return null;
+    return { title: p.task.title, gross: p.gross, net: p.net };
+  } else {
+    const t = await prisma.timesheet.findUnique({
+      where: { id: entityId },
+      include: { task: true },
+    });
+    if (!t) return null;
+    return { title: t.task.title };
+  }
+}
+
+// ─── Admin routes (/api/disputes) ───────────────────────────────────────────
+
+// GET /api/disputes?status=OPEN — list all disputes with worker + entity info.
+adminRouter.get(
+  "/",
+  requireAuth,
+  requireRole("SUPER_ADMIN", "TASK_MANAGER"),
+  async (req: AuthedRequest, res: Response) => {
+    const { status } = req.query;
+    const where =
+      status && typeof status === "string" && status !== "ALL"
+        ? { status }
+        : {};
+    const disputes = await prisma.dispute.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: { worker: { select: { id: true, name: true } } },
+    });
+    const enriched = await Promise.all(
+      disputes.map(async (d) => {
+        const entity = await resolveEntityAdmin(d.entityType as EntityType, d.entityId);
+        return { ...d, entity };
+      })
+    );
+    res.json(enriched);
+  }
+);
+
+// PATCH /api/disputes/:id — resolve (RESOLVED) or close (CLOSED) a dispute.
+// body: { status: "RESOLVED"|"CLOSED", resolution?: string }
+adminRouter.patch(
+  "/:id",
+  requireAuth,
+  requireRole("SUPER_ADMIN", "TASK_MANAGER"),
+  async (req: AuthedRequest, res: Response) => {
+    const { status, resolution } = req.body || {};
+    if (status !== "RESOLVED" && status !== "CLOSED") {
+      return res
+        .status(400)
+        .json({ error: 'status must be "RESOLVED" or "CLOSED"' });
+    }
+
+    const existing = await prisma.dispute.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!existing) return res.status(404).json({ error: "Dispute not found" });
+    if (existing.status !== "OPEN") {
+      return res.status(409).json({ error: "Dispute is already closed" });
+    }
+
+    const updated = await prisma.dispute.update({
+      where: { id: req.params.id },
+      data: {
+        status,
+        resolution: String(resolution ?? "").trim() || null,
+      },
+      include: { worker: { select: { id: true, name: true } } },
+    });
+
+    // Un-flag the underlying entity so it can continue its normal lifecycle.
+    if (existing.entityType === "PAYMENT") {
+      await prisma.payment.update({
+        where: { id: existing.entityId },
+        data: { status: "APPROVED" },
+      });
+    } else {
+      await prisma.timesheet.update({
+        where: { id: existing.entityId },
+        data: { status: "APPROVED" },
+      });
+    }
+
+    res.json(updated);
+  }
+);
 
 // POST /api/me/disputes — raise a dispute on a payment or timesheet.
 // body: { entityType: "PAYMENT"|"TIMESHEET", entityId: string, reason: string }

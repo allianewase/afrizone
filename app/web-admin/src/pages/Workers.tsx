@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import { useApi } from '../lib/useApi'
-import type { Worker, WorkerDetail } from '../api/types'
+import type { KycDocument, Worker, WorkerDetail } from '../api/types'
 import {
   TIER_COLORS,
   TIER_LABELS,
@@ -13,8 +13,167 @@ import PageHeader from '../components/PageHeader'
 import Glass from '../components/ui/Glass'
 import Button from '../components/ui/Button'
 import StatusPill from '../components/ui/StatusPill'
+import Modal from '../components/ui/Modal'
 import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
+
+const DOC_TYPE_LABEL: Record<string, string> = {
+  ID: 'Government ID',
+  SELFIE: 'Selfie / Liveness',
+  DOCS: 'Supporting Documents',
+}
+
+// ─── KYC document viewer + decision modal ─────────────────────────────────────
+function KycDocsModal({
+  worker,
+  onClose,
+  onDecide,
+  busyId,
+}: {
+  worker: Worker
+  onClose: () => void
+  onDecide: (id: string, decision: 'TIER_APPROVED' | 'REJECTED') => void
+  busyId: string | null
+}) {
+  const [docs, setDocs] = useState<KycDocument[] | null>(null)
+  const [loadErr, setLoadErr] = useState<string | null>(null)
+  const [lightbox, setLightbox] = useState<KycDocument | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    api.workerKycDocuments(worker.id).then((d) => {
+      if (!cancelled) setDocs(d)
+    }).catch((e) => {
+      if (!cancelled) setLoadErr(e instanceof ApiError ? e.message : 'Could not load documents')
+    })
+    return () => { cancelled = true }
+  }, [worker.id])
+
+  const isPending = worker.kycStatus === 'PENDING'
+
+  return (
+    <>
+      <Modal
+        open
+        title={`KYC documents · ${worker.name}`}
+        subtitle={`${docs?.length ?? '…'} document${docs?.length !== 1 ? 's' : ''} uploaded · ${worker.kycStatus}`}
+        onClose={onClose}
+      >
+        <div style={{ marginTop: 12 }}>
+          {loadErr ? (
+            <p style={{ color: 'var(--danger)', fontSize: 13 }}>{loadErr}</p>
+          ) : !docs ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}>
+              <span className="spinner" style={{ width: 28, height: 28, borderWidth: 3 }} />
+            </div>
+          ) : docs.length === 0 ? (
+            <p style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '24px 0' }}>
+              No documents uploaded yet.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {(['ID', 'SELFIE', 'DOCS'] as const).map((type) => {
+                const group = docs.filter((d) => d.docType === type)
+                if (group.length === 0) return null
+                return (
+                  <div key={type}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                      {DOC_TYPE_LABEL[type]}
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      {group.map((doc) => (
+                        <button
+                          key={doc.id}
+                          onClick={() => setLightbox(doc)}
+                          style={{
+                            border: '2px solid rgba(255,255,255,.12)',
+                            borderRadius: 10,
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            padding: 0,
+                            background: 'rgba(255,255,255,.04)',
+                            transition: 'border-color .15s',
+                            width: 110,
+                            height: 110,
+                            flexShrink: 0,
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--gold)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,.12)')}
+                          title={doc.originalName}
+                        >
+                          <img
+                            src={doc.url}
+                            alt={doc.originalName}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {isPending && (
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 24, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,.08)' }}>
+              <Button
+                variant="danger"
+                size="sm"
+                loading={busyId === worker.id + 'REJECTED'}
+                onClick={() => { onDecide(worker.id, 'REJECTED'); onClose() }}
+              >
+                Reject KYC
+              </Button>
+              <Button
+                variant="money"
+                size="sm"
+                icon="check"
+                loading={busyId === worker.id + 'TIER_APPROVED'}
+                onClick={() => { onDecide(worker.id, 'TIER_APPROVED'); onClose() }}
+              >
+                Approve KYC
+              </Button>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {lightbox && (
+        <div
+          onClick={() => setLightbox(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1100,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <button
+            onClick={() => setLightbox(null)}
+            style={{
+              position: 'absolute', top: 20, right: 20,
+              background: 'rgba(255,255,255,.1)', border: 'none', borderRadius: 8,
+              color: '#fff', width: 38, height: 38, cursor: 'pointer', fontSize: 20,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+            aria-label="Close"
+          >
+            <Icon name="x" />
+          </button>
+          <img
+            src={lightbox.url}
+            alt={lightbox.originalName}
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '90vw', maxHeight: '88vh', borderRadius: 12, boxShadow: '0 8px 60px rgba(0,0,0,.5)' }}
+          />
+          <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,.7)', fontSize: 12 }}>
+            {DOC_TYPE_LABEL[lightbox.docType]} · {lightbox.originalName}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
 
 // ─── Star rating picker ───────────────────────────────────────────────────────
 const STAR_PATH = 'M12 2l2.9 6.3 6.8.6-5 4.7 1.5 6.8L12 17l-6.2 3.4 1.5-6.8-5-4.7 6.8-.6Z'
@@ -198,6 +357,7 @@ export default function Workers() {
   const [busy, setBusy] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [ratingWorker, setRatingWorker] = useState<Worker | null>(null)
+  const [kycWorker, setKycWorker] = useState<Worker | null>(null)
 
   const workers = data ?? []
   const pendingKyc = workers.filter((w) => w.kycStatus === 'PENDING').length
@@ -307,36 +467,32 @@ export default function Workers() {
                       )}
                     </td>
                     <td>
-                      {w.kycStatus === 'PENDING' ? (
-                        <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {w.kycStatus === 'PENDING' && (
                           <Button
-                            variant="money"
+                            variant="primary"
                             size="sm"
-                            loading={busy === w.id + 'TIER_APPROVED'}
-                            onClick={() => decide(w.id, 'TIER_APPROVED')}
+                            icon="eye"
+                            onClick={() => setKycWorker(w)}
                           >
-                            Approve KYC
+                            Review KYC
                           </Button>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            loading={busy === w.id + 'REJECTED'}
-                            onClick={() => decide(w.id, 'REJECTED')}
-                          >
-                            Reject
-                          </Button>
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <Button
-                            variant="glass"
-                            size="sm"
-                            onClick={() => setRatingWorker(w)}
-                          >
+                        )}
+                        <Button
+                          variant="glass"
+                          size="sm"
+                          icon="file"
+                          onClick={() => setKycWorker(w)}
+                          title="View KYC documents"
+                        >
+                          Docs
+                        </Button>
+                        {w.kycStatus !== 'PENDING' && (
+                          <Button variant="glass" size="sm" onClick={() => setRatingWorker(w)}>
                             Rate
                           </Button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )
@@ -344,6 +500,15 @@ export default function Workers() {
             </tbody>
           </table>
         </Glass>
+      )}
+
+      {kycWorker && (
+        <KycDocsModal
+          worker={kycWorker}
+          onClose={() => setKycWorker(null)}
+          onDecide={decide}
+          busyId={busy}
+        />
       )}
 
       {ratingWorker && (

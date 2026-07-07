@@ -8,7 +8,10 @@ import type {
   Candidate,
   Category,
   DashboardStats,
+  Dispute,
+  DisputeStatus,
   Job,
+  KycDocument,
   LoginResponse,
   PasswordForgotResponse,
   PasswordResetResponse,
@@ -16,6 +19,7 @@ import type {
   PaymentStatus,
   ReleaseAllResponse,
   ReportsSummary,
+  SearchResults,
   Stage,
   Task,
   TaxRate,
@@ -144,6 +148,10 @@ export const api = {
       body: { token, password },
     }),
 
+  // Search
+  search: (q: string, signal?: AbortSignal) =>
+    request<SearchResults>(`/search?q=${encodeURIComponent(q)}`, { signal }),
+
   // Dashboard
   dashboardStats: (signal?: AbortSignal) =>
     request<DashboardStats>('/dashboard/stats', { signal }),
@@ -200,6 +208,8 @@ export const api = {
     request<WorkerDetail>(`/workers/${id}`, { signal }),
   reviewKyc: (id: string, decision: 'TIER_APPROVED' | 'REJECTED') =>
     request<Worker>(`/workers/${id}/kyc`, { method: 'POST', body: { decision } }),
+  workerKycDocuments: (id: string, signal?: AbortSignal) =>
+    request<KycDocument[]>(`/workers/${id}/kyc/documents`, { signal }),
   rateWorker: (id: string, body: { taskId: string; score: number; note?: string }) =>
     request<{ id: string; rating: number | null; completedCount: number }>(
       `/workers/${id}/rate`,
@@ -228,6 +238,15 @@ export const api = {
   }) => request<Candidate>('/candidates', { method: 'POST', body }),
   moveCandidate: (id: string, stage: Stage) =>
     request<Candidate>(`/candidates/${id}/move`, { method: 'POST', body: { stage } }),
+
+  // Disputes (admin)
+  disputes: (status?: DisputeStatus | 'ALL', signal?: AbortSignal) =>
+    request<Dispute[]>(
+      `/disputes${status && status !== 'ALL' ? `?status=${status}` : ''}`,
+      { signal },
+    ),
+  resolveDispute: (id: string, status: 'RESOLVED' | 'CLOSED', resolution?: string) =>
+    request<Dispute>(`/disputes/${id}`, { method: 'PATCH', body: { status, resolution } }),
 
   // ===== v2: Reports =====
   reportsSummary: (signal?: AbortSignal) =>

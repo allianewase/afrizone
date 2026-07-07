@@ -6,23 +6,29 @@ const router = Router();
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+function monthBounds(year: number, month: number) {
+  return {
+    start: new Date(year, month, 1),
+    end: new Date(year, month + 1, 0, 23, 59, 59, 999),
+  };
+}
+
 // GET /api/reports/summary
-// Computes tax.whtCollected, payrollEquivalent, and spendByCategory from real
-// Payment rows (status RELEASED + APPROVED). Monthly/trend arrays are partly
-// illustrative but include the current month from real data.
 router.get("/summary", requireAuth, async (_req: AuthedRequest, res: Response) => {
-  // Counted spend = released + approved payments.
-  const payments = await prisma.payment.findMany({
-    where: { status: { in: ["RELEASED", "APPROVED"] } },
-    include: { task: true },
-  });
+  const [payments, allTasks] = await Promise.all([
+    prisma.payment.findMany({
+      where: { status: { in: ["RELEASED", "APPROVED"] } },
+      include: { task: { select: { category: true } } },
+    }),
+    prisma.task.findMany({ select: { status: true, createdAt: true } }),
+  ]);
 
   const grossPaid = payments.reduce((s, p) => s + p.gross, 0);
   const totalWht = payments.reduce((s, p) => s + p.whtAmount, 0);
   const netPaid = payments.reduce((s, p) => s + p.net, 0);
   const workersPaid = new Set(payments.map((p) => p.workerId)).size;
 
-  // Spend by task category (real).
+  // Spend by task category (real)
   const byCategory = new Map<string, number>();
   for (const p of payments) {
     const label = p.task?.category || "Other";
@@ -33,7 +39,7 @@ router.get("/summary", requireAuth, async (_req: AuthedRequest, res: Response) =
     .map(([label, amount]) => ({ label, amount, pct: Math.round((amount / totalSpend) * 100) }))
     .sort((a, b) => b.amount - a.amount);
 
-  // Top categories (real): task count + spend per category.
+  // Top categories: task count + spend per category (real)
   const taskCountByCategory = new Map<string, number>();
   for (const p of payments) {
     const label = p.task?.category || "Other";
@@ -43,44 +49,35 @@ router.get("/summary", requireAuth, async (_req: AuthedRequest, res: Response) =
     .map(([label, amount]) => ({ label, tasks: taskCountByCategory.get(label) || 0, spend: amount }))
     .sort((a, b) => b.spend - a.spend);
 
-  // Spend by month — last 6 months. Current month is real (counted spend);
-  // earlier months are illustrative (history is thin in the demo).
+  // Spend by month — last 6 months, fully derived from payment createdAt
   const now = new Date();
-  const currentMonthIdx = now.getMonth();
-  const illustrative = [1200000, 1450000, 1310000, 1580000, 1420000];
   const spendByMonth = [];
   for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), currentMonthIdx - i, 1);
-    const isCurrent = i === 0;
-    spendByMonth.push({
-      month: MONTHS[d.getMonth()],
-      spend: isCurrent ? grossPaid : illustrative[(5 - i) % illustrative.length],
-    });
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const { start, end } = monthBounds(d.getFullYear(), d.getMonth());
+    const spend = payments
+      .filter((p) => p.createdAt >= start && p.createdAt <= end)
+      .reduce((s, p) => s + p.gross, 0);
+    spendByMonth.push({ month: MONTHS[d.getMonth()], spend });
   }
 
-  // Fill-rate trend — illustrative, with current month derived from task fill.
-  const [filledTasks, totalTasks] = await Promise.all([
-    prisma.task.count({ where: { status: "FILLED" } }),
-    prisma.task.count(),
-  ]);
-  const currentFillRate = totalTasks > 0 ? Math.round((filledTasks / totalTasks) * 100) : 0;
-  const illustrativeRates = [74, 78, 81, 79, 84];
+  // Fill-rate trend — last 6 months, per task-creation cohort
+  // Rate = tasks created that month that are now FILLED or CLOSED / all tasks created that month.
   const fillRateTrend = [];
   for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), currentMonthIdx - i, 1);
-    const isCurrent = i === 0;
-    fillRateTrend.push({
-      month: MONTHS[d.getMonth()],
-      rate: isCurrent ? currentFillRate : illustrativeRates[(5 - i) % illustrativeRates.length],
-    });
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const { start, end } = monthBounds(d.getFullYear(), d.getMonth());
+    const cohort = allTasks.filter((t) => t.createdAt >= start && t.createdAt <= end);
+    const filled = cohort.filter((t) => t.status === "FILLED" || t.status === "CLOSED").length;
+    const rate = cohort.length > 0 ? Math.round((filled / cohort.length) * 100) : 0;
+    fillRateTrend.push({ month: MONTHS[d.getMonth()], rate });
   }
 
-  // Spend by department — illustrative (no department on tasks/payments in v1).
-  const spendByDepartment = [
-    { label: "Logistics", amount: Math.round(grossPaid * 0.4) },
-    { label: "Marketing", amount: Math.round(grossPaid * 0.35) },
-    { label: "Operations", amount: Math.round(grossPaid * 0.25) },
-  ];
+  // Spend by department — derived from categories (no department field in v1)
+  const spendByDepartment = spendByCategory.map(({ label, amount }) => ({
+    label,
+    amount,
+  }));
 
   res.json({
     spendByMonth,

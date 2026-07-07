@@ -26,6 +26,8 @@ export interface User {
   role: Role;
   tiers: Tier[];
   kycStatus: KycStatus;
+  /** Reason for the latest REJECTED verdict (from Smile ID or an admin note), if any. */
+  kycNote?: string | null;
   location?: string | null;
   rating?: number | null;
   completedCount?: number;

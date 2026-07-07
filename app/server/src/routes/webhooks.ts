@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../prisma";
 import { paystack } from "../services/paystack";
+import { verifyWebhookSignature, isApprovedResultCode } from "../services/smileIdentity";
 
 const router = Router();
 
@@ -49,6 +50,49 @@ router.post("/paystack", async (req: Request, res: Response) => {
   }
 
   // Always 200 so Paystack stops retrying.
+  res.json({ received: true });
+});
+
+// POST /api/webhooks/smile
+// Final result for a Document Verification job, including ones that needed human
+// review (which the synchronous return_job_status result in routes/me.ts can't
+// reflect — see services/smileIdentity.ts). Only relevant when SMILE_CALLBACK_URL
+// points here; without it Smile has nowhere to send this and the sync result stands.
+router.post("/smile", async (req: Request, res: Response) => {
+  const body = req.body || {};
+  const { timestamp, signature, ResultCode, ResultText, SmileJobID, PartnerParams } = body;
+
+  if (!verifyWebhookSignature(String(timestamp ?? ""), String(signature ?? ""))) {
+    return res.status(401).json({ error: "Invalid signature" });
+  }
+
+  const jobId = PartnerParams?.job_id ? String(PartnerParams.job_id) : undefined;
+  const verification = jobId
+    ? await prisma.kycVerification.findUnique({ where: { jobId } })
+    : null;
+
+  if (verification) {
+    const approved = isApprovedResultCode(ResultCode);
+    await prisma.kycVerification.update({
+      where: { id: verification.id },
+      data: {
+        smileJobId: SmileJobID ?? verification.smileJobId,
+        status: approved ? "APPROVED" : "REJECTED",
+        resultCode: ResultCode ?? verification.resultCode,
+        resultText: ResultText ?? verification.resultText,
+        raw: JSON.stringify(body),
+      },
+    });
+    await prisma.user.update({
+      where: { id: verification.workerId },
+      data: {
+        kycStatus: approved ? "VERIFIED" : "REJECTED",
+        kycNote: approved ? null : ResultText || "Automated verification did not pass.",
+      },
+    });
+  }
+
+  // Always 200 so Smile ID stops retrying.
   res.json({ received: true });
 });
 

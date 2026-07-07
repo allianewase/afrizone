@@ -17,6 +17,10 @@ async function main() {
   await prisma.clockEvent.deleteMany();
   await prisma.withdrawal.deleteMany();
   await prisma.contract.deleteMany();
+  await prisma.dispute.deleteMany();
+  await prisma.kycVerification.deleteMany();
+  await prisma.kycDocument.deleteMany();
+  await prisma.rating.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.timesheet.deleteMany();
   await prisma.application.deleteMany();
@@ -295,7 +299,16 @@ async function main() {
   // Ibrahim ₦9,000 (APPROVED)
   await mkPay(ibrahim.id, tDispatch.id, 9000, "APPROVED");
   // Funke ₦24,000 (DISPUTED)
-  await mkPay(funke.id, tPromo.id, 24000, "DISPUTED");
+  const funkePayment = await mkPay(funke.id, tPromo.id, 24000, "DISPUTED");
+  await prisma.dispute.create({
+    data: {
+      workerId: funke.id,
+      entityType: "PAYMENT",
+      entityId: funkePayment.id,
+      reason: "Payment amount looks lower than what was agreed for the weekend shift.",
+      status: "OPEN",
+    },
+  });
 
   // ── v3: Amaka's worker journey (mobile app demo data) ─────────────────────
   // Amaka already has: APPROVED application on tPromo + ₦18,000 APPROVED Payment.

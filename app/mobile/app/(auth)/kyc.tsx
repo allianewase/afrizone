@@ -65,6 +65,16 @@ const STEP_LABEL: Record<StepKey, string> = {
   submitted: 'Submitted',
 };
 
+// Nigeria document keywords Smile ID's Document Verification recognises
+// (server/src/services/smileIdentity.ts → NG_ID_TYPES). Only used when Smile ID
+// is configured server-side; harmless to always collect otherwise.
+const ID_TYPES: { key: string; label: string }[] = [
+  { key: 'IDENTITY_CARD', label: 'National ID' },
+  { key: 'VOTER_ID', label: "Voter's Card" },
+  { key: 'DRIVERS_LICENSE', label: "Driver's Licence" },
+  { key: 'PASSPORT', label: 'Passport' },
+];
+
 const TIERS: { key: Tier; blurb: string; docLabel: string }[] = [
   { key: 'STUDENT', blurb: 'Campus tasks, surveys, promo.', docLabel: 'Matric number / student ID' },
   { key: 'DISPATCH', blurb: 'Parcel runs & delivery.', docLabel: "Driver's licence + vehicle papers" },
@@ -85,6 +95,7 @@ export default function KycScreen() {
   const [email, setEmail] = useState(user?.email ?? '');
   const [tier, setTier] = useState<Tier | null>(null);
   const [idDocId, setIdDocId] = useState<string | null>(null);
+  const [idType, setIdType] = useState<string | null>(null);
   const [selfieDocId, setSelfieDocId] = useState<string | null>(null);
   const [docsDocId, setDocsDocId] = useState<string | null>(null);
   const [tin, setTin] = useState('');
@@ -93,6 +104,8 @@ export default function KycScreen() {
   const [bankPickerOpen, setBankPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submittedStatus, setSubmittedStatus] = useState<'PENDING' | 'VERIFIED' | 'REJECTED'>('PENDING');
+  const [submittedNote, setSubmittedNote] = useState<string | null>(null);
 
   const selectedTier = TIERS.find((t) => t.key === tier);
   const selectedBank = NIGERIAN_BANKS.find((b) => b.code === bankCode);
@@ -108,18 +121,22 @@ export default function KycScreen() {
     setError(null);
     try {
       await updateProfile({ name: name.trim(), email: email.trim() });
-      await api.submitKyc({
+      const result = await api.submitKyc({
         tin: tin || undefined,
         bankMasked: maskedBank(),
         bankCode: bankCode || undefined,
         bankAccountNumber: acct || undefined,
         bankName: selectedBank?.name || undefined,
         tier: tier ?? undefined,
+        idType: idType ?? undefined,
       });
       await updateUser({
-        kycStatus: 'PENDING',
+        kycStatus: result.kycStatus,
+        kycNote: result.kycNote ?? null,
         tiers: tier ? [tier] : user?.tiers ?? [],
       });
+      setSubmittedStatus(result.kycStatus === 'REJECTED' || result.kycStatus === 'VERIFIED' ? result.kycStatus : 'PENDING');
+      setSubmittedNote(result.kycNote ?? null);
       setStepIndex(STEPS.indexOf('submitted'));
     } catch (e) {
       const msg =
@@ -152,7 +169,7 @@ export default function KycScreen() {
       case 'tier':
         return !!tier;
       case 'id':
-        return !!idDocId;
+        return !!idDocId && !!idType;
       case 'selfie':
         return !!selfieDocId;
       case 'docs':
@@ -198,7 +215,10 @@ export default function KycScreen() {
               tone="danger"
               icon="shield"
               title="Previous verification rejected"
-              message="Please update your documents and re-submit. Ensure your ID is clear and your selfie matches your ID photo."
+              message={
+                user?.kycNote ??
+                'Please update your documents and re-submit. Ensure your ID is clear and your selfie matches your ID photo.'
+              }
             />
           ) : (
             <Banner
@@ -263,14 +283,36 @@ export default function KycScreen() {
         )}
 
         {step === 'id' && (
-          <UploadStep
-            icon="id"
-            title="Upload your ID"
-            sub="NIN slip, voter's card, or passport photo page."
-            docType="ID"
-            docId={idDocId}
-            onUploaded={setIdDocId}
-          />
+          <View style={{ gap: spacing.lg }}>
+            <Field label="ID type">
+              <View style={styles.idTypeRow}>
+                {ID_TYPES.map((t) => {
+                  const selected = idType === t.key;
+                  return (
+                    <Pressable
+                      key={t.key}
+                      onPress={() => setIdType(t.key)}
+                      style={[styles.idTypeChip, selected && styles.idTypeChipActive]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                    >
+                      <Text style={[styles.idTypeChipText, selected && styles.idTypeChipTextActive]}>
+                        {t.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </Field>
+            <UploadStep
+              icon="id"
+              title="Upload your ID"
+              sub="NIN slip, voter's card, or passport photo page."
+              docType="ID"
+              docId={idDocId}
+              onUploaded={setIdDocId}
+            />
+          </View>
         )}
 
         {step === 'selfie' && (
@@ -350,7 +392,10 @@ export default function KycScreen() {
               <ReviewRow label="Name" value={name.trim() || '—'} />
               <ReviewRow label="Email" value={email.trim() || '—'} />
               <ReviewRow label="Tier" value={tier ?? '—'} />
-              <ReviewRow label="ID" value={idDocId ? '✓ Uploaded' : 'Missing'} />
+              <ReviewRow
+                label="ID"
+                value={idDocId ? `✓ Uploaded (${ID_TYPES.find((t) => t.key === idType)?.label ?? idType})` : 'Missing'}
+              />
               <ReviewRow label="Selfie" value={selfieDocId ? '✓ Uploaded' : 'Missing'} />
               <ReviewRow label="Tier docs" value={docsDocId ? '✓ Uploaded' : 'Missing'} />
               <ReviewRow label="TIN" value={tin || '—'} />
@@ -363,7 +408,34 @@ export default function KycScreen() {
           </View>
         )}
 
-        {step === 'submitted' && (
+        {step === 'submitted' && submittedStatus === 'REJECTED' && (
+          <View style={styles.submitted}>
+            <View style={[styles.submittedIcon, { backgroundColor: colors.dangerSoft }]}>
+              <Icon name="alert" size={40} color={colors.danger} strokeWidth={3} />
+            </View>
+            <Text style={styles.h1}>Verification not approved</Text>
+            <Text style={styles.muted}>
+              {submittedNote ??
+                'Your ID and selfie did not pass automated verification. Please re-check your documents and try again.'}
+            </Text>
+          </View>
+        )}
+
+        {step === 'submitted' && submittedStatus === 'VERIFIED' && (
+          <View style={styles.submitted}>
+            <View style={styles.submittedIcon}>
+              <Icon name="check" size={40} color={colors.indigo} strokeWidth={3} />
+            </View>
+            <Text style={styles.h1}>Identity verified</Text>
+            <Text style={styles.muted}>
+              Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. Your identity has been{' '}
+              <Text style={{ fontWeight: '700', color: colors.indigo }}>automatically verified</Text>.
+              An admin still needs to approve your tier before you can apply to tasks.
+            </Text>
+          </View>
+        )}
+
+        {step === 'submitted' && submittedStatus === 'PENDING' && (
           <View style={styles.submitted}>
             <View style={styles.submittedIcon}>
               <Icon name="check" size={40} color={colors.indigo} strokeWidth={3} />
@@ -721,6 +793,18 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   bankPickerText: { fontSize: type.size.md, color: colors.text, flex: 1 },
+  idTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  idTypeChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+  },
+  idTypeChipActive: { borderColor: colors.indigo, backgroundColor: colors.indigoSoft },
+  idTypeChipText: { fontSize: type.size.sm, color: colors.text, fontWeight: '600' },
+  idTypeChipTextActive: { color: colors.indigo },
   acctHint: { fontSize: type.size.sm, color: colors.textMuted, marginTop: 4 },
   // bank picker modal
   pickerBackdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },

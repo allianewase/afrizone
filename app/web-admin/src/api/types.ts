@@ -7,6 +7,8 @@ export type PayModel = 'HOURLY' | 'FIXED'
 export type LocationType = 'PHYSICAL' | 'REMOTE'
 export type TaskStatus = 'OPEN' | 'FILLED' | 'CLOSED' | 'ARCHIVED'
 export type AppStatus = 'APPLIED' | 'APPROVED' | 'REJECTED'
+export type DisputeStatus = 'OPEN' | 'RESOLVED' | 'CLOSED'
+export type DisputeEntityType = 'PAYMENT' | 'TIMESHEET'
 export type TimesheetStatus = 'SUBMITTED' | 'APPROVED' | 'DISPUTED'
 export type PaymentStatus = 'PENDING' | 'APPROVED' | 'RELEASED' | 'DISPUTED'
 
@@ -120,6 +122,18 @@ export interface WorkerDetail extends Worker {
   applications?: Application[]
 }
 
+export type KycDocType = 'ID' | 'SELFIE' | 'DOCS'
+
+export interface KycDocument {
+  id: string
+  docType: KycDocType
+  filename: string
+  originalName: string
+  mimeType: string
+  url: string
+  createdAt?: string
+}
+
 export interface SpendByCategory {
   label: string
   value: number
@@ -194,6 +208,25 @@ export interface PasswordForgotResponse {
 /** /auth/password/reset. */
 export interface PasswordResetResponse {
   ok: true
+}
+
+export interface SearchResults {
+  tasks: { id: string; title: string; status: TaskStatus; category: string }[]
+  workers: { id: string; name: string; email: string; kycStatus: KycStatus }[]
+}
+
+export interface Dispute {
+  id: string
+  workerId: string
+  entityType: DisputeEntityType
+  entityId: string
+  reason: string
+  status: DisputeStatus
+  resolution?: string | null
+  createdAt?: string
+  updatedAt?: string
+  worker?: { id: string; name: string }
+  entity?: { title: string; gross?: number; net?: number } | null
 }
 
 export interface ReleaseAllResponse {

@@ -2,6 +2,8 @@ import { Router, Response } from "express";
 import { prisma } from "../prisma";
 import { requireAuth, AuthedRequest } from "../auth";
 import { tiersToArray, tiersToString, Tier } from "../types";
+import { isSmileConfigured, submitDocumentVerification, NgIdType, NG_ID_TYPES } from "../services/smileIdentity";
+import { getFileBuffer } from "../services/storage";
 
 const router = Router();
 
@@ -34,6 +36,7 @@ function formatUser(user: any) {
     phone: user.phone ?? null,
     tiers: tiersToArray(user.tiers),
     kycStatus: user.kycStatus,
+    kycNote: user.kycNote ?? null,
     location: user.location,
     bankMasked: user.bankMasked,
     bankCode: user.bankCode ?? null,
@@ -400,15 +403,73 @@ router.patch("/push-token", requireAuth, async (req: AuthedRequest, res: Respons
   res.json({ ok: true });
 });
 
-// POST /api/me/kyc/submit → body {tin?, bankMasked?, bankCode?, bankAccountNumber?, bankName?, tier?}.
+// POST /api/me/kyc/submit → body {tin?, bankMasked?, bankCode?, bankAccountNumber?, bankName?, tier?, idType?}.
+// When Smile ID is configured (see services/smileIdentity.ts) and the worker has
+// uploaded both an ID and a selfie document, this also runs an automated Document
+// Verification pass: a final REJECTED result short-circuits straight to kycStatus
+// REJECTED (with the real reason in kycNote), a final approval moves to kycStatus
+// VERIFIED — still awaiting an admin's own TIER_APPROVED call. Any failure to reach
+// Smile (missing docs, no idType, network error) falls back to the pre-existing
+// manual-review flow (kycStatus stays PENDING for an admin to decide).
 router.post("/kyc/submit", requireAuth, async (req: AuthedRequest, res: Response) => {
-  const { tin, bankMasked, bankCode, bankAccountNumber, bankName, tier } = req.body || {};
+  const { tin, bankMasked, bankCode, bankAccountNumber, bankName, tier, idType } = req.body || {};
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
   if (!user) return res.status(404).json({ error: "User not found" });
 
   let tiers = tiersToArray(user.tiers);
   if (tier && !tiers.includes(tier as Tier)) {
     tiers = [...tiers, tier as Tier];
+  }
+
+  let kycStatus = "PENDING";
+  let kycNote: string | null = null;
+
+  if (isSmileConfigured && NG_ID_TYPES.includes(idType)) {
+    const docs = await prisma.kycDocument.findMany({
+      where: { userId: user.id, docType: { in: ["ID", "SELFIE"] } },
+      orderBy: { createdAt: "desc" },
+    });
+    const idDoc = docs.find((d) => d.docType === "ID");
+    const selfieDoc = docs.find((d) => d.docType === "SELFIE");
+
+    if (idDoc && selfieDoc) {
+      const jobId = `kyc_${user.id}_${Date.now()}`;
+      try {
+        const [idBuf, selfieBuf] = await Promise.all([
+          getFileBuffer(idDoc.filename),
+          getFileBuffer(selfieDoc.filename),
+        ]);
+        const result = await submitDocumentVerification({
+          jobId,
+          userId: user.id,
+          idType: idType as NgIdType,
+          idFrontBase64: idBuf.toString("base64"),
+          selfieBase64: selfieBuf.toString("base64"),
+        });
+
+        await prisma.kycVerification.create({
+          data: {
+            workerId: user.id,
+            jobId,
+            smileJobId: result.smileJobId,
+            status: result.final ? (result.approved ? "APPROVED" : "REJECTED") : "PENDING",
+            resultCode: result.resultCode,
+            resultText: result.resultText,
+            raw: JSON.stringify(result.raw),
+          },
+        });
+
+        if (result.final) {
+          kycStatus = result.approved ? "VERIFIED" : "REJECTED";
+          kycNote = result.approved
+            ? null
+            : result.resultText ||
+              "Automated verification did not pass. Please re-check your documents and try again.";
+        }
+      } catch (err) {
+        console.error("[smileIdentity] verification failed, falling back to manual review:", err);
+      }
+    }
   }
 
   const updated = await prisma.user.update({
@@ -420,7 +481,8 @@ router.post("/kyc/submit", requireAuth, async (req: AuthedRequest, res: Response
       bankAccountNumber: bankAccountNumber != null ? String(bankAccountNumber) : user.bankAccountNumber,
       bankName: bankName != null ? String(bankName) : user.bankName,
       tiers: tiersToString(tiers),
-      kycStatus: "PENDING",
+      kycStatus,
+      kycNote,
     },
   });
   res.json(formatUser(updated));

@@ -110,6 +110,19 @@ export function timesheetPill(s: TimesheetStatus): { variant: PillVariant; label
   }
 }
 
+export function disputePill(s: string): { variant: PillVariant; label: string } {
+  switch (s) {
+    case 'OPEN':
+      return { variant: 'danger', label: 'Open' }
+    case 'RESOLVED':
+      return { variant: 'ready', label: 'Resolved' }
+    case 'CLOSED':
+      return { variant: 'paid', label: 'Closed' }
+    default:
+      return { variant: 'pending', label: s }
+  }
+}
+
 export function kycPill(s: string): { variant: PillVariant; label: string } {
   switch (s) {
     case 'VERIFIED':

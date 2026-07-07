@@ -11,6 +11,7 @@ import Splash from '../src/components/Splash';
 import {
   configureNotificationHandler,
   registerPushToken,
+  subscribeToTokenRefresh,
 } from '../src/lib/notifications';
 
 // Configure foreground notification display before any component mounts.
@@ -36,6 +37,12 @@ function NotificationHandler() {
   // Reset flag on logout so it re-registers on next login.
   useEffect(() => {
     if (!user) tokenRegistered.current = false;
+  }, [user]);
+
+  // Re-upload token whenever the app comes to foreground (tokens can rotate).
+  useEffect(() => {
+    if (!user) return;
+    return subscribeToTokenRefresh();
   }, [user]);
 
   // Handle notification taps (works from background and killed state).
