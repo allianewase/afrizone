@@ -301,6 +301,29 @@ export interface Template {
   value: string
 }
 
+export interface HealthConfig {
+  ready: boolean
+  criticalIssues: string[]
+  services: {
+    paystack: { ok: boolean; mode: 'live' | 'simulated'; note: string }
+    [key: string]: unknown
+  }
+}
+
+export interface Funding {
+  id: string
+  amount: number
+  status: 'PENDING' | 'SUCCESS' | 'FAILED'
+  provider: 'paystack' | 'simulated' | null
+  reference: string
+  providerRef: string | null
+  initiatedBy: string
+  createdAt: string
+  admin: { id: string; name: string }
+  simulated?: boolean
+  authorizationUrl?: string
+}
+
 export interface ReportsSummary {
   spendByMonth: { month: string; spend: number }[]
   spendByCategory: { label: string; amount: number; pct: number }[]

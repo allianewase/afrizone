@@ -10,6 +10,8 @@ import type {
   DashboardStats,
   Dispute,
   DisputeStatus,
+  Funding,
+  HealthConfig,
   Job,
   KycDocument,
   LoginResponse,
@@ -251,6 +253,18 @@ export const api = {
   // ===== v2: Reports =====
   reportsSummary: (signal?: AbortSignal) =>
     request<ReportsSummary>('/reports/summary', { signal }),
+
+  healthConfig: (signal?: AbortSignal) => request<HealthConfig>('/health/config', { signal }),
+
+  // ===== Platform funding (admin) =====
+  fundingBalance: (signal?: AbortSignal) =>
+    request<{ balance: number }>('/admin/funding/balance', { signal }),
+  fundingHistory: (signal?: AbortSignal) =>
+    request<Funding[]>('/admin/funding', { signal }),
+  initializeFunding: (amount: number) =>
+    request<Funding>('/admin/funding/initialize', { method: 'POST', body: { amount } }),
+  devSettleFunding: () =>
+    request<{ settled: number }>('/admin/funding/dev/settle', { method: 'POST' }),
 
   // ===== v2: Settings =====
   taxRates: (signal?: AbortSignal) =>

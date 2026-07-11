@@ -1,11 +1,17 @@
-// Paystack Transfers integration — payouts to worker bank accounts.
+// Paystack integration — outbound Transfers (payouts to worker bank accounts)
+// and inbound hosted-checkout (Afrizone Mart funding the platform balance).
 //
 // Env-driven: set PAYSTACK_SECRET in .env to go live. With no key, `enabled` is
-// false and the withdraw flow runs in SIMULATED mode (no real money moves).
+// false and both flows run in SIMULATED mode (no real money moves).
 //
-// Live flow: create a transfer recipient (NUBAN + bank code) → initiate transfer
+// Outbound: create a transfer recipient (NUBAN + bank code) → initiate transfer
 // (amount in kobo) → Paystack settles async → webhook flips status to PAID/FAILED.
 // Docs: https://paystack.com/docs/transfers
+//
+// Inbound: initialize a transaction → redirect admin to the returned
+// authorization_url → Paystack settles async → webhook (charge.success) flips
+// the matching Funding row to SUCCESS.
+// Docs: https://paystack.com/docs/payments/accept-payments
 
 import crypto from "crypto";
 
@@ -63,6 +69,22 @@ export const paystack = {
       reason: input.reason || "Afrizone Part Time payout",
     });
     return { status: data.status as string, transferCode: data.transfer_code as string };
+  },
+
+  /** Start a hosted-checkout inbound payment. `amountNaira` is whole Naira. */
+  async initializeTransaction(input: {
+    amountNaira: number;
+    email: string;
+    reference: string;
+    callbackUrl?: string;
+  }): Promise<{ authorizationUrl: string; accessCode: string }> {
+    const data = await this.call("/transaction/initialize", "POST", {
+      amount: input.amountNaira * 100,
+      email: input.email,
+      reference: input.reference,
+      callback_url: input.callbackUrl,
+    });
+    return { authorizationUrl: data.authorization_url as string, accessCode: data.access_code as string };
   },
 
   /** Verify the X-Paystack-Signature header (HMAC-SHA512 of the raw body). */

@@ -24,6 +24,7 @@ import webhooksRouter from "./routes/webhooks";
 import kycDocumentsRouter from "./routes/kycDocuments";
 import searchRouter from "./routes/search";
 import healthRouter from "./routes/health";
+import fundingRouter from "./routes/funding";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -72,6 +73,7 @@ app.use("/api/disputes", adminDisputesRouter);
 app.use("/api/me/disputes", disputesRouter);
 app.use("/api/workers", ratingsRouter);
 app.use("/api/webhooks", webhooksRouter);
+app.use("/api/admin/funding", fundingRouter);
 
 // Serve uploaded KYC documents (dev only; use signed S3 URLs in prod).
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));

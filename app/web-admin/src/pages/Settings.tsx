@@ -5,12 +5,14 @@ import { TIER_LABELS } from '../lib/format'
 import { useAuth } from '../auth/AuthContext'
 import type {
   Category,
+  Funding,
   PayModel,
   TaxRate,
   Template,
   Tier,
   TwoFactorSetup,
 } from '../api/types'
+import { formatNaira, formatDate } from '../lib/format'
 import PageHeader from '../components/PageHeader'
 import Glass from '../components/ui/Glass'
 import Button from '../components/ui/Button'
@@ -18,10 +20,11 @@ import Modal from '../components/ui/Modal'
 import OtpInput from '../components/ui/OtpInput'
 import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
+import StatusPill from '../components/ui/StatusPill'
 import './Settings.css'
 
 const TIERS: Tier[] = ['STUDENT', 'DISPATCH', 'REMOTE', 'PROMO', 'TRADE']
-type Tab = 'tax' | 'categories' | 'templates' | 'security'
+type Tab = 'tax' | 'categories' | 'templates' | 'billing' | 'security'
 
 function Toggle({
   checked,
@@ -792,6 +795,216 @@ function DisableTwoFactorModal({
   )
 }
 
+/* ===================== Billing / Funding ===================== */
+
+function fundingPill(s: Funding['status']): { variant: 'pending' | 'ready' | 'danger'; label: string } {
+  switch (s) {
+    case 'SUCCESS':
+      return { variant: 'ready', label: 'Success' }
+    case 'FAILED':
+      return { variant: 'danger', label: 'Failed' }
+    default:
+      return { variant: 'pending', label: 'Pending' }
+  }
+}
+
+function FundingModal({
+  open,
+  onClose,
+  onInitialized,
+}: {
+  open: boolean
+  onClose: () => void
+  onInitialized: (f: Funding) => void
+}) {
+  const [amount, setAmount] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    const amt = Math.round(Number(amount))
+    if (!Number.isInteger(amt) || amt <= 0) {
+      setError('Enter a whole-Naira amount greater than 0')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const funding = await api.initializeFunding(amt)
+      onInitialized(funding)
+      setAmount('')
+      onClose()
+      if (funding.authorizationUrl) {
+        window.location.href = funding.authorizationUrl
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to start funding')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Modal open={open} title="Fund platform wallet" subtitle="Top up the balance that worker withdrawals draw from" onClose={onClose}>
+      <form onSubmit={submit}>
+        <div className="formgrid">
+          <div className="field">
+            <label htmlFor="fund-amt">Amount (₦)</label>
+            <input
+              id="fund-amt"
+              className="input"
+              type="number"
+              min="1"
+              step="1"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="500000"
+              required
+              autoFocus
+            />
+          </div>
+        </div>
+        {error && (
+          <div className="login-error" role="alert" style={{ marginTop: 4 }}>
+            <Icon name="alert" size={15} />
+            {error}
+          </div>
+        )}
+        <div className="modal-actions">
+          <Button type="button" variant="glass" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" icon="naira" loading={submitting}>
+            Continue to pay
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function BillingTab({ canEdit }: { canEdit: boolean }) {
+  const balanceRes = useApi((signal) => api.fundingBalance(signal))
+  const historyRes = useApi((signal) => api.fundingHistory(signal))
+  const configRes = useApi((signal) => api.healthConfig(signal))
+  const [modalOpen, setModalOpen] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [settling, setSettling] = useState(false)
+  const history = useMemo(() => historyRes.data ?? [], [historyRes.data])
+  const simulated = configRes.data ? !configRes.data.services.paystack.ok : false
+
+  function refreshAll() {
+    balanceRes.reload()
+    historyRes.reload()
+  }
+
+  async function devSettle() {
+    setSettling(true)
+    setActionError(null)
+    try {
+      await api.devSettleFunding()
+      refreshAll()
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Settlement failed')
+    } finally {
+      setSettling(false)
+    }
+  }
+
+  if (balanceRes.loading || historyRes.loading) return <LoadingState label="Loading billing…" />
+  if (balanceRes.error) return <ErrorState message={balanceRes.error} onRetry={refreshAll} />
+
+  return (
+    <>
+      <div className="tabhead">
+        <p className="tabhint">
+          Fund the platform wallet via Paystack so worker withdrawals have a balance to draw from.
+        </p>
+        {canEdit && (
+          <Button variant="primary" size="sm" icon="naira" onClick={() => setModalOpen(true)}>
+            Fund wallet
+          </Button>
+        )}
+      </div>
+
+      {actionError && (
+        <div className="login-error" role="alert" style={{ marginBottom: 16 }}>
+          <Icon name="alert" size={15} />
+          {actionError}
+        </div>
+      )}
+
+      <Glass reveal style={{ padding: 20, marginBottom: 16 }}>
+        <div className="card-h" style={{ alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <span className="twofa-ic" style={{ color: 'var(--money)' }}>
+              <Icon name="naira" size={22} />
+            </span>
+            <div>
+              <h3 style={{ fontSize: 16 }}>Platform balance</h3>
+              <p className="tabhint" style={{ marginTop: 4 }}>
+                {formatNaira(balanceRes.data?.balance ?? 0)}
+              </p>
+              {simulated && (
+                <span className="twofa-status">
+                  <span className="dot" />
+                  Simulated mode — set PAYSTACK_SECRET for live charges
+                </span>
+              )}
+            </div>
+          </div>
+          {canEdit && simulated && (
+            <Button variant="glass" size="sm" loading={settling} onClick={devSettle}>
+              Simulate payment received
+            </Button>
+          )}
+        </div>
+      </Glass>
+
+      {history.length === 0 ? (
+        <Glass>
+          <EmptyState icon="naira" title="No funding yet" sub="Fund the platform wallet to get started." />
+        </Glass>
+      ) : (
+        <Glass className="tablewrap">
+          <table className="dt">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Initiated by</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((f) => {
+                const pill = fundingPill(f.status)
+                return (
+                  <tr key={f.id}>
+                    <td>{formatDate(f.createdAt)}</td>
+                    <td style={{ fontWeight: 600 }}>{formatNaira(f.amount)}</td>
+                    <td>
+                      <StatusPill variant={pill.variant} label={pill.label} />
+                    </td>
+                    <td>{f.admin?.name ?? '—'}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </Glass>
+      )}
+
+      <FundingModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onInitialized={() => refreshAll()}
+      />
+    </>
+  )
+}
+
 function SecurityTab() {
   const { user, refreshUser } = useAuth()
   const [enableOpen, setEnableOpen] = useState(false)
@@ -858,16 +1071,21 @@ function SecurityTab() {
 
 /* ===================== Page ===================== */
 
-const TABS: { id: Tab; label: string; icon: 'percent' | 'tag' | 'mail' | 'shield' }[] = [
+const TABS: { id: Tab; label: string; icon: 'percent' | 'tag' | 'mail' | 'naira' | 'shield' }[] = [
   { id: 'tax', label: 'Tax rates', icon: 'percent' },
   { id: 'categories', label: 'Categories', icon: 'tag' },
   { id: 'templates', label: 'Templates', icon: 'mail' },
+  { id: 'billing', label: 'Billing', icon: 'naira' },
   { id: 'security', label: 'Security', icon: 'shield' },
 ]
 
 export default function Settings() {
   const { user } = useAuth()
-  const [tab, setTab] = useState<Tab>('tax')
+  const hasBillingRef = useMemo(
+    () => new URLSearchParams(window.location.search).has('billing_ref'),
+    [],
+  )
+  const [tab, setTab] = useState<Tab>(hasBillingRef ? 'billing' : 'tax')
   const canEdit = user?.role === 'SUPER_ADMIN'
 
   return (
@@ -907,6 +1125,7 @@ export default function Settings() {
       {tab === 'tax' && <TaxRatesTab canEdit={canEdit} />}
       {tab === 'categories' && <CategoriesTab canEdit={canEdit} />}
       {tab === 'templates' && <TemplatesTab canEdit={canEdit} />}
+      {tab === 'billing' && <BillingTab canEdit={canEdit} />}
       {tab === 'security' && <SecurityTab />}
     </>
   )

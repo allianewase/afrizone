@@ -210,3 +210,15 @@ Env-driven. `PAYSTACK_SECRET` blank → **SIMULATED** mode (no money moves, with
 - `POST /api/wallet/withdraw` — unchanged request `{amount}`. In live mode without payout bank details → `400`. On provider error → withdrawal FAILED + `502`. Otherwise `201` Withdrawal (PROCESSING; `simulated:true` flag in sim mode).
 - `POST /api/webhooks/paystack` — verifies `x-paystack-signature` (HMAC-SHA512 over raw body); on `transfer.success` → PAID, on `transfer.failed`/`transfer.reversed` → FAILED. Always `200`. Set this URL in the Paystack dashboard (use an ngrok/tunnel in dev).
 - `POST /api/wallet/dev/settle` — **dev only** (sim mode): flips the caller's PROCESSING withdrawals to PAID so the full flow can be demoed without webhooks. Returns `403` when live.
+
+# Platform funding (Paystack inbound — Afrizone Mart funding the wallet)
+
+Env-driven, same `PAYSTACK_SECRET` gate as payouts. `PAYSTACK_SECRET` blank → **SIMULATED** (no real charge, `Funding` stays PENDING). Set the secret → **LIVE**: admin gets redirected to a real Paystack hosted-checkout page; the webhook settles it. Informational only for now — the platform balance is not used to gate withdrawal approval.
+
+- `Funding` model: `id, amount, status (PENDING|SUCCESS|FAILED), provider ("paystack"|"simulated"), reference, providerRef?, initiatedBy, createdAt`.
+- Platform balance is derived, not stored: `Σ SUCCESS Funding.amount − Σ non-failed Withdrawal.amount`.
+- `GET /api/admin/funding/balance` (SUPER_ADMIN) → `{balance}`.
+- `GET /api/admin/funding` (SUPER_ADMIN) → funding history, newest first, with `admin {id, name}`.
+- `POST /api/admin/funding/initialize` (SUPER_ADMIN) — body `{amount}`. Creates a PENDING Funding row. Live mode also returns `authorizationUrl` (Paystack hosted checkout) for the admin web to redirect to; sim mode returns `{simulated: true}`.
+- `POST /api/webhooks/paystack` — now also handles `charge.success`/`charge.failed`, matched by `reference` (or `providerRef`/access_code), flipping the matching `Funding` to SUCCESS/FAILED.
+- `POST /api/admin/funding/dev/settle` — **dev only** (sim mode): flips all PENDING fundings to SUCCESS. Returns `403` when live.

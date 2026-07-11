@@ -7,9 +7,10 @@ import { notifyWorker } from "../services/push";
 const router = Router();
 
 // POST /api/webhooks/paystack
-// Receives transfer.* events and reconciles the matching Withdrawal.
-// The raw body is needed for signature verification — index.ts mounts
-// express.raw() on this path BEFORE the global express.json().
+// Receives transfer.* events (outbound payouts → Withdrawal) and charge.*
+// events (inbound platform funding → Funding). The raw body is needed for
+// signature verification — index.ts mounts express.raw() on this path BEFORE
+// the global express.json().
 router.post("/paystack", async (req: Request, res: Response) => {
   const signature = req.header("x-paystack-signature");
   const raw: Buffer = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body));
@@ -46,6 +47,22 @@ router.post("/paystack", async (req: Request, res: Response) => {
       await prisma.withdrawal.update({
         where: { id: withdrawal.id },
         data: { status: "FAILED", failureReason: data.reason || type },
+      });
+    }
+  } else if (type === "charge.success" || type === "charge.failed") {
+    // Locate the funding by our reference (preferred) or Paystack access_code.
+    const accessCode: string | undefined = data.access_code;
+    const funding = await prisma.funding.findFirst({
+      where: {
+        OR: [reference ? { reference } : undefined, accessCode ? { providerRef: accessCode } : undefined].filter(
+          Boolean
+        ) as any,
+      },
+    });
+    if (funding && funding.status === "PENDING") {
+      await prisma.funding.update({
+        where: { id: funding.id },
+        data: { status: type === "charge.success" ? "SUCCESS" : "FAILED" },
       });
     }
   }
