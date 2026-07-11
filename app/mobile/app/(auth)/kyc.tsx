@@ -10,6 +10,7 @@ import {
   FlatList,
   Image,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +20,8 @@ import { ProgressRail } from '../../src/components/ProgressRail';
 import { Icon } from '../../src/components/Icon';
 import { TierBadge } from '../../src/components/TierBadge';
 import { Banner } from '../../src/components/Feedback';
+import { GlassCard, GlassBackdrop, GlassBar } from '../../src/components/Glass';
+import { BlurView } from 'expo-blur';
 import { colors, spacing, radii, type, layout } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAuth } from '../../src/auth/AuthContext';
@@ -185,7 +188,9 @@ export default function KycScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={[styles.topbar, { paddingTop: insets.top + spacing.sm }]}>
+      <GlassBackdrop />
+
+      <GlassBar edge="top" style={[styles.topbar, { paddingTop: insets.top + spacing.sm }]}>
         <Pressable onPress={back} hitSlop={10} style={styles.backBtn} accessibilityLabel="Back">
           <Icon name="chevron-left" size={22} color={colors.text} />
         </Pressable>
@@ -193,11 +198,13 @@ export default function KycScreen() {
           {user?.kycStatus === 'REJECTED' ? 'Re-verify' : 'Get verified'}
         </Text>
         <View style={{ width: layout.hitTarget }} />
-      </View>
+      </GlassBar>
 
       {step !== 'submitted' ? (
         <View style={styles.railWrap}>
-          <ProgressRail current={stepIndex + 1} total={STEPS.length - 1} label={STEP_LABEL[step]} />
+          <GlassCard tone="clay" radius={radii.card} contentStyle={{ padding: spacing.md }}>
+            <ProgressRail current={stepIndex + 1} total={STEPS.length - 1} label={STEP_LABEL[step]} />
+          </GlassCard>
         </View>
       ) : null}
 
@@ -267,15 +274,16 @@ export default function KycScreen() {
                 <Pressable
                   key={t.key}
                   onPress={() => setTier(t.key)}
-                  style={[styles.tierCard, active && styles.tierActive]}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: active }}
                 >
-                  <View style={styles.tierHead}>
-                    <TierBadge tier={t.key} />
-                    {active ? <Icon name="check-circle" size={20} color={colors.clay} /> : null}
-                  </View>
-                  <Text style={styles.tierBlurb}>{t.blurb}</Text>
+                  <GlassCard tone={active ? 'clay' : 'neutral'} contentStyle={{ gap: spacing.sm }}>
+                    <View style={styles.tierHead}>
+                      <TierBadge tier={t.key} />
+                      {active ? <Icon name="check-circle" size={20} color={colors.clay} /> : null}
+                    </View>
+                    <Text style={styles.tierBlurb}>{t.blurb}</Text>
+                  </GlassCard>
                 </Pressable>
               );
             })}
@@ -292,13 +300,18 @@ export default function KycScreen() {
                     <Pressable
                       key={t.key}
                       onPress={() => setIdType(t.key)}
-                      style={[styles.idTypeChip, selected && styles.idTypeChipActive]}
                       accessibilityRole="button"
                       accessibilityState={{ selected }}
                     >
-                      <Text style={[styles.idTypeChipText, selected && styles.idTypeChipTextActive]}>
-                        {t.label}
-                      </Text>
+                      <GlassCard
+                        tone={selected ? 'indigo' : 'neutral'}
+                        radius={radii.pill}
+                        contentStyle={styles.idTypeChipContent}
+                      >
+                        <Text style={[styles.idTypeChipText, selected && styles.idTypeChipTextActive]}>
+                          {t.label}
+                        </Text>
+                      </GlassCard>
                     </Pressable>
                   );
                 })}
@@ -388,7 +401,7 @@ export default function KycScreen() {
         {step === 'review' && (
           <View style={{ gap: spacing.md }}>
             <Text style={styles.h2}>Review & submit</Text>
-            <View style={styles.reviewCard}>
+            <GlassCard tone="gold" contentStyle={{ paddingHorizontal: spacing.lg, paddingVertical: 0 }}>
               <ReviewRow label="Name" value={name.trim() || '—'} />
               <ReviewRow label="Email" value={email.trim() || '—'} />
               <ReviewRow label="Tier" value={tier ?? '—'} />
@@ -399,8 +412,8 @@ export default function KycScreen() {
               <ReviewRow label="Selfie" value={selfieDocId ? '✓ Uploaded' : 'Missing'} />
               <ReviewRow label="Tier docs" value={docsDocId ? '✓ Uploaded' : 'Missing'} />
               <ReviewRow label="TIN" value={tin || '—'} />
-              <ReviewRow label="Bank" value={bankCode ? maskedBank() : '—'} />
-            </View>
+              <ReviewRow label="Bank" value={bankCode ? maskedBank() : '—'} last />
+            </GlassCard>
             <Text style={styles.muted}>
               Submitting sets your status to <Text style={{ fontWeight: '700' }}>In review</Text>.
               An admin verifies your tier before you can apply to tasks.
@@ -410,9 +423,9 @@ export default function KycScreen() {
 
         {step === 'submitted' && submittedStatus === 'REJECTED' && (
           <View style={styles.submitted}>
-            <View style={[styles.submittedIcon, { backgroundColor: colors.dangerSoft }]}>
+            <GlassCard tone="danger" radius={44} style={styles.submittedIcon} contentStyle={styles.submittedIconContent}>
               <Icon name="alert" size={40} color={colors.danger} strokeWidth={3} />
-            </View>
+            </GlassCard>
             <Text style={styles.h1}>Verification not approved</Text>
             <Text style={styles.muted}>
               {submittedNote ??
@@ -423,9 +436,9 @@ export default function KycScreen() {
 
         {step === 'submitted' && submittedStatus === 'VERIFIED' && (
           <View style={styles.submitted}>
-            <View style={styles.submittedIcon}>
+            <GlassCard tone="indigo" radius={44} style={styles.submittedIcon} contentStyle={styles.submittedIconContent}>
               <Icon name="check" size={40} color={colors.indigo} strokeWidth={3} />
-            </View>
+            </GlassCard>
             <Text style={styles.h1}>Identity verified</Text>
             <Text style={styles.muted}>
               Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. Your identity has been{' '}
@@ -437,9 +450,9 @@ export default function KycScreen() {
 
         {step === 'submitted' && submittedStatus === 'PENDING' && (
           <View style={styles.submitted}>
-            <View style={styles.submittedIcon}>
+            <GlassCard tone="indigo" radius={44} style={styles.submittedIcon} contentStyle={styles.submittedIconContent}>
               <Icon name="check" size={40} color={colors.indigo} strokeWidth={3} />
-            </View>
+            </GlassCard>
             <Text style={styles.h1}>Verification in review</Text>
             <Text style={styles.muted}>
               Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. Your verification is{' '}
@@ -459,6 +472,11 @@ export default function KycScreen() {
       >
         <Pressable style={styles.pickerBackdrop} onPress={() => setBankPickerOpen(false)} />
         <View style={[styles.pickerSheet, { paddingBottom: insets.bottom + spacing.md }]}>
+          <BlurView
+            intensity={Platform.OS === 'android' ? 90 : 50}
+            tint="light"
+            style={StyleSheet.absoluteFill}
+          />
           <View style={styles.pickerGrabber} />
           <Text style={styles.pickerTitle}>Select bank</Text>
           <FlatList
@@ -480,11 +498,12 @@ export default function KycScreen() {
         </View>
       </Modal>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
+      <GlassBar edge="bottom" style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
         {step === 'submitted' ? (
-          <Button label="Go to Home" icon="home" onPress={() => router.replace('/(tabs)/home')} />
+          <Button variant="premium" label="Go to Home" icon="home" onPress={() => router.replace('/(tabs)/home')} />
         ) : (
           <Button
+            variant="premium"
             label={step === 'review' ? 'Submit for review' : 'Continue'}
             icon="chevron-right"
             onPress={next}
@@ -492,7 +511,7 @@ export default function KycScreen() {
             loading={busy}
           />
         )}
-      </View>
+      </GlassBar>
     </View>
   );
 }
@@ -515,9 +534,9 @@ function Field({
   );
 }
 
-function ReviewRow({ label, value }: { label: string; value: string }) {
+function ReviewRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
   return (
-    <View style={styles.reviewRow}>
+    <View style={[styles.reviewRow, last && { borderBottomWidth: 0 }]}>
       <Text style={styles.reviewLabel}>{label}</Text>
       <Text style={styles.reviewValue} numberOfLines={1}>
         {value}
@@ -622,12 +641,14 @@ function UploadStep({
           ) : null}
         </View>
       ) : (
-        <View style={[styles.dropzone, done && styles.dropzoneDone]}>
-          <Icon name={done ? 'check-circle' : icon} size={40} color={done ? colors.money : colors.clay} />
-          <Text style={[styles.dropText, done && { color: colors.money }]}>
-            {done ? '✓ Document uploaded' : 'Choose how to add your document'}
-          </Text>
-        </View>
+        <GlassCard tone={done ? 'money' : 'gold'} contentStyle={styles.dropzoneContent}>
+          <View style={[styles.dropzoneRing, done && styles.dropzoneRingDone]}>
+            <Icon name={done ? 'check-circle' : icon} size={40} color={done ? colors.money : colors.clay} />
+            <Text style={[styles.dropText, done && { color: colors.money }]}>
+              {done ? '✓ Document uploaded' : 'Choose how to add your document'}
+            </Text>
+          </View>
+        </GlassCard>
       )}
 
       {uploadError ? (
@@ -699,28 +720,19 @@ const styles = StyleSheet.create({
     fontSize: type.size.md,
     color: colors.text,
   },
-  tierCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.card,
-    borderWidth: 1.5,
-    borderColor: colors.line,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  tierActive: { borderColor: colors.clay, backgroundColor: colors.claySoft },
   tierHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   tierBlurb: { color: colors.textMuted, fontSize: type.size.base, lineHeight: 20 },
-  dropzone: {
+  dropzoneContent: { padding: spacing.sm },
+  dropzoneRing: {
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: colors.line,
-    borderRadius: radii.card,
+    borderColor: 'rgba(194,80,46,0.35)',
+    borderRadius: radii.card - 4,
     paddingVertical: spacing.xxxl,
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
   },
-  dropzoneDone: { borderColor: colors.money, borderStyle: 'solid', backgroundColor: colors.moneySoft },
+  dropzoneRingDone: { borderColor: 'rgba(31,157,107,0.45)' },
   dropText: { color: colors.clay, fontWeight: '700', fontSize: type.size.md },
   thumbWrap: {
     width: '100%',
@@ -752,39 +764,23 @@ const styles = StyleSheet.create({
   pickBtnText: { color: colors.clay, fontWeight: '700', fontSize: type.size.sm },
   uploadErr: { color: colors.danger, fontSize: type.size.sm, fontWeight: '600' },
   retakeLink: { color: colors.textMuted, fontSize: type.size.sm, textDecorationLine: 'underline', textAlign: 'center' },
-  reviewCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: spacing.lg,
-  },
   reviewRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.line,
+    borderBottomColor: 'rgba(36,28,21,0.08)',
     gap: spacing.lg,
   },
   reviewLabel: { color: colors.textMuted, fontSize: type.size.base },
   reviewValue: { color: colors.text, fontSize: type.size.base, fontWeight: '700', flexShrink: 1, textAlign: 'right' },
   submitted: { alignItems: 'center', gap: spacing.lg, paddingTop: spacing.xxxl },
-  submittedIcon: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: colors.indigoSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  submittedIcon: { width: 88, height: 88 },
+  submittedIconContent: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 0 },
   footer: {
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
-    backgroundColor: colors.bg,
   },
   bankPicker: {
     flexDirection: 'row',
@@ -794,28 +790,24 @@ const styles = StyleSheet.create({
   },
   bankPickerText: { fontSize: type.size.md, color: colors.text, flex: 1 },
   idTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  idTypeChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.surface,
-  },
-  idTypeChipActive: { borderColor: colors.indigo, backgroundColor: colors.indigoSoft },
+  idTypeChipContent: { paddingVertical: 8, paddingHorizontal: 14 },
   idTypeChipText: { fontSize: type.size.sm, color: colors.text, fontWeight: '600' },
   idTypeChipTextActive: { color: colors.indigo },
   acctHint: { fontSize: type.size.sm, color: colors.textMuted, marginTop: 4 },
   // bank picker modal
   pickerBackdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
   pickerSheet: {
-    backgroundColor: colors.bg,
-    borderTopLeftRadius: radii.card,
-    borderTopRightRadius: radii.card,
+    backgroundColor: 'rgba(251,245,236,0.72)',
+    borderTopLeftRadius: radii.sheet,
+    borderTopRightRadius: radii.sheet,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: 'rgba(255,255,255,0.55)',
     padding: layout.screenPadding,
     maxHeight: '70%',
+    overflow: 'hidden',
   },
-  pickerGrabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 100, backgroundColor: colors.line, marginBottom: spacing.md },
+  pickerGrabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 100, backgroundColor: 'rgba(36,28,21,0.2)', marginBottom: spacing.md },
   pickerTitle: { fontSize: type.size.lg, fontWeight: '800', color: colors.text, marginBottom: spacing.md },
   bankItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md },
   bankItemActive: { backgroundColor: colors.claySoft, marginHorizontal: -layout.screenPadding, paddingHorizontal: layout.screenPadding },

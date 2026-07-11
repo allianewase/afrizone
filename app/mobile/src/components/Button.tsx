@@ -7,10 +7,11 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radii, layout, type } from '../theme';
 import { Icon, IconName } from './Icon';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'premium';
 
 interface ButtonProps {
   label: string;
@@ -35,6 +36,7 @@ export function Button({
 }: ButtonProps) {
   const isDisabled = disabled || loading;
   const v = VARIANTS[variant];
+  const isGradient = variant === 'premium';
 
   return (
     <Pressable
@@ -52,6 +54,14 @@ export function Button({
         style,
       ]}
     >
+      {isGradient && (
+        <LinearGradient
+          colors={[colors.clay, colors.gold]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+      )}
       {loading ? (
         <ActivityIndicator color={v.fg} />
       ) : (
@@ -69,6 +79,7 @@ const VARIANTS: Record<Variant, { bg: string; fg: string; border: string }> = {
   secondary: { bg: colors.surface, fg: colors.text, border: colors.line },
   ghost: { bg: 'transparent', fg: colors.clay, border: 'transparent' },
   danger: { bg: colors.danger, fg: colors.white, border: colors.danger },
+  premium: { bg: 'transparent', fg: colors.white, border: 'transparent' },
 };
 
 const styles = StyleSheet.create({
@@ -79,6 +90,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   full: { alignSelf: 'stretch' },
   content: { flexDirection: 'row', alignItems: 'center', gap: 8 },
