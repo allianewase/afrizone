@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { prisma } from "../prisma";
 import { paystack } from "../services/paystack";
 import { verifyWebhookSignature, isApprovedResultCode } from "../services/smileIdentity";
+import { notifyWorker } from "../services/push";
 
 const router = Router();
 
@@ -90,6 +91,17 @@ router.post("/smile", async (req: Request, res: Response) => {
         kycNote: approved ? null : ResultText || "Automated verification did not pass.",
       },
     });
+
+    void notifyWorker(
+      prisma,
+      verification.workerId,
+      approved ? "Identity verified ✅" : "Verification not approved",
+      approved
+        ? "Your identity has been verified. You can now apply to tasks."
+        : "Your verification wasn't approved. Check the app for details and re-verify.",
+      { screen: "kyc" },
+      "notifTasks"
+    );
   }
 
   // Always 200 so Smile ID stops retrying.

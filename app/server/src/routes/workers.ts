@@ -4,6 +4,7 @@ import { requireAuth, requireRole, AuthedRequest, publicUser } from "../auth";
 import { tiersToArray } from "../types";
 import { writeAudit } from "../util/audit";
 import { resolveUrl } from "../services/storage";
+import { notifyWorker } from "../services/push";
 
 const router = Router();
 
@@ -98,6 +99,18 @@ router.post(
       data: { kycStatus: decision },
     });
     await writeAudit(req.user!.id, "KYC_DECISION", "User", worker.id, { decision });
+
+    void notifyWorker(
+      prisma,
+      worker.id,
+      decision === "TIER_APPROVED" ? "Identity verified ✅" : "Verification not approved",
+      decision === "TIER_APPROVED"
+        ? "Your identity has been verified. You can now apply to tasks."
+        : "Your verification wasn't approved. Check the app for details and re-verify.",
+      { screen: "kyc" },
+      "notifTasks"
+    );
+
     res.json(publicUser(updated));
   }
 );

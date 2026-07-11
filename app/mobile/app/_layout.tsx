@@ -19,7 +19,7 @@ configureNotificationHandler();
 
 /**
  * Listens for notification taps and routes to the relevant screen.
- * data.screen: "tasks" | "wallet" | "home" | "task" (+ data.id)
+ * data.screen: "tasks" | "wallet" | "home" | "task" (+ data.id) | "kyc" | "disputes"
  */
 function NotificationHandler() {
   const router = useRouter();
@@ -64,6 +64,12 @@ function NotificationHandler() {
             break;
           case 'task':
             if (id) router.push(`/task/${id}`);
+            break;
+          case 'kyc':
+            router.push('/(auth)/kyc');
+            break;
+          case 'disputes':
+            router.push('/disputes');
             break;
           default:
             router.push('/(tabs)/home');

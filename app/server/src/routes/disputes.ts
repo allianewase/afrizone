@@ -1,6 +1,7 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest } from "../auth";
+import { notifyWorker } from "../services/push";
 
 const router = Router();
 export const adminRouter = Router();
@@ -124,6 +125,17 @@ adminRouter.patch(
         data: { status: "APPROVED" },
       });
     }
+
+    void notifyWorker(
+      prisma,
+      updated.workerId,
+      status === "RESOLVED" ? "Dispute resolved" : "Dispute closed",
+      updated.resolution
+        ? `Update on your dispute: ${updated.resolution}`
+        : "There's an update on the dispute you raised. Check the app for details.",
+      { screen: "disputes" },
+      existing.entityType === "PAYMENT" ? "notifPay" : "notifTasks"
+    );
 
     res.json(updated);
   }
