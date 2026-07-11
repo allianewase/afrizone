@@ -293,7 +293,8 @@ router.get("/contracts", requireAuth, async (req: AuthedRequest, res: Response) 
 function buildContractSections(
   task: any,
   worker: any,
-  signedAt: Date | null
+  signedAt: Date | null,
+  signerName?: string | null
 ): { heading: string; body: string }[] {
   const fmt = (d: Date | null | undefined) =>
     d ? new Date(d).toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" }) : "TBD";
@@ -358,7 +359,7 @@ function buildContractSections(
     },
     {
       heading: "11. Entire Agreement",
-      body: `This Agreement constitutes the entire agreement between the parties regarding the task and supersedes all prior discussions. It may only be amended in writing signed by both parties.\n\n${signedAt ? `Digitally signed by ${workerName} on ${fmt(signedAt)}.` : "This Agreement takes effect upon the Contractor's digital signature via the Afrizone app."}`,
+      body: `This Agreement constitutes the entire agreement between the parties regarding the task and supersedes all prior discussions. It may only be amended in writing signed by both parties.\n\n${signedAt ? `Digitally signed by ${signerName || workerName} on ${fmt(signedAt)}.` : "This Agreement takes effect upon the Contractor's typed-name digital signature via the Afrizone app."}`,
     },
   ];
 }
@@ -374,11 +375,12 @@ router.get("/contracts/:id", requireAuth, async (req: AuthedRequest, res: Respon
     return res.status(403).json({ error: "Not your contract" });
   }
 
-  const sections = buildContractSections(contract.task, contract.worker, contract.signedAt);
+  const sections = buildContractSections(contract.task, contract.worker, contract.signedAt, contract.signerName);
   res.json({
     id: contract.id,
     status: contract.status,
     signedAt: contract.signedAt,
+    signerName: contract.signerName,
     createdAt: contract.createdAt,
     task: {
       id: contract.task.id,

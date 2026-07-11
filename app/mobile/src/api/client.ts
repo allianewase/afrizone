@@ -388,9 +388,9 @@ export const api = {
     return request<ContractDetail>(`/me/contracts/${id}`, { signal });
   },
 
-  /** POST /api/contracts/:id/sign — sign a contract. */
-  signContract(id: string): Promise<Contract> {
-    return request<Contract>(`/contracts/${id}/sign`, { method: 'POST' });
+  /** POST /api/contracts/:id/sign — sign a contract with a typed full-name signature. */
+  signContract(id: string, signerName: string): Promise<Contract> {
+    return request<Contract>(`/contracts/${id}/sign`, { method: 'POST', body: { signerName } });
   },
 
   /**

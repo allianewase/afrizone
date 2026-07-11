@@ -298,6 +298,7 @@ export interface Contract {
   id: string;
   status: ContractStatus;
   signedAt?: string | null;
+  signerName?: string | null;
   task?: Pick<Task, 'id' | 'title'>;
 }
 
@@ -338,6 +339,7 @@ export interface ContractDetail {
   id: string;
   status: ContractStatus;
   signedAt?: string | null;
+  signerName?: string | null;
   createdAt: string;
   task: Pick<Task, 'id' | 'title' | 'category' | 'tier'>;
   sections: ContractSection[];

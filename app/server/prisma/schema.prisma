@@ -278,12 +278,15 @@ model Funding {
 }
 
 model Contract {
-  id        String    @id @default(cuid())
-  taskId    String
-  workerId  String
-  status    String    @default("PENDING_SIGNATURE") // ContractStatus enum (PENDING_SIGNATURE | SIGNED)
-  signedAt  DateTime?
-  createdAt DateTime  @default(now())
+  id            String    @id @default(cuid())
+  taskId        String
+  workerId      String
+  status        String    @default("PENDING_SIGNATURE") // ContractStatus enum (PENDING_SIGNATURE | SIGNED)
+  signedAt      DateTime?
+  signerName    String? // typed full-name signature, captured at sign time (record of intent)
+  signerIp      String? // requesting IP at sign time
+  signatureHash String? // SHA-256 of `${contractId}:${workerId}:${signerName}:${signedAt.toISOString()}` — tamper-evidence
+  createdAt     DateTime  @default(now())
 
   task   Task @relation(fields: [taskId], references: [id])
   worker User @relation(fields: [workerId], references: [id])

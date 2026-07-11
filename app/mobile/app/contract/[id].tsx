@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Screen } from '../../src/components/Screen';
@@ -12,12 +12,14 @@ import { Icon } from '../../src/components/Icon';
 import { colors, spacing, type, radii, layout } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
+import { useAuth } from '../../src/auth/AuthContext';
 import type { ContractDetail } from '../../src/api/types';
 
 export default function ContractDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
 
   const contractQ = useAsync<ContractDetail | null>(
     (signal) => (id ? api.myContractDetail(id, signal) : Promise.resolve(null)),
@@ -25,15 +27,18 @@ export default function ContractDetailScreen() {
   );
   const c = contractQ.data;
 
+  const [signerName, setSignerName] = useState(user?.name ?? '');
   const [signing, setSigning] = useState(false);
   const [signError, setSignError] = useState<string | null>(null);
 
+  const canSign = signerName.trim().length >= 2;
+
   async function sign() {
-    if (!id) return;
+    if (!id || !canSign) return;
     setSigning(true);
     setSignError(null);
     try {
-      await api.signContract(id);
+      await api.signContract(id, signerName.trim());
       // Reload to get updated status + signedAt in the sections
       contractQ.reload();
     } catch (e) {
@@ -52,7 +57,7 @@ export default function ContractDetailScreen() {
         <Button
           label=""
           icon="chevron-left"
-          variant="glass"
+          variant="ghost"
           full={false}
           onPress={() => router.back()}
         />
@@ -130,14 +135,26 @@ export default function ContractDetailScreen() {
               </View>
             ) : (
               <>
+                <Text style={styles.label}>Type your full legal name to sign</Text>
+                <TextInput
+                  style={styles.signatureInput}
+                  value={signerName}
+                  onChangeText={setSignerName}
+                  placeholder="Full name"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="words"
+                />
                 <Text style={styles.footerHint}>
-                  By tapping "Sign agreement" you confirm that you have read and agree to the terms above.
+                  By typing your name and tapping "Sign agreement" you confirm that you have read
+                  and agree to the terms above, and that this typed name is your electronic
+                  signature.
                 </Text>
                 <Button
                   label="Sign agreement"
                   icon="check"
                   onPress={sign}
                   loading={signing}
+                  disabled={!canSign}
                 />
               </>
             )}
@@ -230,6 +247,22 @@ const styles = StyleSheet.create({
     fontSize: type.size.xs,
     textAlign: 'center',
     lineHeight: 16,
+  },
+  label: {
+    color: colors.textMuted,
+    fontSize: type.size.sm,
+    fontWeight: '600',
+  },
+  signatureInput: {
+    minHeight: layout.hitTarget,
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderWidth: 1,
+    borderRadius: radii.input,
+    paddingHorizontal: spacing.md,
+    fontSize: type.size.md,
+    fontStyle: 'italic',
+    color: colors.text,
   },
   signedFooter: {
     flexDirection: 'row',

@@ -222,3 +222,11 @@ Env-driven, same `PAYSTACK_SECRET` gate as payouts. `PAYSTACK_SECRET` blank → 
 - `POST /api/admin/funding/initialize` (SUPER_ADMIN) — body `{amount}`. Creates a PENDING Funding row. Live mode also returns `authorizationUrl` (Paystack hosted checkout) for the admin web to redirect to; sim mode returns `{simulated: true}`.
 - `POST /api/webhooks/paystack` — now also handles `charge.success`/`charge.failed`, matched by `reference` (or `providerRef`/access_code), flipping the matching `Funding` to SUCCESS/FAILED.
 - `POST /api/admin/funding/dev/settle` — **dev only** (sim mode): flips all PENDING fundings to SUCCESS. Returns `403` when live.
+
+# Contract e-signature (typed-name)
+
+`Contract` gains `signerName?, signerIp?, signatureHash?` alongside the existing `status`/`signedAt`. Signing is a typed full-name signature (no drawn/image capture) — the worker types their legal name, which is stored verbatim along with the requesting IP and a SHA-256 hash of `${contractId}:${workerId}:${signerName}:${signedAt.toISOString()}` for tamper-evidence.
+
+- `POST /api/contracts/:id/sign` — body `{signerName}` (required, ≥2 chars after trim, else `400`). Sets `status: SIGNED`, `signedAt`, `signerName`, `signerIp`, `signatureHash`. Ownership-checked; `400` if already signed.
+- The rendered "Entire Agreement" section now reads "Digitally signed by `{signerName}` on `{date}`" (falls back to the worker's profile name if `signerName` is absent, e.g. legacy contracts signed before this change).
+- No admin-web contract viewer exists — out of scope for this pass.
