@@ -134,7 +134,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const inAuthGroup = segments[0] === '(auth)';
     // Authenticated users may still need the KYC stepper, so don't bounce them
     // off (auth)/kyc.
-    const onKyc = inAuthGroup && segments[1] === 'kyc';
+    // expo-router's typed `segments` tuple is only as wide as its route
+    // manifest can statically prove; widen it here since we're just doing a
+    // runtime string comparison on whatever segment happens to be present.
+    const onKyc = inAuthGroup && (segments as string[])[1] === 'kyc';
     if (!user && !inAuthGroup) {
       // Front door for signed-out users → welcome carousel (→ Sign in).
       router.replace('/(auth)/welcome');
