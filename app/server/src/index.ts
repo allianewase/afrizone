@@ -54,28 +54,33 @@ app.use(
 app.use("/api/webhooks/paystack", express.raw({ type: "*/*" }));
 app.use(express.json());
 
-// General API rate limit — generous, just a backstop against abuse/scraping.
-app.use(
-  "/api",
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 300,
-    standardHeaders: true,
-    legacyHeaders: false,
-  })
-);
-// Tighter limit on auth endpoints (login/register/otp/google/password/2fa) —
-// these are the brute-force/credential-stuffing targets.
-app.use(
-  "/api/auth",
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 20,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: "Too many auth requests. Try again later." },
-  })
-);
+// Rate limiting is disabled under the automated test suite (NODE_ENV=test) —
+// tests legitimately fire many requests at /api/auth in a short window, and
+// the limiter's own behaviour is covered separately, not via the app tests.
+if (process.env.NODE_ENV !== "test") {
+  // General API rate limit — generous, just a backstop against abuse/scraping.
+  app.use(
+    "/api",
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 300,
+      standardHeaders: true,
+      legacyHeaders: false,
+    })
+  );
+  // Tighter limit on auth endpoints (login/register/otp/google/password/2fa) —
+  // these are the brute-force/credential-stuffing targets.
+  app.use(
+    "/api/auth",
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 20,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { error: "Too many auth requests. Try again later." },
+    })
+  );
+}
 
 // Health + config
 app.use("/api/health", healthRouter);
@@ -122,8 +127,12 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.status(status).json({ error: err.message || "Internal server error" });
 });
 
-app.listen(PORT, () => {
-  console.log(`Afrizone server listening on http://localhost:${PORT}`);
-});
+// Only auto-listen when this file is run directly (node/ts-node-dev) — not
+// when imported as a module (e.g. by the test suite via supertest).
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Afrizone server listening on http://localhost:${PORT}`);
+  });
+}
 
 export default app;

@@ -15,7 +15,8 @@
     "db:use-postgres": "node prisma/use-postgres.js",
     "db:use-sqlite": "node prisma/use-sqlite.js",
     "db:start": "node scripts/dev-db.js",
-    "setup:prod": "node prisma/use-postgres.js && prisma generate && prisma migrate deploy"
+    "setup:prod": "node prisma/use-postgres.js && prisma generate && prisma migrate deploy",
+    "test": "jest"
   },
   "prisma": {
     "seed": "ts-node-dev --transpile-only prisma/seed.ts"
@@ -41,12 +42,17 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
+    "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/multer": "^2.1.0",
     "@types/node": "^20.17.9",
     "@types/qrcode": "^1.5.5",
+    "@types/supertest": "^7.2.1",
     "embedded-postgres": "^18.4.0-beta.17",
+    "jest": "^30.4.2",
     "prisma": "^5.22.0",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.11",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.7.2"
   }

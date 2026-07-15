@@ -13,6 +13,10 @@ app/server/prisma/dev.db-shm
 app/server/uploads/
 app/server/.env
 app/server/.pgdata/
+app/server/prisma/test.db
+app/server/prisma/test.db-journal
+app/server/prisma/test.db-wal
+app/server/prisma/test.db-shm
 
 # ── Web admin (Vite) ──────────────────────────────────────────────────────────
 app/web-admin/dist/
