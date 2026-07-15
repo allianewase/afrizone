@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import * as FileSystem from 'expo-file-system';
+// expo-file-system v19 (SDK 54) replaced this API with a File/Directory
+// class model; the `/legacy` subpath keeps the old cacheDirectory/
+// writeAsStringAsync surface this screen already relies on.
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Screen } from '../../src/components/Screen';
 import { WalletBalanceCard } from '../../src/components/WalletBalanceCard';
