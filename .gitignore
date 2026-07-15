@@ -12,6 +12,7 @@ app/server/prisma/dev.db-wal
 app/server/prisma/dev.db-shm
 app/server/uploads/
 app/server/.env
+app/server/.pgdata/
 
 # ── Web admin (Vite) ──────────────────────────────────────────────────────────
 app/web-admin/dist/

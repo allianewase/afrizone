@@ -14,6 +14,7 @@
     "setup": "prisma generate && prisma db push && npm run seed",
     "db:use-postgres": "node prisma/use-postgres.js",
     "db:use-sqlite": "node prisma/use-sqlite.js",
+    "db:start": "node scripts/dev-db.js",
     "setup:prod": "node prisma/use-postgres.js && prisma generate && prisma migrate deploy"
   },
   "prisma": {
@@ -27,7 +28,9 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.5.2",
     "google-auth-library": "^9.15.0",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.2.0",
     "otplib": "^12.0.1",
@@ -42,6 +45,7 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^20.17.9",
     "@types/qrcode": "^1.5.5",
+    "embedded-postgres": "^18.4.0-beta.17",
     "prisma": "^5.22.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.7.2"

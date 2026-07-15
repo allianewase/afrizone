@@ -2,6 +2,8 @@ import "dotenv/config";
 import path from "path";
 import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 import authRouter from "./routes/auth";
 import dashboardRouter from "./routes/dashboard";
@@ -29,15 +31,21 @@ import fundingRouter from "./routes/funding";
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
 
+app.set("trust proxy", 1);
+// crossOriginResourcePolicy relaxed to "cross-origin": this API is deliberately
+// consumed from other origins (web-admin, mobile web preview) — including
+// /uploads, which admin web loads directly in <img> tags. helmet's default
+// "same-origin" policy would silently block those image loads.
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+
 // CORS — Vite admin dev server, Expo web preview (8081/19006), + same-origin.
+const corsOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173,http://localhost:4000,http://localhost:8081,http://localhost:19006")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:4000",
-      "http://localhost:8081",
-      "http://localhost:19006",
-    ],
+    origin: corsOrigins,
     credentials: true,
   })
 );
@@ -45,6 +53,29 @@ app.use(
 // mount the raw parser on this path BEFORE the global JSON parser.
 app.use("/api/webhooks/paystack", express.raw({ type: "*/*" }));
 app.use(express.json());
+
+// General API rate limit — generous, just a backstop against abuse/scraping.
+app.use(
+  "/api",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
+// Tighter limit on auth endpoints (login/register/otp/google/password/2fa) —
+// these are the brute-force/credential-stuffing targets.
+app.use(
+  "/api/auth",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many auth requests. Try again later." },
+  })
+);
 
 // Health + config
 app.use("/api/health", healthRouter);

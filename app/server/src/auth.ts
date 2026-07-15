@@ -4,7 +4,13 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 import { Role, tiersToArray } from "./types";
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
+const DEFAULT_DEV_SECRET = "dev-secret-change-me";
+if (process.env.NODE_ENV === "production" && (!process.env.JWT_SECRET || process.env.JWT_SECRET === DEFAULT_DEV_SECRET)) {
+  throw new Error(
+    "JWT_SECRET must be set to a strong, unique value in production (refusing to start with the default dev secret)."
+  );
+}
+const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_DEV_SECRET;
 const TOKEN_TTL = "7d";
 const CHALLENGE_TTL = "5m"; // short-lived 2FA challenge token
 
