@@ -23,6 +23,11 @@ interface Slide {
 
 const SLIDES: Slide[] = [
   {
+    icon: 'globe',
+    title: 'Welcome to\nAfrizone Part Time',
+    body: 'Afrizone Mart posts paid tasks and jobs — you apply, do the work, and get paid straight to your wallet. Made in Africa, delivered worldwide.',
+  },
+  {
     icon: 'briefcase',
     title: 'Flexible work,\nnear you',
     body: 'Browse paid tasks matched to your skills and location — from one-day gigs to longer projects.',
@@ -57,9 +62,17 @@ export default function WelcomeScreen() {
       finish();
       return;
     }
-    scrollRef.current?.scrollTo({ x: width * (index + 1), animated: true });
+    // Advance `index` directly instead of waiting for onMomentumScrollEnd:
+    // react-native-web never fires that event for a JS-triggered scrollTo,
+    // so relying on it left `index` stuck at 0 after the first tap and made
+    // every later "Next" press re-scroll to the same slide.
+    const targetIndex = index + 1;
+    scrollRef.current?.scrollTo({ x: width * targetIndex, animated: true });
+    setIndex(targetIndex);
   }
 
+  // Keeps `index` in sync when the user swipes the carousel directly
+  // (native touch scrolling does fire this event reliably).
   function onScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const i = Math.round(e.nativeEvent.contentOffset.x / width);
     if (i !== index) setIndex(i);
