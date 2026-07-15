@@ -1,0 +1,16 @@
+node_modules
+dist
+.pgdata
+uploads
+.env
+prisma/dev.db
+prisma/dev.db-journal
+prisma/dev.db-wal
+prisma/dev.db-shm
+prisma/test.db
+prisma/test.db-journal
+prisma/test.db-wal
+prisma/test.db-shm
+test
+jest.config.js
+npm-debug.log*
