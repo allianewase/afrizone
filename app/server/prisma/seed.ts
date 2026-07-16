@@ -22,6 +22,7 @@ async function main() {
   await prisma.kycDocument.deleteMany();
   await prisma.rating.deleteMany();
   await prisma.payment.deleteMany();
+  await prisma.funding.deleteMany();
   await prisma.timesheet.deleteMany();
   await prisma.application.deleteMany();
   await prisma.task.deleteMany();
