@@ -2,6 +2,7 @@
   "expo": {
     "name": "Afrizone Part Time",
     "slug": "afrizone-part-time",
+    "owner": "afrizone",
     "scheme": "afrizone",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,7 +12,9 @@
       "backgroundColor": "#1E2643",
       "resizeMode": "contain"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "work.afrizone.parttime"
@@ -26,18 +29,22 @@
       "bundler": "metro",
       "output": "single"
     },
-    "plugins": ["expo-router", "expo-secure-store"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
     "experiments": {
       "typedRoutes": false
     },
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "107eeac3-119c-4eba-ab6c-134a5b6c5e4c"
       },
       "googleWebClientId": "",
       "googleIosClientId": "",
       "googleAndroidClientId": "",
-      "googleExpoClientId": ""
+      "googleExpoClientId": "",
+      "router": {}
     }
   }
 }

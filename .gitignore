@@ -28,6 +28,7 @@ app/mobile/android/
 app/mobile/ios/
 app/mobile/.env
 app/mobile/.env.local
+app/mobile/credentials.json
 
 # ── OS / editors ──────────────────────────────────────────────────────────────
 .DS_Store
