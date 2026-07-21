@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, ApiError } from '../api/client'
+import { API_ORIGIN, api, ApiError } from '../api/client'
 import { useApi } from '../lib/useApi'
 import type { KycDocument, Worker, WorkerDetail } from '../api/types'
 import {
@@ -22,6 +22,10 @@ const DOC_TYPE_LABEL: Record<string, string> = {
   SELFIE: 'Selfie / Liveness',
   DOCS: 'Supporting Documents',
 }
+
+// doc.url is a server-relative path (e.g. /uploads/kyc/xyz.jpg); prefix with
+// the API's origin so it resolves when the frontend is hosted separately.
+const docSrc = (url: string) => `${API_ORIGIN}${url}`
 
 // ─── KYC document viewer + decision modal ─────────────────────────────────────
 function KycDocsModal({
@@ -102,7 +106,7 @@ function KycDocsModal({
                           title={doc.originalName}
                         >
                           <img
-                            src={doc.url}
+                            src={docSrc(doc.url)}
                             alt={doc.originalName}
                             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                           />
@@ -161,7 +165,7 @@ function KycDocsModal({
             <Icon name="x" />
           </button>
           <img
-            src={lightbox.url}
+            src={docSrc(lightbox.url)}
             alt={lightbox.originalName}
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: '90vw', maxHeight: '88vh', borderRadius: 12, boxShadow: '0 8px 60px rgba(0,0,0,.5)' }}

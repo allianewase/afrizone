@@ -1,5 +1,7 @@
-// Small typed fetch wrapper. Injects the JWT from localStorage and hits /api
-// (Vite dev server proxies /api -> http://localhost:4000).
+// Small typed fetch wrapper. Injects the JWT from localStorage and hits /api.
+// In dev, Vite proxies /api -> http://localhost:4000 (VITE_API_URL unset).
+// In production (frontend + API on separate domains), set VITE_API_URL to
+// the API's origin, e.g. https://api.afrizoneparttime.com
 
 import type {
   Application,
@@ -36,7 +38,8 @@ import type {
 } from './types'
 
 const TOKEN_KEY = 'afz_token'
-const API_BASE = '/api'
+export const API_ORIGIN: string = import.meta.env.VITE_API_URL ?? ''
+const API_BASE = `${API_ORIGIN}/api`
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
