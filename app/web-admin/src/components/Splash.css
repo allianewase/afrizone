@@ -29,6 +29,21 @@
   background: var(--clay, #c2502e);
   opacity: 0.2;
 }
+.splash-motif {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 420px;
+  height: 420px;
+  margin: -210px 0 0 -210px;
+  background-image: var(--motif);
+  background-repeat: repeat;
+  background-size: 32px 32px;
+  opacity: 0.1;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(circle, #000 50%, transparent 72%);
+  mask-image: radial-gradient(circle, #000 50%, transparent 72%);
+}
 .splash-inner {
   position: relative;
   display: flex;

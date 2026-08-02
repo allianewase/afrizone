@@ -55,6 +55,23 @@ export const radii = {
   card: 16,
   sheet: 22,
   pill: 100,
+  /** "Sunrise Cut" signature — the sharp corner paired with `card`/`button`
+   * on the opposite corner to give every surface an asymmetric, angular
+   * silhouette instead of a uniform rounded rectangle. */
+  cut: 4,
+} as const;
+
+/**
+ * "Sunrise Cut" motif — a repeating chevron pattern echoing the angular
+ * lines of the Africa+cart logo mark. Used sparingly as a thin section
+ * divider or a low-opacity background watermark on brand moments only
+ * (never behind dense data, per DESIGN_SPEC §7).
+ */
+export const motif = {
+  watermarkOpacityDark: 0.12,
+  watermarkOpacityLight: 0.05,
+  dividerOpacityDark: 0.35,
+  dividerOpacityLight: 0.5,
 } as const;
 
 export const shadow = {

@@ -22,6 +22,20 @@
   align-items: center;
   gap: 11px;
   padding: 8px 10px 16px;
+  position: relative;
+  overflow: hidden;
+}
+.brand::after {
+  content: '';
+  position: absolute;
+  inset: -20% -30% auto auto;
+  width: 120px;
+  height: 120px;
+  background-image: var(--motif);
+  background-repeat: repeat;
+  background-size: 28px 28px;
+  opacity: 0.06;
+  pointer-events: none;
 }
 .mark {
   width: 38px;
@@ -56,6 +70,7 @@
   gap: 11px;
   padding: 10px 12px;
   border-radius: 12px;
+  border-top-right-radius: var(--cut);
   color: var(--muted);
   font-size: 14px;
   font-weight: 500;
@@ -104,6 +119,7 @@
   gap: 10px;
   padding: 10px;
   border-radius: 13px;
+  border-top-right-radius: var(--cut);
   background: var(--glass);
   border: 1px solid var(--line);
 }
@@ -111,6 +127,7 @@
   width: 34px;
   height: 34px;
   border-radius: 10px;
+  border-top-right-radius: var(--cut);
   background: linear-gradient(135deg, var(--indigo), #7c5cff);
   display: grid;
   place-items: center;

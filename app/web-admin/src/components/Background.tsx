@@ -1,4 +1,4 @@
-/** Animated gradient-mesh background + grain overlay (fixed, behind everything). */
+/** Animated gradient-mesh background + grain + chevron-motif overlay (fixed, behind everything). */
 export default function Background() {
   return (
     <>
@@ -9,6 +9,7 @@ export default function Background() {
         <span className="blob b4" />
       </div>
       <div className="grain" aria-hidden="true" />
+      <div className="app-motif" aria-hidden="true" />
     </>
   )
 }

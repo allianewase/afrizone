@@ -31,7 +31,7 @@ export default function KpiCard({
 }: Props) {
   const animated = useCountUp(value, decimals)
   return (
-    <div className={`glass kpi ${tone} rv in ${delay}`}>
+    <div className={`glass glass-accent kpi ${tone} rv in ${delay}`}>
       <div className="kh">
         <span className="kic">
           <Icon name={icon} style={{ color: iconColor }} />

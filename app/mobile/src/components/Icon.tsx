@@ -40,7 +40,8 @@ export type IconName =
   | 'close'
   | 'filter'
   | 'star'
-  | 'dollar';
+  | 'dollar'
+  | 'cart';
 
 interface IconProps {
   name: IconName;
@@ -300,6 +301,14 @@ function renderGlyph(
         <>
           <Circle cx="12" cy="12" r="9" {...c} />
           <Path d="M12 7v10M9.5 9.5h3a1.5 1.5 0 0 1 0 3h-1a1.5 1.5 0 0 0 0 3H15" {...c} />
+        </>
+      );
+    case 'cart':
+      return (
+        <>
+          <Circle cx="9" cy="21" r="1" {...c} />
+          <Circle cx="20" cy="21" r="1" {...c} />
+          <Path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" {...c} />
         </>
       );
     default:

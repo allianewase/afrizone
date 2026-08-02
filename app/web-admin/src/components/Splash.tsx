@@ -10,6 +10,7 @@ export default function Splash() {
     <div className="splash" role="status" aria-label="Loading Afrizone">
       <div className="splash-glow splash-glow-gold" aria-hidden="true" />
       <div className="splash-glow splash-glow-clay" aria-hidden="true" />
+      <div className="splash-motif" aria-hidden="true" />
       <div className="splash-inner">
         <div className="splash-logo">
           <Logo size={56} tone="dark" tagline />

@@ -16,7 +16,8 @@ import { Button } from '../../src/components/Button';
 import { GoogleButton } from '../../src/components/GoogleButton';
 import { Banner } from '../../src/components/Feedback';
 import { Icon } from '../../src/components/Icon';
-import { colors, spacing, radii, type, layout } from '../../src/theme';
+import { PatternWatermark, PatternDivider } from '../../src/components/Motif';
+import { colors, spacing, radii, type, layout, motif } from '../../src/theme';
 import { useAuth } from '../../src/auth/AuthContext';
 import { toE164, isValidNgNumber } from '../../src/lib/format';
 
@@ -108,6 +109,12 @@ export default function LoginScreen() {
       {/* decorative brand glow, matches the welcome carousel */}
       <View style={styles.glowGold} pointerEvents="none" />
       <View style={styles.glowClay} pointerEvents="none" />
+      <PatternWatermark
+        color={colors.goldBright}
+        opacity={motif.watermarkOpacityDark}
+        size={320}
+        style={styles.watermark}
+      />
 
       <ScrollView
         contentContainerStyle={[
@@ -178,9 +185,9 @@ export default function LoginScreen() {
 
           {/* ---- divider ---- */}
           <View style={styles.dividerRow}>
-            <View style={styles.divider} />
+            <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
             <Text style={styles.dividerText}>or sign in with email</Text>
-            <View style={styles.divider} />
+            <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
           </View>
 
           {/* ---- Email + password ---- */}
@@ -275,6 +282,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.clay,
     opacity: 0.18,
   },
+  watermark: {
+    top: -40,
+    left: '50%',
+    marginLeft: -160,
+  },
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
@@ -291,6 +303,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: colors.bg,
     borderRadius: radii.sheet,
+    borderTopRightRadius: radii.cut * 2,
     padding: layout.screenPadding,
     gap: spacing.lg,
     shadowColor: '#000',
@@ -352,7 +365,7 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, fontSize: type.size.md, color: colors.text, paddingVertical: spacing.sm },
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  divider: { flex: 1, height: 1, backgroundColor: colors.line },
+  dividerMotif: { flex: 1 },
   dividerText: { color: colors.textMuted, fontSize: type.size.sm },
   forgotRow: { alignSelf: 'flex-end', paddingVertical: spacing.xs },
   forgotText: { color: colors.clay, fontSize: type.size.base, fontWeight: '700' },

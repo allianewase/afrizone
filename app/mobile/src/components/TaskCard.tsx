@@ -65,6 +65,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radii.card,
+    borderTopRightRadius: radii.cut,
     borderWidth: 1,
     borderColor: colors.line,
     padding: spacing.lg,

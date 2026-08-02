@@ -166,7 +166,7 @@ export default function HomeScreen() {
       refreshing={tasks.loading && !!tasks.data}
     >
       {/* Earnings snapshot */}
-      <Card style={styles.snapshot}>
+      <Card style={styles.snapshot} accent>
         <View style={styles.snapRow}>
           <View style={styles.snapItem}>
             <Text style={styles.snapLabel}>Available</Text>

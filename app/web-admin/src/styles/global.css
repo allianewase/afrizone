@@ -134,6 +134,18 @@ a {
   background-image: radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 3px 3px;
 }
+/* Faint chevron field across the whole app shell, well under any content —
+   the "Sunrise Cut" motif as an ambient texture rather than a hero-only accent. */
+.app-motif {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: var(--motif);
+  background-repeat: repeat;
+  background-size: 36px 36px;
+}
 
 /* ===== buttons ===== */
 .btn {
@@ -145,6 +157,7 @@ a {
   font-size: 14px;
   padding: 11px 18px;
   border-radius: 12px;
+  border-top-right-radius: var(--cut);
   min-height: 44px;
   transition: transform 0.18s var(--ease), box-shadow 0.22s, background 0.2s;
 }
@@ -199,12 +212,49 @@ a {
 }
 
 /* ===== glass card ===== */
+/* "Sunrise Cut": every glass surface pairs a sharp top-right corner with
+   the standard rounded radius elsewhere — a signature asymmetric shape
+   used everywhere .glass is used (cards, panels, tables, modals). No
+   overflow:hidden here — .glass wraps popovers/menus/dropdowns in several
+   places (e.g. Hiring's kc-menu, Modal) that must not be clipped. */
 .glass {
+  position: relative;
   background: var(--glass);
   backdrop-filter: blur(16px) saturate(130%);
   -webkit-backdrop-filter: blur(16px) saturate(130%);
   border: 1px solid var(--line);
   border-radius: var(--r);
+  border-top-right-radius: var(--cut);
+}
+/* Branded clay->gold edge — opt in with .glass-accent on hero/primary
+   surfaces only (ones known not to host overflowing children). */
+.glass-accent {
+  overflow: hidden;
+}
+.glass-accent::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--grad);
+}
+
+/* ===== motif utilities ===== */
+.motif-divider {
+  height: 10px;
+  background-image: var(--motif);
+  background-repeat: repeat-x;
+  background-size: 24px 24px;
+  opacity: 0.4;
+}
+.motif-bg {
+  position: absolute;
+  inset: 0;
+  background-image: var(--motif);
+  background-repeat: repeat;
+  background-size: 32px 32px;
+  opacity: 0.08;
+  pointer-events: none;
 }
 
 /* ===== page header ===== */
@@ -219,6 +269,24 @@ a {
 .phead h1 {
   font-size: 30px;
   font-weight: 800;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 10px;
+}
+/* Signature chevron underline — appears once per page under every title,
+   the one brand touch that reaches every screen without ever sitting near
+   dense data (DESIGN_SPEC §7). */
+.phead h1::after {
+  content: '';
+  position: absolute;
+  left: 1px;
+  bottom: 0;
+  width: 46px;
+  height: 6px;
+  background-image: var(--motif);
+  background-repeat: repeat-x;
+  background-size: 12px 12px;
+  opacity: 0.7;
 }
 .phead .crumb {
   color: var(--muted);
@@ -304,6 +372,7 @@ a {
 .tablewrap {
   overflow: auto;
   border-radius: var(--r);
+  border-top-right-radius: var(--cut);
 }
 table.dt {
   width: 100%;
@@ -341,6 +410,7 @@ table.dt tbody tr:last-child td {
   width: 32px;
   height: 32px;
   border-radius: 9px;
+  border-top-right-radius: 3px;
   display: grid;
   place-items: center;
   font-weight: 700;

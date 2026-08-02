@@ -36,7 +36,10 @@ export function Button({
 }: ButtonProps) {
   const isDisabled = disabled || loading;
   const v = VARIANTS[variant];
-  const isGradient = variant === 'premium';
+  // Primary CTAs use the clay→gold brand gradient (matching web-admin's
+  // .btn-primary) instead of a flat fill — bolder, and keeps the two apps
+  // visually consistent. `premium` keeps the same treatment as an alias.
+  const isGradient = variant === 'premium' || variant === 'primary';
 
   return (
     <Pressable
@@ -75,7 +78,7 @@ export function Button({
 }
 
 const VARIANTS: Record<Variant, { bg: string; fg: string; border: string }> = {
-  primary: { bg: colors.clay, fg: colors.white, border: colors.clay },
+  primary: { bg: 'transparent', fg: colors.white, border: 'transparent' },
   secondary: { bg: colors.surface, fg: colors.text, border: colors.line },
   ghost: { bg: 'transparent', fg: colors.clay, border: 'transparent' },
   danger: { bg: colors.danger, fg: colors.white, border: colors.danger },
@@ -86,7 +89,9 @@ const styles = StyleSheet.create({
   base: {
     minHeight: layout.hitTarget,
     paddingHorizontal: 18,
+    // "Sunrise Cut": sharp top-right corner, rounded elsewhere — matches Card.
     borderRadius: radii.button,
+    borderTopRightRadius: radii.cut,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

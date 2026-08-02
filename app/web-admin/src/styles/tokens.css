@@ -30,12 +30,22 @@
   --r: 18px;
   --r-sm: 13px;
   --r-lg: 26px;
+  /* "Sunrise Cut" signature: the sharp corner every surface pairs with --r/
+     --r-sm/--r-lg on the opposite corner for an asymmetric, angular
+     silhouette instead of a uniform rounded rectangle. */
+  --cut: 4px;
 
   /* Motion + effects */
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --grad: linear-gradient(120deg, var(--clay), var(--gold));
   --grad-glow: 0 14px 40px -10px rgba(210, 105, 30, 0.6);
   --shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+
+  /* "Sunrise Cut" chevron motif — repeating geometric pattern echoing the
+     angular lines of the Africa+cart logo mark (DESIGN_SPEC §1.5). Used only
+     as a thin section divider or a low-opacity brand-moment watermark, never
+     behind dense data (DESIGN_SPEC §7). */
+  --motif: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M0 24 12 0 24 24 18 24 12 10 6 24Z' fill='%23f2a93b'/%3E%3C/svg%3E");
 }
 
 @property --p {

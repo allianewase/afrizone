@@ -33,7 +33,7 @@ export default function ForgotPassword() {
 
   return (
     <div className="login-screen">
-      <div className="glass login-card rv in">
+      <div className="glass glass-accent login-card rv in">
         <div className="login-brand">
           <Logo size={46} tone="dark" tagline />
         </div>
