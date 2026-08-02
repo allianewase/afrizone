@@ -1,21 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
   Text,
   TextInput,
   StyleSheet,
   Pressable,
-  KeyboardAvoidingView,
-  Platform,
+  View,
   NativeSyntheticEvent,
   TextInputKeyPressEventData,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Button } from '../../src/components/Button';
-import { Icon } from '../../src/components/Icon';
 import { Banner } from '../../src/components/Feedback';
-import { colors, spacing, radii, type, layout } from '../../src/theme';
+import { AuthShell, AuthCard } from '../../src/components/AuthShell';
+import { colors, spacing, radii, type } from '../../src/theme';
 import { useAuth } from '../../src/auth/AuthContext';
 import { ApiError } from '../../src/api/client';
 
@@ -31,15 +28,12 @@ type Status = 'idle' | 'verifying' | 'error' | 'locked';
  * `devCode` is shown as a hint and prefilled; master `123456` is accepted.
  */
 export default function OtpScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { verifyOtp, requestOtp } = useAuth();
   const params = useLocalSearchParams<{ phone?: string; devCode?: string }>();
   const phone = typeof params.phone === 'string' ? params.phone : '';
   const initialDevCode =
-    typeof params.devCode === 'string' && params.devCode.length === CODE_LEN
-      ? params.devCode
-      : '';
+    typeof params.devCode === 'string' && params.devCode.length === CODE_LEN ? params.devCode : '';
 
   const [devCode, setDevCode] = useState(initialDevCode);
   const [digits, setDigits] = useState<string[]>(() =>
@@ -86,10 +80,7 @@ export default function OtpScreen() {
     }
   }
 
-  function onKeyPress(
-    index: number,
-    e: NativeSyntheticEvent<TextInputKeyPressEventData>
-  ) {
+  function onKeyPress(index: number, e: NativeSyntheticEvent<TextInputKeyPressEventData>) {
     if (e.nativeEvent.key === 'Backspace' && !digits[index] && index > 0) {
       inputs.current[index - 1]?.focus();
       setDigits((prev) => {
@@ -114,9 +105,7 @@ export default function OtpScreen() {
     } catch (e) {
       const status429 = e instanceof ApiError && e.status === 429;
       setStatus(status429 ? 'locked' : 'error');
-      setError(
-        e instanceof Error ? e.message : 'That code is wrong or expired.'
-      );
+      setError(e instanceof Error ? e.message : 'That code is wrong or expired.');
     }
   }
 
@@ -140,24 +129,8 @@ export default function OtpScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={[styles.topbar, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={10}
-          style={styles.backBtn}
-          accessibilityLabel="Back"
-        >
-          <Icon name="chevron-left" size={22} color={colors.text} />
-        </Pressable>
-        <Text style={styles.topTitle}>Verify your number</Text>
-        <View style={{ width: layout.hitTarget }} />
-      </View>
-
-      <View style={styles.body}>
+    <AuthShell watermarkSize={280}>
+      <AuthCard title="Verify your number" onBack={() => router.back()}>
         <Text style={styles.lead}>
           Enter the 6-digit code we sent to{'\n'}
           <Text style={styles.phone}>{phone || 'your phone'}</Text>.
@@ -180,12 +153,7 @@ export default function OtpScreen() {
             message={error ?? 'Please wait and request a new code.'}
           />
         ) : status === 'error' ? (
-          <Banner
-            tone="danger"
-            icon="alert"
-            title="Couldn’t verify"
-            message={error ?? 'That code is wrong or expired.'}
-          />
+          <Banner tone="danger" icon="alert" title="Couldn’t verify" message={error ?? 'That code is wrong or expired.'} />
         ) : null}
 
         <View style={styles.boxes}>
@@ -201,11 +169,7 @@ export default function OtpScreen() {
               keyboardType="number-pad"
               maxLength={CODE_LEN}
               editable={!locked && status !== 'verifying'}
-              style={[
-                styles.box,
-                d ? styles.boxFilled : null,
-                status === 'error' || locked ? styles.boxError : null,
-              ]}
+              style={[styles.box, d ? styles.boxFilled : null, status === 'error' || locked ? styles.boxError : null]}
               accessibilityLabel={`Digit ${i + 1}`}
               autoFocus={i === 0 && !devCode}
               textContentType="oneTimeCode"
@@ -221,51 +185,23 @@ export default function OtpScreen() {
           disabled={!complete || locked || status === 'verifying'}
         />
 
-        <Pressable
-          onPress={onResend}
-          disabled={secondsLeft > 0}
-          accessibilityRole="button"
-          style={styles.resendRow}
-        >
+        <Pressable onPress={onResend} disabled={secondsLeft > 0} accessibilityRole="button" style={styles.resendRow}>
           <Text style={[styles.resend, secondsLeft > 0 && styles.resendDisabled]}>
-            {secondsLeft > 0
-              ? `Resend code in ${secondsLeft}s`
-              : 'Didn’t get it? Resend code'}
+            {secondsLeft > 0 ? `Resend code in ${secondsLeft}s` : 'Didn’t get it? Resend code'}
           </Text>
         </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+      </AuthCard>
+    </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  topbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: layout.screenPadding,
-    paddingBottom: spacing.sm,
-  },
-  backBtn: {
-    width: layout.hitTarget,
-    height: layout.hitTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: -spacing.md,
-  },
-  topTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: type.size.md,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  body: { flex: 1, padding: layout.screenPadding, gap: spacing.xl },
   lead: { color: colors.text, fontSize: type.size.md, lineHeight: 24 },
   phone: { fontWeight: '800', color: colors.clay },
   boxes: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   box: {
     flex: 1,
+    minWidth: 0,
     height: 58,
     backgroundColor: colors.surface,
     borderColor: colors.line,

@@ -103,6 +103,7 @@ const styles = StyleSheet.create({
   boxes: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   box: {
     flex: 1,
+    minWidth: 0,
     height: 58,
     backgroundColor: colors.surface,
     borderColor: colors.line,

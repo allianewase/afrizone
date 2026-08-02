@@ -1,20 +1,12 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
 import { Icon } from '../../src/components/Icon';
 import { Banner } from '../../src/components/Feedback';
-import { colors, spacing, radii, type, layout } from '../../src/theme';
+import { SuccessCard } from '../../src/components/SuccessCard';
+import { AuthShell, AuthCard } from '../../src/components/AuthShell';
+import { colors, spacing, type, layout } from '../../src/theme';
 import { useAuth } from '../../src/auth/AuthContext';
 
 const emailValid = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
@@ -25,7 +17,6 @@ const emailValid = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
  * with a link to the reset screen so the flow is testable end-to-end.
  */
 export default function ForgotScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { passwordForgot } = useAuth();
 
@@ -51,66 +42,25 @@ export default function ForgotScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={[styles.topbar, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={10}
-          style={styles.backBtn}
-          accessibilityLabel="Back"
-        >
-          <Icon name="chevron-left" size={22} color={colors.text} />
-        </Pressable>
-        <Text style={styles.topTitle}>Forgot password</Text>
-        <View style={{ width: layout.hitTarget }} />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={{ padding: layout.screenPadding, gap: spacing.lg, paddingBottom: insets.bottom + 24 }}
-        keyboardShouldPersistTaps="handled"
-      >
+    <AuthShell watermarkSize={280}>
+      <AuthCard title="Forgot password" onBack={() => router.back()}>
         {sent ? (
-          <>
-            <Banner
-              tone="money"
-              icon="check-circle"
-              title="Check your email"
-              message="If an account exists for that email, we’ve sent a password reset link."
-            />
+          <SuccessCard
+            title="Check your email"
+            message="If an account exists for that email, we’ve sent a password reset link."
+            actionLabel="Enter reset token"
+            onAction={() =>
+              router.replace({ pathname: '/(auth)/reset', params: { token: devToken ?? '' } })
+            }
+          >
             {devToken ? (
-              <Banner
-                tone="indigo"
-                icon="key"
-                title="Dev / sim mode"
-                message={`Reset token: ${devToken}`}
-              />
+              <Banner tone="indigo" icon="key" title="Dev / sim mode" message={`Reset token: ${devToken}`} />
             ) : null}
-            <Button
-              label="Enter reset token"
-              icon="key"
-              onPress={() =>
-                router.replace({
-                  pathname: '/(auth)/reset',
-                  params: { token: devToken ?? '' },
-                })
-              }
-            />
-            <Pressable
-              onPress={() => router.replace('/(auth)/login')}
-              accessibilityRole="button"
-              style={styles.altRow}
-            >
-              <Text style={styles.altLink}>Back to sign in</Text>
-            </Pressable>
-          </>
+          </SuccessCard>
         ) : (
           <>
             <Text style={styles.lead}>
-              Enter the email on your account and we’ll send you a link to reset
-              your password.
+              Enter the email on your account and we’ll send you a link to reset your password.
             </Text>
 
             {error ? (
@@ -145,43 +95,20 @@ export default function ForgotScreen() {
               loading={busy}
               disabled={!emailValid(email) || busy}
             />
-
-            <Pressable
-              onPress={() => router.back()}
-              accessibilityRole="button"
-              style={styles.altRow}
-            >
-              <Text style={styles.altLink}>Back to sign in</Text>
-            </Pressable>
           </>
         )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+        {!sent && (
+          <Pressable onPress={() => router.back()} accessibilityRole="button" style={styles.altRow}>
+            <Text style={styles.altLink}>Back to sign in</Text>
+          </Pressable>
+        )}
+      </AuthCard>
+    </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  topbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: layout.screenPadding,
-    paddingBottom: spacing.sm,
-  },
-  backBtn: {
-    width: layout.hitTarget,
-    height: layout.hitTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: -spacing.md,
-  },
-  topTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: type.size.md,
-    fontWeight: '700',
-    color: colors.text,
-  },
   lead: { color: colors.textMuted, fontSize: type.size.md, lineHeight: 22 },
   field: { gap: 6 },
   label: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
@@ -193,7 +120,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.line,
     borderWidth: 1,
-    borderRadius: radii.input,
+    borderRadius: 12,
     paddingHorizontal: spacing.md,
   },
   input: { flex: 1, fontSize: type.size.md, color: colors.text, paddingVertical: spacing.sm },

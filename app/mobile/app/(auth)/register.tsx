@@ -1,20 +1,12 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
 import { Icon } from '../../src/components/Icon';
 import { Banner } from '../../src/components/Feedback';
-import { colors, spacing, radii, type, layout } from '../../src/theme';
+import { PasswordField } from '../../src/components/PasswordField';
+import { AuthShell, AuthCard } from '../../src/components/AuthShell';
+import { colors, spacing, type, layout } from '../../src/theme';
 import { useAuth } from '../../src/auth/AuthContext';
 
 const MIN_PASSWORD = 8;
@@ -25,7 +17,6 @@ const emailValid = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
  * creates a WORKER (isNewUser:true) and routes to the KYC stepper.
  */
 export default function RegisterScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { register } = useAuth();
 
@@ -57,27 +48,8 @@ export default function RegisterScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={[styles.topbar, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={10}
-          style={styles.backBtn}
-          accessibilityLabel="Back"
-        >
-          <Icon name="chevron-left" size={22} color={colors.text} />
-        </Pressable>
-        <Text style={styles.topTitle}>Create account</Text>
-        <View style={{ width: layout.hitTarget }} />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={{ padding: layout.screenPadding, gap: spacing.lg, paddingBottom: insets.bottom + 24 }}
-        keyboardShouldPersistTaps="handled"
-      >
+    <AuthShell watermarkSize={280}>
+      <AuthCard title="Create account" onBack={() => router.back()}>
         <Text style={styles.lead}>
           Join Afrizone as a worker. You’ll verify your identity (KYC) right after.
         </Text>
@@ -125,45 +97,23 @@ export default function RegisterScreen() {
           <Text style={styles.hint}>For receipts and tax statements.</Text>
         </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Password</Text>
-          <View style={styles.inputRow}>
-            <Icon name="lock" size={18} color={colors.textMuted} />
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              placeholder="Create a password"
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
-              accessibilityLabel="Password"
-            />
-          </View>
-          <Text style={styles.hint}>At least {MIN_PASSWORD} characters.</Text>
-        </View>
+        <PasswordField
+          label="Password"
+          value={password}
+          onChangeText={setPassword}
+          placeholder="Create a password"
+          hint={`At least ${MIN_PASSWORD} characters.`}
+        />
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Confirm password</Text>
-          <View style={styles.inputRow}>
-            <Icon name="lock" size={18} color={colors.textMuted} />
-            <TextInput
-              value={confirm}
-              onChangeText={setConfirm}
-              secureTextEntry
-              autoCapitalize="none"
-              placeholder="Re-enter your password"
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
-              accessibilityLabel="Confirm password"
-              onSubmitEditing={onSubmit}
-              returnKeyType="go"
-            />
-          </View>
-          {confirm.length > 0 && !matchOk ? (
-            <Text style={styles.errorHint}>Passwords don’t match.</Text>
-          ) : null}
-        </View>
+        <PasswordField
+          label="Confirm password"
+          value={confirm}
+          onChangeText={setConfirm}
+          placeholder="Re-enter your password"
+          error={confirm.length > 0 && !matchOk ? 'Passwords don’t match.' : undefined}
+          onSubmitEditing={onSubmit}
+          returnKeyType="go"
+        />
 
         <Button
           label="Sign up"
@@ -173,47 +123,21 @@ export default function RegisterScreen() {
           disabled={!canSubmit || busy}
         />
 
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          style={styles.altRow}
-        >
+        <Pressable onPress={() => router.back()} accessibilityRole="button" style={styles.altRow}>
           <Text style={styles.altText}>
             Already have an account? <Text style={styles.altLink}>Sign in →</Text>
           </Text>
         </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </AuthCard>
+    </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  topbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: layout.screenPadding,
-    paddingBottom: spacing.sm,
-  },
-  backBtn: {
-    width: layout.hitTarget,
-    height: layout.hitTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: -spacing.md,
-  },
-  topTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: type.size.md,
-    fontWeight: '700',
-    color: colors.text,
-  },
   lead: { color: colors.textMuted, fontSize: type.size.md, lineHeight: 22 },
   field: { gap: 6 },
   label: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
   hint: { color: colors.textMuted, fontSize: type.size.sm },
-  errorHint: { color: colors.danger, fontSize: type.size.sm },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -222,7 +146,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.line,
     borderWidth: 1,
-    borderRadius: radii.input,
+    borderRadius: 12,
     paddingHorizontal: spacing.md,
   },
   input: { flex: 1, fontSize: type.size.md, color: colors.text, paddingVertical: spacing.sm },

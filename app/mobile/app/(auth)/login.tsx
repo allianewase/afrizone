@@ -1,22 +1,14 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import Logo from '../../src/components/Logo';
 import { Button } from '../../src/components/Button';
 import { GoogleButton } from '../../src/components/GoogleButton';
 import { Banner } from '../../src/components/Feedback';
 import { Icon } from '../../src/components/Icon';
-import { PatternWatermark, PatternDivider } from '../../src/components/Motif';
+import { PasswordField } from '../../src/components/PasswordField';
+import { PatternDivider } from '../../src/components/Motif';
+import { AuthShell, AuthCard } from '../../src/components/AuthShell';
 import { colors, spacing, radii, type, layout, motif } from '../../src/theme';
 import { useAuth } from '../../src/auth/AuthContext';
 import { toE164, isValidNgNumber } from '../../src/lib/format';
@@ -36,7 +28,6 @@ const emailValid = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
  * users to the tabs.
  */
 export default function LoginScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { requestOtp, loginPassword } = useAuth();
 
@@ -102,222 +93,132 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      {/* decorative brand glow, matches the welcome carousel */}
-      <View style={styles.glowGold} pointerEvents="none" />
-      <View style={styles.glowClay} pointerEvents="none" />
-      <PatternWatermark
-        color={colors.goldBright}
-        opacity={motif.watermarkOpacityDark}
-        size={320}
-        style={styles.watermark}
-      />
+    <AuthShell watermarkSize={320}>
+      <View style={styles.brand}>
+        <Logo size={40} tone="dark" tagline />
+      </View>
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xxl },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.brand}>
-          <Logo size={40} tone="dark" tagline />
-        </View>
+      <AuthCard>
+        <Text style={styles.welcome}>Sign in</Text>
+        <Text style={styles.welcomeSub}>Find tasks, get verified, get paid to your wallet.</Text>
 
-        <View style={styles.card}>
-          <Text style={styles.welcome}>Sign in</Text>
-          <Text style={styles.welcomeSub}>
-            Find tasks, get verified, get paid to your wallet.
-          </Text>
+        {error ? (
+          <Banner tone="danger" icon="alert" title="Couldn’t continue" message={error} />
+        ) : null}
 
-          {error ? (
-            <Banner tone="danger" icon="alert" title="Couldn’t continue" message={error} />
-          ) : null}
-
-          {/* ---- Phone OTP ---- */}
-          {!phoneOpen ? (
-            <Button
-              label="Continue with phone"
-              icon="phone"
-              variant="secondary"
-              onPress={() => {
-                setError(null);
-                setPhoneOpen(true);
-              }}
-            />
-          ) : (
-            <View style={styles.phoneBlock}>
-              <Text style={styles.label}>Mobile number</Text>
-              <View style={styles.phoneRow}>
-                <View style={styles.prefix}>
-                  <Text style={styles.prefixText}>{COUNTRY_PREFIX}</Text>
-                </View>
-                <TextInput
-                  value={phone}
-                  onChangeText={(t) => setPhone(t.replace(/[^\d\s]/g, '').slice(0, 14))}
-                  keyboardType="phone-pad"
-                  autoComplete="tel"
-                  placeholder="803 000 0001"
-                  placeholderTextColor={colors.textMuted}
-                  style={styles.phoneInput}
-                  accessibilityLabel="Phone number"
-                  autoFocus
-                />
-              </View>
-              <Button
-                label="Send code"
-                icon="chevron-right"
-                onPress={onPhoneContinue}
-                loading={phoneBusy}
-                disabled={!phoneOk || phoneBusy}
-              />
-              <Text style={styles.hint}>
-                By continuing you agree to our Terms & Privacy.
-              </Text>
-            </View>
-          )}
-
-          {/* ---- Google ---- */}
-          <GoogleButton onSuccess={routeAfterAuth} onError={setError} />
-
-          {/* ---- divider ---- */}
-          <View style={styles.dividerRow}>
-            <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
-            <Text style={styles.dividerText}>or sign in with email</Text>
-            <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
-          </View>
-
-          {/* ---- Email + password ---- */}
-          <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
-            <View style={styles.inputRow}>
-              <Icon name="mail" size={18} color={colors.textMuted} />
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                placeholder="you@email.com"
-                placeholderTextColor={colors.textMuted}
-                style={styles.input}
-                accessibilityLabel="Email"
-              />
-            </View>
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.inputRow}>
-              <Icon name="lock" size={18} color={colors.textMuted} />
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoComplete="password"
-                placeholder="Your password"
-                placeholderTextColor={colors.textMuted}
-                style={styles.input}
-                accessibilityLabel="Password"
-                onSubmitEditing={onSignIn}
-                returnKeyType="go"
-              />
-            </View>
-          </View>
-
-          <Pressable
-            onPress={() => router.push('/(auth)/forgot')}
-            accessibilityRole="button"
-            style={styles.forgotRow}
-          >
-            <Text style={styles.forgotText}>Forgot password?</Text>
-          </Pressable>
-
+        {/* ---- Phone OTP ---- */}
+        {!phoneOpen ? (
           <Button
-            label="Sign in"
-            icon="chevron-right"
-            onPress={onSignIn}
-            loading={busy}
-            disabled={!canSignIn || busy}
+            label="Continue with phone"
+            icon="phone"
+            variant="secondary"
+            onPress={() => {
+              setError(null);
+              setPhoneOpen(true);
+            }}
           />
+        ) : (
+          <View style={styles.phoneBlock}>
+            <Text style={styles.label}>Mobile number</Text>
+            <View style={styles.phoneRow}>
+              <View style={styles.prefix}>
+                <Text style={styles.prefixText}>{COUNTRY_PREFIX}</Text>
+              </View>
+              <TextInput
+                value={phone}
+                onChangeText={(t) => setPhone(t.replace(/[^\d\s]/g, '').slice(0, 14))}
+                keyboardType="phone-pad"
+                autoComplete="tel"
+                placeholder="803 000 0001"
+                placeholderTextColor={colors.textMuted}
+                style={styles.phoneInput}
+                accessibilityLabel="Phone number"
+                autoFocus
+              />
+            </View>
+            <Button
+              label="Send code"
+              icon="chevron-right"
+              onPress={onPhoneContinue}
+              loading={phoneBusy}
+              disabled={!phoneOk || phoneBusy}
+            />
+            <Text style={styles.hint}>By continuing you agree to our Terms & Privacy.</Text>
+          </View>
+        )}
 
-          <Pressable
-            onPress={() => router.push('/(auth)/register')}
-            accessibilityRole="button"
-            style={styles.altRow}
-          >
-            <Text style={styles.altText}>
-              New to Afrizone? <Text style={styles.altLink}>Create an account →</Text>
-            </Text>
-          </Pressable>
+        {/* ---- Google ---- */}
+        <GoogleButton onSuccess={routeAfterAuth} onError={setError} />
+
+        {/* ---- divider ---- */}
+        <View style={styles.dividerRow}>
+          <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
+          <Text style={styles.dividerText}>or sign in with email</Text>
+          <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+        {/* ---- Email + password ---- */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Email</Text>
+          <View style={styles.inputRow}>
+            <Icon name="mail" size={18} color={colors.textMuted} />
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              placeholder="you@email.com"
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+              accessibilityLabel="Email"
+            />
+          </View>
+        </View>
+
+        <PasswordField
+          label="Password"
+          value={password}
+          onChangeText={setPassword}
+          placeholder="Your password"
+          autoComplete="password"
+          onSubmitEditing={onSignIn}
+          returnKeyType="go"
+        />
+
+        <Pressable
+          onPress={() => router.push('/(auth)/forgot')}
+          accessibilityRole="button"
+          style={styles.forgotRow}
+        >
+          <Text style={styles.forgotText}>Forgot password?</Text>
+        </Pressable>
+
+        <Button
+          label="Sign in"
+          icon="chevron-right"
+          onPress={onSignIn}
+          loading={busy}
+          disabled={!canSignIn || busy}
+        />
+
+        <Pressable
+          onPress={() => router.push('/(auth)/register')}
+          accessibilityRole="button"
+          style={styles.altRow}
+        >
+          <Text style={styles.altText}>
+            New to Afrizone? <Text style={styles.altLink}>Create an account →</Text>
+          </Text>
+        </Pressable>
+      </AuthCard>
+    </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.navy, overflow: 'hidden' },
-  glowGold: {
-    position: 'absolute',
-    top: -120,
-    right: -90,
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: colors.gold,
-    opacity: 0.16,
-  },
-  glowClay: {
-    position: 'absolute',
-    bottom: -140,
-    left: -100,
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    backgroundColor: colors.clay,
-    opacity: 0.18,
-  },
-  watermark: {
-    top: -40,
-    left: '50%',
-    marginLeft: -160,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: layout.screenPadding,
-    gap: spacing.xxl,
-  },
   brand: { alignItems: 'center' },
-  // Centered square-ish card — floats in the middle of the navy background
-  // instead of a full-bleed bottom sheet.
-  card: {
-    width: '100%',
-    maxWidth: 400,
-    alignSelf: 'center',
-    backgroundColor: colors.bg,
-    borderRadius: radii.sheet,
-    borderTopRightRadius: radii.cut * 2,
-    padding: layout.screenPadding,
-    gap: spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.25,
-    shadowRadius: 30,
-    elevation: 8,
-  },
-  welcome: {
-    color: colors.text,
-    fontSize: type.size.xl,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
+  welcome: { color: colors.text, fontSize: type.size.xl, fontWeight: '800', textAlign: 'center' },
   welcomeSub: {
     color: colors.textMuted,
     fontSize: type.size.base,

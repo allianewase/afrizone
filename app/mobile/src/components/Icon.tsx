@@ -41,7 +41,9 @@ export type IconName =
   | 'filter'
   | 'star'
   | 'dollar'
-  | 'cart';
+  | 'cart'
+  | 'eye'
+  | 'eye-off';
 
 interface IconProps {
   name: IconName;
@@ -309,6 +311,21 @@ function renderGlyph(
           <Circle cx="9" cy="21" r="1" {...c} />
           <Circle cx="20" cy="21" r="1" {...c} />
           <Path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" {...c} />
+        </>
+      );
+    case 'eye':
+      return (
+        <>
+          <Path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" {...c} />
+          <Circle cx="12" cy="12" r="3" {...c} />
+        </>
+      );
+    case 'eye-off':
+      return (
+        <>
+          <Path d="M3 3l18 18" {...c} />
+          <Path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.5 0 10 7 10 7a15.6 15.6 0 0 1-3.2 4.1M6.6 6.6C3.9 8.3 2 12 2 12s3.5 7 10 7a10.2 10.2 0 0 0 4.2-.9" {...c} />
+          <Path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" {...c} />
         </>
       );
     default:

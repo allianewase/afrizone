@@ -1,19 +1,11 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Button } from '../../src/components/Button';
-import { Icon } from '../../src/components/Icon';
 import { CodeInput } from '../../src/components/CodeInput';
 import { Banner } from '../../src/components/Feedback';
-import { colors, spacing, type, layout } from '../../src/theme';
+import { AuthShell, AuthCard } from '../../src/components/AuthShell';
+import { colors, spacing, type } from '../../src/theme';
 import { useAuth } from '../../src/auth/AuthContext';
 
 const CODE_LEN = 6;
@@ -25,7 +17,6 @@ const CODE_LEN = 6;
  * On success: new/never-completed → KYC, else tabs.
  */
 export default function TwoFactorScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { verifyTwoFactor } = useAuth();
   const params = useLocalSearchParams<{ challenge?: string }>();
@@ -52,27 +43,9 @@ export default function TwoFactorScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={[styles.topbar, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={10}
-          style={styles.backBtn}
-          accessibilityLabel="Back"
-        >
-          <Icon name="chevron-left" size={22} color={colors.text} />
-        </Pressable>
-        <Text style={styles.topTitle}>Two-factor</Text>
-        <View style={{ width: layout.hitTarget }} />
-      </View>
-
-      <View style={styles.body}>
-        <Text style={styles.lead}>
-          Enter the 6-digit code from your authenticator app.
-        </Text>
+    <AuthShell watermarkSize={280}>
+      <AuthCard title="Two-factor" onBack={() => router.back()}>
+        <Text style={styles.lead}>Enter the 6-digit code from your authenticator app.</Text>
 
         <Banner
           tone="indigo"
@@ -81,9 +54,7 @@ export default function TwoFactorScreen() {
           message="The bypass code 000000 works outside production."
         />
 
-        {error ? (
-          <Banner tone="danger" icon="alert" title="Couldn’t verify" message={error} />
-        ) : null}
+        {error ? <Banner tone="danger" icon="alert" title="Couldn’t verify" message={error} /> : null}
 
         <CodeInput
           value={code}
@@ -102,41 +73,15 @@ export default function TwoFactorScreen() {
           disabled={code.length !== CODE_LEN || busy}
         />
 
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          style={styles.altRow}
-        >
+        <Pressable onPress={() => router.back()} accessibilityRole="button" style={styles.altRow}>
           <Text style={styles.altLink}>Use a different account</Text>
         </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+      </AuthCard>
+    </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  topbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: layout.screenPadding,
-    paddingBottom: spacing.sm,
-  },
-  backBtn: {
-    width: layout.hitTarget,
-    height: layout.hitTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: -spacing.md,
-  },
-  topTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: type.size.md,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  body: { flex: 1, padding: layout.screenPadding, gap: spacing.xl },
   lead: { color: colors.text, fontSize: type.size.md, lineHeight: 24 },
   altRow: { alignItems: 'center', paddingVertical: spacing.sm },
   altLink: { color: colors.clay, fontSize: type.size.base, fontWeight: '700' },
