@@ -10,8 +10,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { colors, type, spacing, layout } from '../theme';
+import { colors, type, spacing, layout, motif } from '../theme';
 import { Icon } from './Icon';
+import { PatternDivider } from './Motif';
 
 interface ScreenProps {
   children: React.ReactNode;
@@ -58,7 +59,17 @@ export function Screen({
           </Pressable>
         ) : null}
         <View style={styles.titleWrap}>
-          {title ? <Text style={styles.title}>{title}</Text> : null}
+          {title ? (
+            <>
+              <Text style={styles.title}>{title}</Text>
+              <PatternDivider
+                color={colors.gold}
+                opacity={motif.dividerOpacityLight}
+                height={5}
+                style={styles.titleMotif}
+              />
+            </>
+          ) : null}
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
         {right}
@@ -124,5 +135,6 @@ const styles = StyleSheet.create({
   },
   titleWrap: { flex: 1 },
   title: { color: colors.text, fontSize: type.size.xxl, fontWeight: '800', letterSpacing: -0.5 },
+  titleMotif: { width: 44, marginTop: 4 },
   subtitle: { color: colors.textMuted, fontSize: type.size.base, marginTop: 2 },
 });
