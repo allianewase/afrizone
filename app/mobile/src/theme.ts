@@ -5,13 +5,14 @@
  */
 
 export const colors = {
-  // Brand
-  clay: '#C2502E', // --clay-600 primary
-  clayLight: '#D2691E', // --clay-500 hover
-  gold: '#E9A23B', // --gold-500 accent
-  goldBright: '#F2A93B', // logo gold (matches web --gold-bright)
-  navy: '#1E2643', // logo square / brand navy
-  navyDeep: '#151B33',
+  // Brand — per the official Afrizonemart.com logo redesign spec: Deep Navy
+  // Blue #000066 + Sea Buckthorn orange #FBAC34 (Raleway typeface).
+  clay: '#FBAC34', // Sea Buckthorn — primary accent (was clay/terracotta)
+  clayLight: '#FCC066', // lightened tint for hover/pressed states
+  gold: '#FBAC34', // Sea Buckthorn (kept as separate token for existing call sites)
+  goldBright: '#FBAC34', // Sea Buckthorn — logo mark color
+  navy: '#000066', // Deep Navy Blue — logo square / brand navy
+  navyDeep: '#00004D',
   forest: '#14302B', // --forest-900 ink / dark surfaces
   forest700: '#1E4B41',
 
@@ -32,7 +33,7 @@ export const colors = {
 
   // Tints for status pill backgrounds (semi-opaque feel without alpha math)
   amberSoft: '#FBEBD3',
-  claySoft: '#F6E0D5',
+  claySoft: '#FDECD1',
   indigoSoft: '#DDE6F4',
   moneySoft: '#D6F0E4',
   forestSoft: '#D6E2DE',
@@ -93,9 +94,9 @@ export const shadow = {
 } as const;
 
 /**
- * Typography. We use system fonts by default (Bricolage Grotesque + Inter
- * would be loaded via expo-font in a follow-up; weights below approximate the
- * display/body split from §1.4). `tabular` is used for money/timesheets.
+ * Typography. Sizes/weights approximate the display/body split from §1.4;
+ * Raleway is applied via `fontFamily` below on brand-critical text. `tabular`
+ * is used for money/timesheets.
  */
 export const type = {
   // sizes from the §1.4 scale
@@ -125,6 +126,19 @@ export const layout = {
   /** Minimum accessible touch target (§7). */
   hitTarget: 44,
   screenPadding: spacing.xl,
+} as const;
+
+/**
+ * Raleway (per the brand spec: extrabold headings, medium body), loaded via
+ * @expo-google-fonts/raleway in app/_layout.tsx. Applied explicitly on the
+ * highest-visibility shared/brand text (screen headers, logo, buttons)
+ * rather than every style in the app — React Native registers each static
+ * weight as its own font family name, so a blanket global override isn't a
+ * simple one-line change the way it is on web.
+ */
+export const fontFamily = {
+  extrabold: 'Raleway_800ExtraBold',
+  medium: 'Raleway_500Medium',
 } as const;
 
 export type Theme = {

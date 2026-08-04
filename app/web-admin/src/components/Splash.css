@@ -4,7 +4,7 @@
   z-index: 9999;
   display: grid;
   place-items: center;
-  background: var(--navy, #1e2643);
+  background: var(--navy, #000066);
   overflow: hidden;
 }
 .splash-glow {
@@ -19,14 +19,14 @@
   height: 360px;
   top: -120px;
   right: -90px;
-  background: var(--gold, #e9a23b);
+  background: var(--gold, #fbac34);
 }
 .splash-glow-clay {
   width: 380px;
   height: 380px;
   bottom: -140px;
   left: -110px;
-  background: var(--clay, #c2502e);
+  background: var(--clay, #c98518);
   opacity: 0.2;
 }
 .splash-motif {
@@ -60,7 +60,7 @@
   height: 30px;
   border-radius: 50%;
   border: 3px solid rgba(255, 255, 255, 0.15);
-  border-top-color: var(--gold-bright, #f2a93b);
+  border-top-color: var(--gold-bright, #fbac34);
   animation: splash-spin 0.8s linear infinite;
 }
 .splash-caption {

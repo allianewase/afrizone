@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "backgroundColor": "#FBF5EC",
     "splash": {
-      "backgroundColor": "#1E2643",
+      "backgroundColor": "#000066",
       "resizeMode": "contain"
     },
     "assetBundlePatterns": [
@@ -22,7 +22,7 @@
     "android": {
       "package": "work.afrizone.parttime",
       "adaptiveIcon": {
-        "backgroundColor": "#1E2643"
+        "backgroundColor": "#000066"
       }
     },
     "web": {
@@ -31,7 +31,8 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": false

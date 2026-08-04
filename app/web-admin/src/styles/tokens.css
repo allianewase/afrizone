@@ -1,17 +1,18 @@
 :root {
-  /* Brand */
-  --clay: #d2691e;
-  --clay-deep: #c2502e;
-  --gold: #e9a23b;
-  --gold-soft: #f3c277;
+  /* Brand — per the official Afrizonemart.com logo redesign spec: Deep Navy
+     Blue #000066 + Sea Buckthorn orange #fbac34 (Raleway typeface). */
+  --clay: #fbac34;
+  --clay-deep: #c98518;
+  --gold: #fbac34;
+  --gold-soft: #fdd9a0;
   --money: #27c08a;
   --indigo: #5b8bff;
   --amber: #e8a13a;
   --danger: #ff6b5e;
   --forest: #14302b;
-  --navy: #1e2643;
-  --navy-deep: #151b33;
-  --gold-bright: #f2a93b;
+  --navy: #000066;
+  --navy-deep: #00004d;
+  --gold-bright: #fbac34;
 
   /* Surfaces */
   --bg: #080f0d;
@@ -45,7 +46,7 @@
      angular lines of the Africa+cart logo mark (DESIGN_SPEC §1.5). Used only
      as a thin section divider or a low-opacity brand-moment watermark, never
      behind dense data (DESIGN_SPEC §7). */
-  --motif: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M0 24 12 0 24 24 18 24 12 10 6 24Z' fill='%23f2a93b'/%3E%3C/svg%3E");
+  --motif: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M0 24 12 0 24 24 18 24 12 10 6 24Z' fill='%23fbac34'/%3E%3C/svg%3E");
 }
 
 @property --p {

@@ -12,7 +12,7 @@ These five principles resolve trade-offs when specs are silent.
 
 1. **Trust is the product.** Money and identity move through this app. Every screen should feel safe, legible, and predictable. No dark patterns, no surprise deductions — show the math (gross → WHT/VAT → net) plainly.
 2. **Built for the field, on a cheap phone, on bad network.** Big tap targets, offline-tolerant flows, clear sync state, low data weight. Performance is a feature.
-3. **Warm, rooted, and unmistakably African — not generic fintech.** The brand draws on West-African earth tones and Adinkra/kente geometry, expressed with restraint so data stays clear.
+3. **Confident and unmistakably African — not generic fintech.** The brand draws on the continent's silhouette and the "Sunrise Cut" angular chevron geometry, expressed with restraint so data stays clear.
 4. **One status language everywhere.** Pending / Active / Approved / Paid use the same colors, words, and pill shape across mobile and web. A worker and a manager describe the same state with the same word.
 5. **Progressive disclosure.** KYC, task posting, and tax detail are heavy. Reveal in steps; never wall a 12-field form in front of a first-time user.
 
@@ -21,21 +21,24 @@ These five principles resolve trade-offs when specs are silent.
 ## 1. Brand Foundation — Afrizone
 
 ### 1.1 Concept
-Afrizone connects people to honest, flexible work across Africa. The identity blends **earth** (clay, soil, savanna gold) with **growth** (deep palm green) and **craft** (Adinkra-inspired geometry). The feeling: warm, capable, locally proud, financially trustworthy.
+Afrizone connects people to honest, flexible work across Africa, under the official **Afrizonemart.com** identity: **Deep Navy Blue** (trust, stability) paired with **Sea Buckthorn orange** (energy, opportunity). The feeling: warm, capable, locally proud, financially trustworthy.
 
 ### 1.2 Logo mark
-A geometric **"A" formed from an Adinkra-style motif** — interlocking chevrons suggesting both an *A* and forward motion / a sunrise over land. Used as a rounded-square app icon on a clay→gold gradient. Full wordmark: **Afrizone** in the display face, with "Part Time" as a lighter sub-label.
+A **Sea Buckthorn-orange silhouette of the African continent** (including Madagascar) with a **Deep Navy Blue shopping-cart glyph** overlaid at its center — reading simultaneously as "Africa" and "marketplace." `markTone="reversed"` swaps the continent fill to white for use on solid orange/navy backgrounds. Full wordmark: **Afrizone** in the display face, with "Part Time" as a lighter sub-label.
 
 ### 1.3 Color system
 
 Primary brand:
 | Token | Hex | Use |
 |---|---|---|
-| `--clay-600` (primary) | `#C2502E` | Primary brand, key CTAs, active nav |
-| `--clay-500` | `#D2691E` | Hover/lighter clay |
-| `--gold-500` (accent) | `#E9A23B` | Highlights, gradient partner, badges, accents |
+| `--navy` (primary) | `#000066` | Deep Navy Blue — brand ink, logo square, dark surfaces, primary CTAs on light |
+| `--navy-deep` | `#00004D` | Darker navy — dark-mode base, pressed states |
+| `--clay` / `--gold` / `--gold-bright` (accent) | `#FBAC34` | Sea Buckthorn orange — key CTAs, active nav, highlights, logo continent fill, badges |
+| `--clay-light` | `#FCC066` | Lightened tint for hover/pressed states |
 | `--forest-900` (ink) | `#14302B` | Dark surfaces, headers, primary text on light |
 | `--forest-700` | `#1E4B41` | Secondary dark, dark-mode cards |
+
+(`clay`/`gold`/`gold-bright` are kept as separate tokens for existing call sites but all resolve to the same Sea Buckthorn orange; there is no longer a distinct terracotta "clay" hue.)
 
 Functional / semantic (shared status language):
 | Token | Hex | Meaning |
@@ -57,25 +60,25 @@ Neutrals (warm-tinted, never pure gray):
 
 **Status → color → word (canonical):**
 - `Pending` → amber → "Awaiting approval"
-- `Active` → clay → "In progress"
+- `Active` → orange (Sea Buckthorn) → "In progress"
 - `In review` → indigo → "Under review"
 - `Approved / Available` → money green → "Ready to withdraw"
 - `Paid / Withdrawn` → forest → "Paid out"
 - `Rejected / Dispute` → danger → "Needs attention"
 
-Dark mode: forest-900 base, sand text, clay/gold accents retained. Designed as a pair (per blueprint §9 `dark-mode-pairing`).
+Dark mode: forest-900 / navy base, sand text, Sea Buckthorn orange accents retained. Designed as a pair (per blueprint §9 `dark-mode-pairing`).
 
 ### 1.4 Typography
-- **Display / headings:** `Bricolage Grotesque` (700/800) — characterful, warm, modern-African editorial feel.
-- **Body / UI:** `Inter` (400–600) — neutral, legible at small sizes, great for data and forms.
-- **Numeric / money:** `Inter` with `font-variant-numeric: tabular-nums` so balances and timesheets align.
+- **Display / headings:** `Raleway` (700/800, extrabold) — the official brand typeface; geometric, confident, works across mobile and web.
+- **Body / UI:** `Raleway` (500 medium) — kept to one family for a consistent brand voice; weight alone carries the display/body split.
+- **Numeric / money:** `Raleway` with `font-variant-numeric: tabular-nums` (web) — on mobile, static font weights are registered as separate family names via `@expo-google-fonts/raleway`, so `fontFamily.extrabold` / `fontFamily.medium` are applied explicitly on brand-critical text (headers, logo, buttons) rather than as a blanket override.
 
 Scale (mobile / web): 12, 13, 14 (base), 16, 18, 20, 24, 30, 38, 48. Body base **16px**, line-height **1.5** (blueprint §6 Typography rules).
 
 ### 1.5 Shape, depth, motion
 - **Radius:** inputs/buttons 12px, cards 16px, sheets 22px, pills 100px.
 - **Depth:** soft warm shadows (`0 12px 30px rgba(36,28,21,.10)`); restrained — this is fintech, not glass.
-- **Pattern:** subtle Adinkra/kente SVG motifs at 3–6% opacity for headers, empty states, and brand moments only — never behind dense data.
+- **Pattern:** the "Sunrise Cut" repeating chevron motif (echoing the angular lines of the Africa+cart logo mark) at low opacity for headers, empty states, and brand moments only — never behind dense data. The Welcome/onboarding screen additionally uses an organic topographic-contour texture and a wave-shaped divider as a one-off treatment (§5 Splash/Auth).
 - **Motion:** 150–300ms, `cubic-bezier(.22,1,.36,1)`. Motion conveys spatial continuity (sheets rise, steps slide). Respect `prefers-reduced-motion`.
 
 ### 1.6 Iconography
@@ -140,7 +143,7 @@ Any earning surface shows: **Gross → − WHT (e.g. 5%) → − VAT flag (if ap
 
 **Status & data:** StatusPill (the 6 canonical states), TierBadge (Student/Rider/Freelancer/Promo/Trade), Avatar, ProgressRail (stepper), ProgressBar/Meter, Money (tabular, with currency), DataTable (sortable, admin), KPIStat card, Chart (bar/line/donut — legends + tooltips, not color-alone).
 
-**Surfaces:** Card, ListRow, BottomSheet, Modal, Banner (KYC nudge / offline / dispute), Toast, Tabs/Segmented, EmptyState (with Adinkra motif), SkeletonLoader.
+**Surfaces:** Card, ListRow, BottomSheet, Modal, Banner (KYC nudge / offline / dispute), Toast, Tabs/Segmented, EmptyState (with Sunrise Cut chevron motif), SkeletonLoader.
 
 **App-specific:** TaskCard (feed), ApplicationRow, ClockInButton (with geofence state: in-fence / out-of-fence / syncing), GeofenceMap, TimesheetEntry, WalletBalanceCard (3 balances), TransactionRow, ContractViewer + SignaturePad, KYCStepCard, NotificationRow, CandidatePipelineColumn (kanban).
 
@@ -152,7 +155,7 @@ Any earning surface shows: **Gross → − WHT (e.g. 5%) → − VAT flag (if ap
 
 | Screen | Purpose | Key elements | States |
 |---|---|---|---|
-| **Splash / Auth** | Entry | Logo on clay→gold gradient + Adinkra motif; phone signup, login, forgot | loading, error |
+| **Splash / Auth** | Entry | Logo on navy ground; Welcome screen uses a Sea Buckthorn hero panel with topographic texture + wave divider; phone signup, login, forgot | loading, error |
 | **KYC stepper** | Verify identity & tier | ProgressRail, one task per step, inline validation, escape route | empty, error, uploading, submitted/Pending |
 | **Home feed** | Find work | Earnings snapshot card, KYC banner (if incomplete), "Matched for you" then "All open"; TaskCard list with tier badge, pay, distance/remote, deadline | empty (motif), loading skeletons, offline |
 | **Task detail** | Decide & apply | Pay model (hourly/fixed) prominent, location/geofence map or "Remote", slots left, deadline, required docs, Apply CTA | applied (disabled CTA), closed, ineligible (tier locked) |
@@ -181,7 +184,7 @@ Any earning surface shows: **Gross → − WHT (e.g. 5%) → − VAT flag (if ap
 ---
 
 ## 7. Accessibility & quality bar (enforced)
-- Contrast ≥ 4.5:1 body / 3:1 large (clay/forest on sand verified in showcase).
+- Contrast ≥ 4.5:1 body / 3:1 large (navy/Sea Buckthorn on sand verified in showcase).
 - Touch targets ≥ 44px; 8px+ spacing; `touch-action: manipulation`.
 - Visible focus rings; labels with `for`; errors beside fields; heading hierarchy h1→h6.
 - `prefers-reduced-motion` respected; never color-alone for status (pill has icon + word).

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { colors, type, spacing, layout, motif } from '../theme';
+import { colors, type, spacing, layout, motif, fontFamily } from '../theme';
 import { Icon } from './Icon';
 import { PatternDivider } from './Motif';
 
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   titleWrap: { flex: 1 },
-  title: { color: colors.text, fontSize: type.size.xxl, fontWeight: '800', letterSpacing: -0.5 },
+  title: { color: colors.text, fontSize: type.size.xxl, fontFamily: fontFamily.extrabold, letterSpacing: -0.5 },
   titleMotif: { width: 44, marginTop: 4 },
   subtitle: { color: colors.textMuted, fontSize: type.size.base, marginTop: 2 },
 });

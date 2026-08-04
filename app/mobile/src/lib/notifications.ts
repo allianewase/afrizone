@@ -30,7 +30,7 @@ export async function ensureAndroidChannel() {
     name: 'Afrizone alerts',
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: '#C2502E',
+    lightColor: '#FBAC34',
     sound: 'default',
   });
 }

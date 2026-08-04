@@ -6,11 +6,13 @@
 <title>Afrizone Part Time — Brand & Design System</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@500;600;700;800&display=swap" rel="stylesheet" />
 <style>
   :root{
-    /* Brand */
-    --clay-600:#C2502E; --clay-500:#D2691E; --gold-500:#E9A23B;
+    /* Brand — per the official Afrizonemart.com logo redesign spec: Deep
+       Navy Blue #000066 + Sea Buckthorn orange #FBAC34 (Raleway typeface). */
+    --clay-600:#FBAC34; --clay-500:#FCC066; --gold-500:#FBAC34;
+    --navy:#000066; --navy-deep:#00004D;
     --forest-900:#14302B; --forest-700:#1E4B41;
     /* Semantic */
     --money-600:#1F9D6B; --indigo-600:#2D5BA8; --amber-500:#E08A1E; --danger-600:#C8453A;
@@ -21,17 +23,18 @@
     --shadow:0 12px 30px rgba(36,28,21,.10);
     --shadow-sm:0 4px 14px rgba(36,28,21,.07);
     --ease:cubic-bezier(.22,1,.36,1);
-    --grad-brand:linear-gradient(135deg,var(--clay-600),var(--gold-500));
-    --grad-forest:linear-gradient(150deg,var(--forest-900),var(--forest-700));
+    --grad-brand:linear-gradient(135deg,var(--clay-600),var(--clay-500));
+    --grad-forest:linear-gradient(150deg,var(--navy),var(--navy-deep));
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:"Inter",system-ui,sans-serif;background:var(--sand-50);color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased}
-  h1,h2,h3,h4,.disp{font-family:"Bricolage Grotesque","Inter",sans-serif;letter-spacing:-.02em;line-height:1.1}
+  body{font-family:"Raleway",system-ui,sans-serif;font-weight:500;background:var(--sand-50);color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4,.disp{font-family:"Raleway",sans-serif;font-weight:800;letter-spacing:-.02em;line-height:1.1}
   .tnum{font-variant-numeric:tabular-nums}
   a{color:inherit}
-  ::selection{background:rgba(194,80,46,.25)}
+  ::selection{background:rgba(251,172,52,.25)}
 
-  /* Adinkra-ish motif pattern (subtle) */
+  /* "Sunrise Cut" chevron motif (subtle) — echoes the angular lines of the
+     Africa+cart logo mark. See DESIGN_SPEC §1.5. */
   .motif{position:absolute;inset:0;opacity:.06;pointer-events:none;
     background-image:
       radial-gradient(circle at 12px 12px, currentColor 2px, transparent 2.5px),
@@ -46,18 +49,18 @@
   .top .motif{color:var(--gold-500)}
   .top .wrap{position:relative;padding:46px 28px 54px}
   .brandrow{display:flex;align-items:center;gap:14px}
-  .logo-mark{width:54px;height:54px;border-radius:15px;background:var(--grad-brand);display:grid;place-items:center;box-shadow:0 8px 24px rgba(194,80,46,.5);flex:none}
+  .logo-mark{width:54px;height:54px;border-radius:15px;background:var(--grad-brand);display:grid;place-items:center;box-shadow:0 8px 24px rgba(251,172,52,.5);flex:none}
   .logo-mark svg{width:30px;height:30px}
   .brandrow h1{font-size:30px;font-weight:800}
   .brandrow .sub{color:#cfe0d6;font-size:14px;font-weight:500;margin-top:2px}
   .kbadge{margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);padding:7px 14px;border-radius:100px;font-size:13px;font-weight:600;backdrop-filter:blur(8px)}
-  .tagline{margin-top:28px;font-family:"Bricolage Grotesque";font-weight:700;font-size:clamp(28px,5vw,46px);max-width:18ch}
+  .tagline{margin-top:28px;font-family:"Raleway";font-weight:700;font-size:clamp(28px,5vw,46px);max-width:18ch}
   .tagline b{background:linear-gradient(120deg,var(--gold-500),#ffd591);-webkit-background-clip:text;background-clip:text;color:transparent}
   .top p.lede{margin-top:14px;color:#cfe0d6;max-width:60ch;font-size:16px}
 
   /* Section scaffolding */
   section.block{padding:54px 0;border-bottom:1px solid var(--line)}
-  .label{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--clay-600);background:rgba(194,80,46,.08);border:1px solid rgba(194,80,46,.18);padding:5px 12px;border-radius:100px}
+  .label{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--clay-600);background:rgba(251,172,52,.08);border:1px solid rgba(251,172,52,.18);padding:5px 12px;border-radius:100px}
   h2.sec{font-size:26px;font-weight:800;margin:14px 0 6px}
   .sec-desc{color:var(--text-muted);max-width:62ch;margin-bottom:26px}
 
@@ -71,7 +74,7 @@
   .sw .chip{height:84px;display:flex;align-items:flex-end;padding:10px;color:#fff;font-size:12px;font-weight:600}
   .sw .meta{padding:11px 13px}
   .sw .name{font-weight:600;font-size:14px}
-  .sw .hex{font-size:12px;color:var(--text-muted);font-family:"Inter";text-transform:uppercase}
+  .sw .hex{font-size:12px;color:var(--text-muted);font-family:"Raleway";text-transform:uppercase}
 
   /* Type scale */
   .type-row{display:flex;align-items:baseline;gap:18px;padding:12px 0;border-bottom:1px dashed var(--line)}
@@ -85,14 +88,14 @@
 
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font:inherit;font-weight:600;font-size:15px;padding:12px 20px;border-radius:var(--r-sm);cursor:pointer;border:1px solid transparent;min-height:44px;transition:transform .2s var(--ease),box-shadow .2s var(--ease),background .2s}
   .btn svg{width:18px;height:18px}
-  .btn-primary{color:#fff;background:var(--clay-600);box-shadow:0 8px 20px rgba(194,80,46,.28)}
+  .btn-primary{color:#fff;background:var(--clay-600);box-shadow:0 8px 20px rgba(251,172,52,.28)}
   .btn-primary:hover{transform:translateY(-2px);background:var(--clay-500)}
-  .btn-gold{color:var(--forest-900);background:var(--gold-500);box-shadow:0 8px 20px rgba(233,162,59,.3)}
+  .btn-gold{color:var(--navy);background:var(--gold-500);box-shadow:0 8px 20px rgba(251,172,52,.3)}
   .btn-gold:hover{transform:translateY(-2px)}
   .btn-secondary{color:var(--forest-900);background:var(--sand-100);border-color:var(--line)}
   .btn-secondary:hover{background:#ecdfca}
-  .btn-ghost{color:var(--clay-600);background:transparent;border-color:rgba(194,80,46,.3)}
-  .btn-ghost:hover{background:rgba(194,80,46,.06)}
+  .btn-ghost{color:var(--clay-600);background:transparent;border-color:rgba(251,172,52,.3)}
+  .btn-ghost:hover{background:rgba(251,172,52,.06)}
   .btn-danger{color:#fff;background:var(--danger-600)}
   .btn:focus-visible{outline:2px solid var(--indigo-600);outline-offset:3px}
 
@@ -100,7 +103,7 @@
   .field{display:flex;flex-direction:column;gap:7px}
   .field label{font-size:13px;font-weight:600;color:var(--text)}
   .input{font:inherit;font-size:15px;padding:12px 14px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface);color:var(--text);min-height:46px;transition:border-color .2s,box-shadow .2s}
-  .input:focus{outline:none;border-color:var(--clay-600);box-shadow:0 0 0 3px rgba(194,80,46,.15)}
+  .input:focus{outline:none;border-color:var(--clay-600);box-shadow:0 0 0 3px rgba(251,172,52,.15)}
   .field .help{font-size:12px;color:var(--text-muted)}
   .field.err .input{border-color:var(--danger-600)}
   .field.err .help{color:var(--danger-600)}
@@ -108,13 +111,13 @@
   /* OTP */
   .otp{display:flex;gap:10px}
   .otp .cell{width:46px;height:54px;border-radius:12px;border:1px solid var(--line);display:grid;place-items:center;font-size:22px;font-weight:700;background:var(--surface)}
-  .otp .cell.fill{border-color:var(--clay-600);box-shadow:0 0 0 3px rgba(194,80,46,.12)}
+  .otp .cell.fill{border-color:var(--clay-600);box-shadow:0 0 0 3px rgba(251,172,52,.12)}
 
   /* Status pills */
   .pill{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;padding:5px 12px;border-radius:100px;border:1px solid transparent}
   .pill svg{width:14px;height:14px}
   .pill.pending{color:#9a5e07;background:rgba(224,138,30,.12);border-color:rgba(224,138,30,.3)}
-  .pill.active{color:#9a3a18;background:rgba(194,80,46,.1);border-color:rgba(194,80,46,.28)}
+  .pill.active{color:#9a3a18;background:rgba(251,172,52,.1);border-color:rgba(251,172,52,.28)}
   .pill.review{color:#234a86;background:rgba(45,91,168,.1);border-color:rgba(45,91,168,.28)}
   .pill.ready{color:#0f6a47;background:rgba(31,157,107,.12);border-color:rgba(31,157,107,.3)}
   .pill.paid{color:#1b3a33;background:rgba(20,48,43,.08);border-color:rgba(20,48,43,.2)}
@@ -129,8 +132,8 @@
   .task-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
   .task-card .th{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
   .task-card h4{font-size:17px}
-  .task-card .pay{font-family:"Bricolage Grotesque";font-weight:700;color:var(--clay-600);font-size:18px;white-space:nowrap}
-  .task-card .pay small{display:block;color:var(--text-muted);font-weight:500;font-size:11px;font-family:"Inter"}
+  .task-card .pay{font-family:"Raleway";font-weight:700;color:var(--clay-600);font-size:18px;white-space:nowrap}
+  .task-card .pay small{display:block;color:var(--text-muted);font-weight:500;font-size:11px;font-family:"Raleway"}
   .meta-row{display:flex;flex-wrap:wrap;gap:14px;margin-top:13px;color:var(--text-muted);font-size:13px}
   .meta-row span{display:inline-flex;align-items:center;gap:6px}
   .meta-row svg{width:15px;height:15px;stroke:var(--text-faint)}
@@ -140,7 +143,7 @@
   .wallet .motif{color:var(--gold-500);opacity:.08}
   .wallet .rel{position:relative}
   .wallet .avail-lbl{color:#bcd2c6;font-size:13px;font-weight:500}
-  .wallet .avail{font-family:"Bricolage Grotesque";font-weight:800;font-size:40px;margin-top:2px}
+  .wallet .avail{font-family:"Raleway";font-weight:800;font-size:40px;margin-top:2px}
   .wallet .splits{display:flex;gap:22px;margin-top:18px}
   .wallet .splits .s .n{font-weight:700;font-size:17px}
   .wallet .splits .s .l{color:#bcd2c6;font-size:12px}
@@ -148,9 +151,9 @@
   /* KPI stat */
   .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
   .kpi .top{display:flex;justify-content:space-between;align-items:center;color:var(--text-muted);font-size:13px}
-  .kpi .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:rgba(194,80,46,.1)}
+  .kpi .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:rgba(251,172,52,.1)}
   .kpi .ic svg{width:18px;height:18px;stroke:var(--clay-600)}
-  .kpi .v{font-family:"Bricolage Grotesque";font-weight:800;font-size:30px;margin-top:10px}
+  .kpi .v{font-family:"Raleway";font-weight:800;font-size:30px;margin-top:10px}
   .kpi .d{font-size:12px;color:var(--money-600);font-weight:600;margin-top:2px}
 
   /* progress rail */
@@ -158,7 +161,7 @@
   .rail .step{display:flex;align-items:center;gap:0;flex:1}
   .rail .node{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;flex:none;border:2px solid var(--line);background:var(--surface);color:var(--text-faint)}
   .rail .node.done{background:var(--money-600);border-color:var(--money-600);color:#fff}
-  .rail .node.cur{background:var(--clay-600);border-color:var(--clay-600);color:#fff;box-shadow:0 0 0 4px rgba(194,80,46,.15)}
+  .rail .node.cur{background:var(--clay-600);border-color:var(--clay-600);color:#fff;box-shadow:0 0 0 4px rgba(251,172,52,.15)}
   .rail .bar{height:3px;flex:1;background:var(--line)}
   .rail .bar.done{background:var(--money-600)}
 
@@ -202,17 +205,17 @@
   <div class="motif"></div>
   <div class="wrap">
     <div class="brandrow">
-      <span class="logo-mark">
-        <svg viewBox="0 0 32 32" fill="none"><path d="M16 4 L27 26 H21 L16 14 L11 26 H5 Z" fill="#fff"/><path d="M16 17 L19.5 24 H12.5 Z" fill="var(--gold-500)"/></svg>
+      <span class="logo-mark" style="background:none;box-shadow:none">
+        <svg viewBox="0 0 100 120" width="44" height="44"><path d="M38 6 L58 8 L66 16 L86 30 L72 40 L76 58 L68 78 L58 100 L50 116 L42 100 L30 84 L14 66 L6 50 L16 34 L24 18 Z" fill="var(--gold-500)"/><path d="M66 50 L40 62" stroke="var(--navy)" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M40 62 L62 62 L56 84 L34 84 Z" fill="var(--navy)"/><rect x="42" y="52" width="8" height="10" rx="2" fill="var(--navy)"/><rect x="52" y="54" width="7" height="8" rx="2" fill="var(--navy)"/><circle cx="40" cy="90" r="5" fill="var(--navy)"/><circle cx="50" cy="90" r="5" fill="var(--navy)"/></svg>
       </span>
       <div>
         <h1>Afrizone <span style="font-weight:600;color:#cfe0d6">Part&nbsp;Time</span></h1>
-        <div class="sub">Brand &amp; Design System · v0.1</div>
+        <div class="sub">Brand &amp; Design System · v0.2</div>
       </div>
       <span class="kbadge">African-rooted · fintech-grade</span>
     </div>
     <div class="tagline">Honest, flexible work — <b>paid for what you deliver.</b></div>
-    <p class="lede">A warm, locally-proud identity built on West-African earth tones and Adinkra geometry, tuned for the trust and clarity that money and identity demand. This page is the living source of truth for tokens and components.</p>
+    <p class="lede">The official Afrizonemart.com identity — Deep Navy Blue and Sea Buckthorn orange, an Africa+cart logo mark, and the "Sunrise Cut" angular chevron geometry — tuned for the trust and clarity that money and identity demand. This page is the living source of truth for tokens and components.</p>
   </div>
 </div>
 
@@ -221,15 +224,15 @@
   <!-- ===== Colors ===== -->
   <section class="block">
     <span class="label">01 · Color</span>
-    <h2 class="sec">Earth, growth & craft</h2>
-    <p class="sec-desc">Clay and savanna gold carry the brand; deep palm green grounds it. Semantic colors form one shared status language across the worker app and admin. Neutrals are warm-tinted — never pure gray.</p>
+    <h2 class="sec">Deep Navy Blue & Sea Buckthorn</h2>
+    <p class="sec-desc">Navy carries trust and stability; Sea Buckthorn orange carries energy and opportunity — the official Afrizonemart.com pairing. Semantic colors form one shared status language across the worker app and admin. Neutrals are warm-tinted — never pure gray.</p>
 
     <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin:6px 0 12px">BRAND</div>
     <div class="grid swatches">
-      <div class="sw"><div class="chip" style="background:var(--clay-600)">Primary</div><div class="meta"><div class="name">Clay 600</div><div class="hex">#C2502E</div></div></div>
-      <div class="sw"><div class="chip" style="background:var(--gold-500);color:#3a2a08">Accent</div><div class="meta"><div class="name">Gold 500</div><div class="hex">#E9A23B</div></div></div>
-      <div class="sw"><div class="chip" style="background:var(--forest-900)">Ink</div><div class="meta"><div class="name">Forest 900</div><div class="hex">#14302B</div></div></div>
-      <div class="sw"><div class="chip" style="background:var(--forest-700)">Dark surface</div><div class="meta"><div class="name">Forest 700</div><div class="hex">#1E4B41</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--navy)">Primary</div><div class="meta"><div class="name">Deep Navy Blue</div><div class="hex">#000066</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--clay-600);color:#3a2a08">Accent</div><div class="meta"><div class="name">Sea Buckthorn</div><div class="hex">#FBAC34</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--navy-deep)">Dark surface</div><div class="meta"><div class="name">Navy deep</div><div class="hex">#00004D</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--forest-900)">Ink (legacy)</div><div class="meta"><div class="name">Forest 900</div><div class="hex">#14302B</div></div></div>
     </div>
 
     <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin:22px 0 12px">SEMANTIC · STATUS</div>
@@ -252,8 +255,8 @@
   <!-- ===== Typography ===== -->
   <section class="block">
     <span class="label">02 · Type</span>
-    <h2 class="sec">Bricolage Grotesque + Inter</h2>
-    <p class="sec-desc">A characterful display face for headings and money figures, paired with neutral Inter for dense UI and forms. Numbers use tabular figures so balances and timesheets align.</p>
+    <h2 class="sec">Raleway</h2>
+    <p class="sec-desc">One typeface, per the official brand spec — extrabold (800) for headings and money figures, medium (500) for dense UI and forms. Numbers use tabular figures so balances and timesheets align.</p>
     <div class="card pad">
       <div class="type-row"><span class="tag">Display / 800</span><span class="disp" style="font-weight:800;font-size:38px">Find work near you</span></div>
       <div class="type-row"><span class="tag">Heading / 700</span><span class="disp" style="font-weight:700;font-size:24px">This week's earnings</span></div>
@@ -439,7 +442,7 @@
         <div class="bar"><span class="d" style="background:#ff5f57"></span><span class="d" style="background:#febc2e"></span><span class="d" style="background:#28c840"></span><span style="margin-left:10px;font-size:12px;color:var(--text-muted)">admin.afrizone.work / payments</span></div>
         <div class="admin-body">
           <div class="admin-side">
-            <div class="brandrow" style="gap:8px;margin-bottom:14px"><span class="logo-mark" style="width:30px;height:30px;border-radius:9px"><svg viewBox="0 0 32 32" fill="none" style="width:18px;height:18px"><path d="M16 4 L27 26 H21 L16 14 L11 26 H5 Z" fill="#fff"/></svg></span><b style="font-size:14px">Afrizone</b></div>
+            <div class="brandrow" style="gap:8px;margin-bottom:14px"><span class="logo-mark" style="width:24px;height:29px;background:none;box-shadow:none"><svg viewBox="0 0 100 120" width="24" height="29"><path d="M38 6 L58 8 L66 16 L86 30 L72 40 L76 58 L68 78 L58 100 L50 116 L42 100 L30 84 L14 66 L6 50 L16 34 L24 18 Z" fill="var(--gold-500)"/><path d="M66 50 L40 62" stroke="var(--navy)" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M40 62 L62 62 L56 84 L34 84 Z" fill="var(--navy)"/></svg></span><b style="font-size:14px">Afrizone</b></div>
             <div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</div>
             <div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9"/></svg>Tasks</div>
             <div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>Applications</div>
@@ -470,6 +473,6 @@
   </section>
 </div>
 
-<footer>Afrizone Part Time · Design System v0.1 · Bricolage Grotesque + Inter · tokens are the source of truth for the code scaffold</footer>
+<footer>Afrizone Part Time · Design System v0.2 · Raleway · tokens are the source of truth for the code scaffold</footer>
 </body>
 </html>

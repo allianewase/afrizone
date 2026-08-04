@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
 import * as Linking from 'expo-linking';
+import { useFonts, Raleway_500Medium, Raleway_800ExtraBold } from '@expo-google-fonts/raleway';
 import { AuthProvider, useAuth } from '../src/auth/AuthContext';
 import { colors } from '../src/theme';
 import Splash from '../src/components/Splash';
@@ -153,6 +154,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({ Raleway_500Medium, Raleway_800ExtraBold });
+
+  if (!fontsLoaded) {
+    return <Splash />;
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

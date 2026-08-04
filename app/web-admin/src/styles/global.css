@@ -9,7 +9,8 @@ html {
   scroll-behavior: smooth;
 }
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Raleway', system-ui, sans-serif;
+  font-weight: 500;
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
@@ -21,7 +22,8 @@ h2,
 h3,
 h4,
 .disp {
-  font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+  font-family: 'Raleway', sans-serif;
+  font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.12;
 }

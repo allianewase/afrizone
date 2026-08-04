@@ -8,22 +8,30 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Raleway:wght@500;600;700;800&display=swap"
       rel="stylesheet"
     />
   </head>
-  <body style="margin: 0; background: #1e2643">
+  <body style="margin: 0; background: #000066">
     <div id="root">
       <!-- Static boot splash — replaced by React on mount (no white flash) -->
-      <div style="position: fixed; inset: 0; display: grid; place-items: center; background: #1e2643; font-family: 'Bricolage Grotesque', Inter, sans-serif">
+      <div style="position: fixed; inset: 0; display: grid; place-items: center; background: #000066; font-family: 'Raleway', sans-serif">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 26px">
           <div style="display: flex; align-items: center; gap: 12px">
-            <span style="width: 52px; height: 52px; border-radius: 15px; background: #1e2643; display: grid; place-items: center; box-shadow: 0 8px 22px -6px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06)">
-              <svg width="34" height="34" viewBox="0 0 100 100"><path d="M26 79 L50 23 L74 79" fill="none" stroke="#f2a93b" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/><path d="M37 60 H63" fill="none" stroke="#f2a93b" stroke-width="12" stroke-linecap="round"/></svg>
+            <span style="width: 40px; height: 48px; display: grid; place-items: center">
+              <svg width="40" height="48" viewBox="0 0 100 120">
+                <path d="M38 6 L58 8 L66 16 L86 30 L72 40 L76 58 L68 78 L58 100 L50 116 L42 100 L30 84 L14 66 L6 50 L16 34 L24 18 Z" fill="#fbac34"/>
+                <path d="M66 50 L40 62" stroke="#000066" stroke-width="4" stroke-linecap="round" fill="none"/>
+                <path d="M40 62 L62 62 L56 84 L34 84 Z" fill="#000066"/>
+                <rect x="42" y="52" width="8" height="10" rx="2" fill="#000066"/>
+                <rect x="52" y="54" width="7" height="8" rx="2" fill="#000066"/>
+                <circle cx="40" cy="90" r="5" fill="#000066"/>
+                <circle cx="50" cy="90" r="5" fill="#000066"/>
+              </svg>
             </span>
-            <span style="font-weight: 800; font-size: 22px; letter-spacing: -.02em"><span style="color:#fff">Afrizone</span><span style="color:#f2a93b">&nbsp;Part&nbsp;Time</span></span>
+            <span style="font-weight: 800; font-size: 22px; letter-spacing: -.02em"><span style="color:#fff">Afrizone</span><span style="color:#fbac34">&nbsp;Part&nbsp;Time</span></span>
           </div>
-          <div style="width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(255,255,255,.15); border-top-color: #f2a93b; animation: azspin .8s linear infinite"></div>
+          <div style="width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(255,255,255,.15); border-top-color: #fbac34; animation: azspin .8s linear infinite"></div>
         </div>
       </div>
       <style>@keyframes azspin { to { transform: rotate(360deg) } }</style>

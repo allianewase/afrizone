@@ -42,7 +42,7 @@
   position: relative;
 }
 .tcard .pay {
-  font-family: 'Bricolage Grotesque';
+  font-family: 'Raleway', sans-serif;
   font-weight: 800;
   font-size: 20px;
   background: var(--grad);

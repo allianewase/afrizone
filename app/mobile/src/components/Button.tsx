@@ -8,7 +8,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, radii, layout, type } from '../theme';
+import { colors, radii, layout, type, fontFamily } from '../theme';
 import { Icon, IconName } from './Icon';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'premium';
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   },
   full: { alignSelf: 'stretch' },
   content: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  label: { fontSize: type.size.md, fontWeight: '700' },
+  label: { fontSize: type.size.md, fontFamily: fontFamily.extrabold },
   pressed: { opacity: 0.85 },
   disabled: { opacity: 0.45 },
 });

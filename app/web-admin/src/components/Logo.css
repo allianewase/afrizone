@@ -4,11 +4,9 @@
   gap: 11px;
 }
 .az-mark {
-  background: var(--navy);
   display: grid;
   place-items: center;
   flex: none;
-  box-shadow: 0 8px 22px -6px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 .az-words {
   display: flex;
@@ -16,7 +14,7 @@
   line-height: 1.05;
 }
 .az-word {
-  font-family: 'Bricolage Grotesque', sans-serif;
+  font-family: 'Raleway', sans-serif;
   font-weight: 800;
   font-size: 19px;
   letter-spacing: -0.02em;
