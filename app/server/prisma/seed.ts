@@ -137,10 +137,30 @@ async function main() {
       bankMasked: "****7890",
     },
   });
+  // Bayo Adigun (TRADE, VERIFIED) — fills the single-slot AC servicing task below.
+  const bayo = await prisma.user.create({
+    data: {
+      name: "Bayo Adigun",
+      email: "bayo.adigun@afrizone.work",
+      phone: "+2348030000006",
+      passwordHash: workerHash,
+      role: "WORKER",
+      tiers: "TRADE",
+      kycStatus: "VERIFIED",
+      location: "Lekki, Lagos",
+      rating: 4.7,
+      completedCount: 22,
+      bankMasked: "****2345",
+    },
+  });
 
   const day = 24 * 3600 * 1000;
+  const hour = 3600 * 1000;
   const now = Date.now();
   const d = (offsetDays: number) => new Date(now + offsetDays * day);
+  // Same as d(), plus an hour offset — used to stagger task-posted vs.
+  // application-approved timestamps so avg time-to-fill isn't ~0.
+  const dh = (offsetDays: number, offsetHours = 0) => new Date(now + offsetDays * day + offsetHours * hour);
 
   // ── Tasks (from contract Seed data) ───────────────────────────────────────
   const tDispatch = await prisma.task.create({
@@ -160,6 +180,7 @@ async function main() {
       status: "OPEN",
       deadline: d(2),
       createdById: admin.id,
+      createdAt: dh(-2),
     },
   });
   const tPromo = await prisma.task.create({
@@ -179,6 +200,7 @@ async function main() {
       status: "OPEN",
       deadline: d(2),
       createdById: admin.id,
+      createdAt: dh(-3),
     },
   });
   const tRemote = await prisma.task.create({
@@ -214,9 +236,10 @@ async function main() {
       address: "Lekki Phase 1, Lagos",
       geofenceRadius: 80,
       slots: 1,
-      status: "OPEN",
+      status: "FILLED", // single slot, filled by Bayo's approved application below
       deadline: d(1),
       createdById: admin.id,
+      createdAt: dh(-1),
     },
   });
   const tCampus = await prisma.task.create({
@@ -240,14 +263,17 @@ async function main() {
   });
 
   // ── Applications ──────────────────────────────────────────────────────────
+  // Timestamps are staggered a few hours after each task's createdAt so
+  // "avg time to fill" on the dashboard reflects a real gap, not ~0.
   await prisma.application.create({
-    data: { taskId: tPromo.id, workerId: amaka.id, pitch: "Done 47 activations, top-rated promo.", status: "APPROVED" },
+    data: { taskId: tPromo.id, workerId: amaka.id, pitch: "Done 47 activations, top-rated promo.", status: "APPROVED", createdAt: dh(-3, 8) },
   });
   await prisma.application.create({
-    data: { taskId: tDispatch.id, workerId: tunde.id, pitch: "Yaba local, own bike, 89 deliveries.", status: "APPROVED" },
+    data: { taskId: tDispatch.id, workerId: tunde.id, pitch: "Yaba local, own bike, 89 deliveries.", status: "APPROVED", createdAt: dh(-2, 5) },
   });
   await prisma.application.create({
-    data: { taskId: tDispatch.id, workerId: ibrahim.id, pitch: "Reliable dispatch rider.", status: "APPLIED" },
+    // APPROVED (not APPLIED) — matches the APPROVED payment he already has for this task below.
+    data: { taskId: tDispatch.id, workerId: ibrahim.id, pitch: "Reliable dispatch rider.", status: "APPROVED", createdAt: dh(-2, 20) },
   });
   await prisma.application.create({
     data: { taskId: tRemote.id, workerId: ngozi.id, pitch: "Strong with spreadsheets and data tools.", status: "APPLIED" },
@@ -257,6 +283,10 @@ async function main() {
   });
   await prisma.application.create({
     data: { taskId: tCampus.id, workerId: ngozi.id, pitch: "UNILAG alumna, knows the campus.", status: "APPLIED" },
+  });
+  await prisma.application.create({
+    // Fills tTrade's single slot — matches its status: "FILLED" above.
+    data: { taskId: tTrade.id, workerId: bayo.id, pitch: "Certified HVAC technician, 22 completed jobs.", status: "APPROVED", createdAt: dh(-1, 3) },
   });
 
   // ── Timesheets (a couple submitted, for the approval queue) ───────────────

@@ -54,10 +54,10 @@ router.get("/stats", requireAuth, async (_req: AuthedRequest, res: Response) => 
       take: 5,
       include: { worker: true, task: true },
     }),
-    prisma.payment.findMany({ include: { task: { select: { category: true } } } }),
+    prisma.payment.findMany({ select: { net: true, status: true } }),
     prisma.payment.findMany({
       where: { createdAt: { gte: monthStart, lte: monthEnd } },
-      select: { gross: true },
+      select: { gross: true, net: true, status: true, task: { select: { category: true } } },
     }),
     prisma.dispute.count({ where: { status: "OPEN" } }),
     prisma.application.count({ where: { status: "APPLIED" } }),
@@ -89,23 +89,24 @@ router.get("/stats", requireAuth, async (_req: AuthedRequest, res: Response) => 
       ? Math.round((ttfSamples.reduce((s, h) => s + h, 0) / ttfSamples.length) * 10) / 10
       : 0;
 
-  // Spend this month (released > 0 ? released : all committed)
-  const releasedSpend = paymentsAll
+  // Spend this month (released > 0 ? released : all committed), scoped to the
+  // same calendar month as budgetThisMonth so the two figures stay paired.
+  const releasedSpendMonth = paymentsThisMonth
     .filter((p) => p.status === "RELEASED")
     .reduce((s, p) => s + p.net, 0);
-  const allNetSpend = paymentsAll.reduce((s, p) => s + p.net, 0);
-  const spendThisMonth = releasedSpend > 0 ? releasedSpend : allNetSpend;
+  const committedSpendMonth = paymentsThisMonth.reduce((s, p) => s + p.net, 0);
+  const spendThisMonth = releasedSpendMonth > 0 ? releasedSpendMonth : committedSpendMonth;
 
   // Budget this month = total gross committed (all statuses) in the calendar month
   const budgetThisMonth = paymentsThisMonth.reduce((s, p) => s + p.gross, 0);
 
-  // Spend by category from real payments
+  // Spend by category from this month's payments (same window as above)
   const byCategory = new Map<string, number>();
-  for (const p of paymentsAll) {
+  for (const p of paymentsThisMonth) {
     const label = p.task?.category || "Other";
     byCategory.set(label, (byCategory.get(label) || 0) + p.gross);
   }
-  const totalGross = paymentsAll.reduce((s, p) => s + p.gross, 0) || 1;
+  const totalGross = paymentsThisMonth.reduce((s, p) => s + p.gross, 0) || 1;
   const spendByCategory = Array.from(byCategory.entries())
     .sort((a, b) => b[1] - a[1])
     .map(([label, gross], i) => ({
