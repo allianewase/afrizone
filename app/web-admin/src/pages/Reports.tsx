@@ -11,6 +11,15 @@ import { ErrorState, LoadingState } from '../components/ui/StateView'
 import type { ReportsSummary } from '../api/types'
 import '../pages/Dashboard.css'
 import './Reports.css'
+import { Skeleton } from '@/components/shadcn/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shadcn/table'
 
 /* Lazy so bklit's visx and Motion dependencies stay out of the initial bundle.
    All three come from the same module, so they share one chunk. */
@@ -119,7 +128,7 @@ export default function Reports() {
             </div>
             <span className="chip">Naira</span>
           </div>
-          <Suspense fallback={<div className="chart-ph" style={{ height: 220 }} />}>
+          <Suspense fallback={<Skeleton className="w-full rounded-[var(--r-sm)]" style={{ height: 220 }} />}>
             <SpendChart data={data.spendByMonth} />
           </Suspense>
         </Glass>
@@ -168,7 +177,7 @@ export default function Reports() {
               <div className="sub">{data.spendByCategory.length} categories</div>
             </div>
           </div>
-          <Suspense fallback={<div className="chart-ph" style={{ height: 240 }} />}>
+          <Suspense fallback={<Skeleton className="w-full rounded-[var(--r-sm)]" style={{ height: 240 }} />}>
             <CategoryChart data={data.spendByCategory} />
           </Suspense>
         </Glass>
@@ -181,7 +190,7 @@ export default function Reports() {
             </div>
             <span className="chip">%</span>
           </div>
-          <Suspense fallback={<div className="chart-ph" style={{ height: 220 }} />}>
+          <Suspense fallback={<Skeleton className="w-full rounded-[var(--r-sm)]" style={{ height: 220 }} />}>
             <FillRateTrendChart data={data.fillRateTrend} />
           </Suspense>
         </Glass>
@@ -195,26 +204,26 @@ export default function Reports() {
               <div className="sub">By spend</div>
             </div>
           </div>
-          <table className="dt" style={{ marginTop: 14 }}>
-            <thead>
-              <tr>
-                <th>Category</th>
-                <th>Tasks</th>
-                <th>Spend</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="dt" style={{ marginTop: 14 }}>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Category</TableHead>
+                <TableHead>Tasks</TableHead>
+                <TableHead>Spend</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {data.topCategories.map((c, i) => (
-                <tr key={c.label + i}>
-                  <td>{c.label}</td>
-                  <td className="tnum">{c.tasks}</td>
-                  <td className="tnum" style={{ fontWeight: 700 }}>
+                <TableRow key={c.label + i}>
+                  <TableCell>{c.label}</TableCell>
+                  <TableCell className="tnum">{c.tasks}</TableCell>
+                  <TableCell className="tnum" style={{ fontWeight: 700 }}>
                     {formatNairaCompact(c.spend)}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </Glass>
       </div>
     </>

@@ -145,6 +145,13 @@ a {
   border-radius: var(--r);
   border-top-right-radius: var(--cut);
   box-shadow: var(--shadow-sm);
+  /* Neutralises shadcn Card's `flex flex-col gap-6 py-6` defaults. These
+     surfaces set their own padding per call site, and several pass padding: 0
+     for tables, so inheriting Card's layout would reflow all 50 of them. This
+     restores exactly the plain-div behaviour they had before. */
+  display: block;
+  padding: 0;
+  gap: 0;
 }
 
 /* ===== page header ===== */
@@ -297,6 +304,16 @@ table.dt tbody tr:last-child td {
   font-size: 13px;
   flex: none;
   color: #fff;
+}
+/* shadcn's AvatarFallback is rounded-full, which inside our rounded-rect avatar
+   would show the corners cut out. The gradient lives on the fallback, so it has
+   to take the parent's shape. */
+.wav [data-slot='avatar-fallback'],
+.avatar [data-slot='avatar-fallback'] {
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font: inherit;
 }
 .neg {
   color: var(--danger);

@@ -9,6 +9,15 @@ import Button from '../components/ui/Button'
 import StatusPill from '../components/ui/StatusPill'
 import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
+import { Avatar, AvatarFallback } from '@/components/shadcn/avatar'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shadcn/table'
 
 export default function Payments() {
   const { data, loading, error, reload, setData } = useApi((signal) => api.payments(undefined, signal))
@@ -95,42 +104,42 @@ export default function Payments() {
       ) : (
         <>
           <Glass reveal delay="d1" className="tablewrap">
-            <table className="dt">
-              <thead>
-                <tr>
-                  <th>Worker</th>
-                  <th>Task</th>
-                  <th>Gross</th>
-                  <th>− WHT 5%</th>
-                  <th>Net payout</th>
-                  <th>Status</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="dt">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Worker</TableHead>
+                  <TableHead>Task</TableHead>
+                  <TableHead>Gross</TableHead>
+                  <TableHead>− WHT 5%</TableHead>
+                  <TableHead>Net payout</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {payments.map((p) => {
                   const pill = paymentPill(p.status)
                   const name = p.worker?.name ?? 'Worker'
                   return (
-                    <tr key={p.id}>
-                      <td>
+                    <TableRow key={p.id}>
+                      <TableCell>
                         <div className="wname">
-                          <span className="wav" style={{ background: avatarGradient(name) }}>
-                            {initials(name)}
-                          </span>
+                          <Avatar className="wav">
+                              <AvatarFallback style={{ background: avatarGradient(name) }}>{initials(name)}</AvatarFallback>
+                            </Avatar>
                           {name}
                         </div>
-                      </td>
-                      <td>{p.task?.title ?? '—'}</td>
-                      <td className="tnum">{formatNaira(p.gross)}</td>
-                      <td className="tnum neg">{formatNaira(p.whtAmount)}</td>
-                      <td className="tnum" style={{ fontWeight: 700 }}>
+                      </TableCell>
+                      <TableCell>{p.task?.title ?? '—'}</TableCell>
+                      <TableCell className="tnum">{formatNaira(p.gross)}</TableCell>
+                      <TableCell className="tnum neg">{formatNaira(p.whtAmount)}</TableCell>
+                      <TableCell className="tnum" style={{ fontWeight: 700 }}>
                         {formatNaira(p.net)}
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         <StatusPill variant={pill.variant} label={pill.label} />
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         {p.status === 'APPROVED' ? (
                           <Button
                             variant="money"
@@ -150,12 +159,12 @@ export default function Payments() {
                             {p.status === 'DISPUTED' ? 'On hold' : 'In review'}
                           </Button>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </Glass>
 
           {sample && (

@@ -19,6 +19,16 @@ import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView
 import Select from '../components/ui/Select'
 import Textarea from '../components/ui/Textarea'
 import { Label } from '@/components/shadcn/label'
+import { Avatar, AvatarFallback } from '@/components/shadcn/avatar'
+import { Badge } from '@/components/shadcn/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shadcn/table'
 
 const DOC_TYPE_LABEL: Record<string, string> = {
   ID: 'Government ID',
@@ -411,48 +421,48 @@ export default function Workers() {
         </Glass>
       ) : (
         <Glass reveal delay="d1" className="tablewrap">
-          <table className="dt">
-            <thead>
-              <tr>
-                <th>Worker</th>
-                <th>Tiers</th>
-                <th>KYC</th>
-                <th>Completed</th>
-                <th>Rating</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="dt">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Worker</TableHead>
+                <TableHead>Tiers</TableHead>
+                <TableHead>KYC</TableHead>
+                <TableHead>Completed</TableHead>
+                <TableHead>Rating</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {workers.map((w) => {
                 const pill = kycPill(w.kycStatus)
                 return (
-                  <tr key={w.id}>
-                    <td>
+                  <TableRow key={w.id}>
+                    <TableCell>
                       <div className="wname">
-                        <span className="wav" style={{ background: avatarGradient(w.name) }}>
-                          {initials(w.name)}
-                        </span>
+                        <Avatar className="wav">
+                            <AvatarFallback style={{ background: avatarGradient(w.name) }}>{initials(w.name)}</AvatarFallback>
+                          </Avatar>
                         <div>
                           {w.name}
                           <div style={{ fontSize: 12, color: 'var(--muted)' }}>{w.email}</div>
                         </div>
                       </div>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {(w.tiers ?? []).map((t) => (
-                          <span className="tier" key={t}>
-                            <span className="d" style={{ background: TIER_COLORS[t] }} />
-                            {TIER_LABELS[t]}
-                          </span>
+                          <Badge variant="outline" className="tier" key={t}>
+                              <span className="d" style={{ background: TIER_COLORS[t] }} />
+                              {TIER_LABELS[t]}
+                            </Badge>
                         ))}
                       </div>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <StatusPill variant={pill.variant} label={pill.label} />
-                    </td>
-                    <td className="tnum">{w.completedCount}</td>
-                    <td className="tnum">
+                    </TableCell>
+                    <TableCell className="tnum">{w.completedCount}</TableCell>
+                    <TableCell className="tnum">
                       {w.rating != null ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                           {w.rating.toFixed(1)}
@@ -463,8 +473,8 @@ export default function Workers() {
                       ) : (
                         '—'
                       )}
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <div style={{ display: 'flex', gap: 8 }}>
                         {w.kycStatus === 'PENDING' && (
                           <Button
@@ -491,12 +501,12 @@ export default function Workers() {
                           </Button>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </Glass>
       )}
 

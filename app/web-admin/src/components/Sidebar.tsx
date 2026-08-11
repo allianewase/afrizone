@@ -4,6 +4,7 @@ import Logo from './Logo'
 import { useAuth } from '../auth/AuthContext'
 import { initials } from '../lib/format'
 import './Sidebar.css'
+import { Avatar, AvatarFallback } from '@/components/shadcn/avatar'
 
 interface NavItem {
   to: string
@@ -78,7 +79,9 @@ export default function Sidebar({ open, onNavigate }: { open: boolean; onNavigat
       </nav>
 
       <div className="userbox">
-        <span className="avatar">{user ? initials(user.name) : 'AZ'}</span>
+        <Avatar className="avatar">
+          <AvatarFallback>{user ? initials(user.name) : 'AZ'}</AvatarFallback>
+        </Avatar>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 600 }}>{user?.name ?? 'Admin'}</div>
           <div style={{ fontSize: 11, color: 'var(--rail-muted)' }}>

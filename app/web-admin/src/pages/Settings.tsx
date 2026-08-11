@@ -27,6 +27,15 @@ import Textarea from '../components/ui/Textarea'
 import Select from '../components/ui/Select'
 import Switch from '../components/ui/Switch'
 import { Label } from '@/components/shadcn/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shadcn/table'
 
 const TIERS: Tier[] = ['STUDENT', 'DISPATCH', 'REMOTE', 'PROMO', 'TRADE']
 type Tab = 'tax' | 'categories' | 'templates' | 'billing' | 'security'
@@ -195,22 +204,22 @@ function TaxRatesTab({ canEdit }: { canEdit: boolean }) {
         </Glass>
       ) : (
         <Glass className="tablewrap">
-          <table className="dt">
-            <thead>
-              <tr>
-                <th>Jurisdiction</th>
-                <th>Category</th>
-                <th>WHT %</th>
-                <th>VAT %</th>
-                <th>Active</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="dt">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Jurisdiction</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>WHT %</TableHead>
+                <TableHead>VAT %</TableHead>
+                <TableHead>Active</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rates.map((r) => (
-                <tr key={r.id}>
-                  <td style={{ fontWeight: 600 }}>{r.jurisdiction}</td>
-                  <td>{r.category}</td>
-                  <td>
+                <TableRow key={r.id}>
+                  <TableCell style={{ fontWeight: 600 }}>{r.jurisdiction}</TableCell>
+                  <TableCell>{r.category}</TableCell>
+                  <TableCell>
                     <Input
                       className="tnum cell"
                       type="number"
@@ -223,8 +232,8 @@ function TaxRatesTab({ canEdit }: { canEdit: boolean }) {
                         if (v !== r.whtRate) patch(r.id, { whtRate: v })
                       }}
                     />
-                  </td>
-                  <td>
+                  </TableCell>
+                  <TableCell>
                     <Input
                       className="tnum cell"
                       type="number"
@@ -237,19 +246,19 @@ function TaxRatesTab({ canEdit }: { canEdit: boolean }) {
                         if (v !== r.vatRate) patch(r.id, { vatRate: v })
                       }}
                     />
-                  </td>
-                  <td>
+                  </TableCell>
+                  <TableCell>
                     <Switch
                       checked={r.active}
                       disabled={!canEdit || busy === r.id}
                       label={`Toggle ${r.jurisdiction} ${r.category} active`}
                       onChange={(v) => patch(r.id, { active: v })}
                     />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </Glass>
       )}
 
@@ -407,33 +416,33 @@ function CategoriesTab({ canEdit }: { canEdit: boolean }) {
         </Glass>
       ) : (
         <Glass className="tablewrap">
-          <table className="dt">
-            <thead>
-              <tr>
-                <th>Category</th>
-                <th>Tier</th>
-                <th>Default pay model</th>
-                <th>Active</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="dt">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Category</TableHead>
+                <TableHead>Tier</TableHead>
+                <TableHead>Default pay model</TableHead>
+                <TableHead>Active</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {cats.map((c) => (
-                <tr key={c.id}>
-                  <td style={{ fontWeight: 600 }}>{c.name}</td>
-                  <td>{TIER_LABELS[c.tier] ?? c.tier}</td>
-                  <td>{c.defaultPayModel === 'HOURLY' ? 'Hourly' : 'Fixed'}</td>
-                  <td>
+                <TableRow key={c.id}>
+                  <TableCell style={{ fontWeight: 600 }}>{c.name}</TableCell>
+                  <TableCell>{TIER_LABELS[c.tier] ?? c.tier}</TableCell>
+                  <TableCell>{c.defaultPayModel === 'HOURLY' ? 'Hourly' : 'Fixed'}</TableCell>
+                  <TableCell>
                     <Switch
                       checked={c.active}
                       disabled={!canEdit || busy === c.id}
                       label={`Toggle ${c.name} active`}
                       onChange={(v) => toggleActive(c, v)}
                     />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </Glass>
       )}
 
@@ -935,31 +944,31 @@ function BillingTab({ canEdit }: { canEdit: boolean }) {
         </Glass>
       ) : (
         <Glass className="tablewrap">
-          <table className="dt">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Initiated by</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="dt">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Initiated by</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {history.map((f) => {
                 const pill = fundingPill(f.status)
                 return (
-                  <tr key={f.id}>
-                    <td>{formatDate(f.createdAt)}</td>
-                    <td style={{ fontWeight: 600 }}>{formatNaira(f.amount)}</td>
-                    <td>
+                  <TableRow key={f.id}>
+                    <TableCell>{formatDate(f.createdAt)}</TableCell>
+                    <TableCell style={{ fontWeight: 600 }}>{formatNaira(f.amount)}</TableCell>
+                    <TableCell>
                       <StatusPill variant={pill.variant} label={pill.label} />
-                    </td>
-                    <td>{f.admin?.name ?? '—'}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell>{f.admin?.name ?? '—'}</TableCell>
+                  </TableRow>
                 )
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </Glass>
       )}
 
@@ -1074,26 +1083,37 @@ export default function Settings() {
         </div>
       )}
 
-      <div className="tabs" role="tablist" aria-label="Settings sections">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            className={`tab ${tab === t.id ? 'on' : ''}`}
-            onClick={() => setTab(t.id)}
-          >
-            <Icon name={t.icon} />
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Radix supplies what the hand-rolled version claimed but did not do: the
+          bar had role="tab" and aria-selected, yet no arrow-key navigation, no
+          aria-controls linking a trigger to its panel, and the panels were not
+          tabpanels at all. Panels stay unmounted until selected, so each tab
+          still fetches only when opened. */}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+        <TabsList className="tabs" aria-label="Settings sections">
+          {TABS.map((t) => (
+            <TabsTrigger key={t.id} value={t.id} className="tab">
+              <Icon name={t.icon} />
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {tab === 'tax' && <TaxRatesTab canEdit={canEdit} />}
-      {tab === 'categories' && <CategoriesTab canEdit={canEdit} />}
-      {tab === 'templates' && <TemplatesTab canEdit={canEdit} />}
-      {tab === 'billing' && <BillingTab canEdit={canEdit} />}
-      {tab === 'security' && <SecurityTab />}
+        <TabsContent value="tax">
+          <TaxRatesTab canEdit={canEdit} />
+        </TabsContent>
+        <TabsContent value="categories">
+          <CategoriesTab canEdit={canEdit} />
+        </TabsContent>
+        <TabsContent value="templates">
+          <TemplatesTab canEdit={canEdit} />
+        </TabsContent>
+        <TabsContent value="billing">
+          <BillingTab canEdit={canEdit} />
+        </TabsContent>
+        <TabsContent value="security">
+          <SecurityTab />
+        </TabsContent>
+      </Tabs>
     </>
   )
 }

@@ -21,6 +21,8 @@ import Input from '../components/ui/Input'
 import Textarea from '../components/ui/Textarea'
 import Select from '../components/ui/Select'
 import { Label } from '@/components/shadcn/label'
+import { Progress } from '@/components/shadcn/progress'
+import { Badge } from '@/components/shadcn/badge'
 
 const TIERS: Tier[] = ['STUDENT', 'DISPATCH', 'REMOTE', 'PROMO', 'TRADE']
 
@@ -43,10 +45,10 @@ function TaskCard({ task, delay }: { task: Task; delay: string }) {
   return (
     <div className={`glass tcard rv in ${delay}`} onPointerMove={onMove}>
       <div className="tc-top">
-        <span className="tier">
-          <span className="d" style={{ background: TIER_COLORS[task.tier] }} />
-          {TIER_LABELS[task.tier]}
-        </span>
+        <Badge variant="outline" className="tier">
+            <span className="d" style={{ background: TIER_COLORS[task.tier] }} />
+            {TIER_LABELS[task.tier]}
+          </Badge>
         <span className="pay">{taskPay(task.rate, task.budget, task.payModel)}</span>
       </div>
       <h4>{task.title}</h4>
@@ -66,9 +68,14 @@ function TaskCard({ task, delay }: { task: Task; delay: string }) {
           {task.applicantCount ?? 0} applicants
         </span>
       </div>
-      <div className="fillbar">
-        <i style={{ width: `${w}%` }} />
-      </div>
+      {/* Radix Progress carries role="progressbar" with aria-valuenow/min/max,
+          which the bare div pair did not: a screen reader had no way to read the
+          fill level at all. */}
+      <Progress
+        value={w}
+        className="fillbar"
+        aria-label={`${filled} of ${task.slots} slots filled`}
+      />
       <div className="tc-foot">
         <span>
           {filled} of {task.slots} filled

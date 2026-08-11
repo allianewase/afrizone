@@ -10,6 +10,7 @@ import Icon, { type IconName } from '../components/Icon'
 import { ErrorState, LoadingState } from '../components/ui/StateView'
 import type { DashboardActivity, DashboardUrgent } from '../api/types'
 import './Dashboard.css'
+import { Skeleton } from '@/components/shadcn/skeleton'
 
 /* Lazy so bklit's visx and Motion dependencies stay out of the initial bundle.
    The dashboard is the landing route, so this is the one that matters most: the
@@ -172,7 +173,7 @@ export default function Dashboard() {
             </div>
             <span className="chip">Monthly</span>
           </div>
-          <Suspense fallback={<div className="chart-ph" style={{ height: 200 }} />}>
+          <Suspense fallback={<Skeleton className="w-full rounded-[var(--r-sm)]" style={{ height: 200 }} />}>
             <CategoryBars data={data.spendByCategory} />
           </Suspense>
         </Glass>
@@ -184,7 +185,7 @@ export default function Dashboard() {
               <div className="sub">This month</div>
             </div>
           </div>
-          <Suspense fallback={<div className="chart-ph" style={{ height: 200 }} />}>
+          <Suspense fallback={<Skeleton className="w-full rounded-[var(--r-sm)]" style={{ height: 200 }} />}>
             <FillRateMeter pct={data.fillRate} filled={data.fill.filled} open={data.fill.open} />
           </Suspense>
         </Glass>

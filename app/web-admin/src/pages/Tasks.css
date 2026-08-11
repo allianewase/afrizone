@@ -77,13 +77,12 @@
   overflow: hidden;
   position: relative;
 }
-.tcard .fillbar i {
-  display: block;
-  height: 100%;
+/* Radix renders the fill as a data-slot div driven by transform, not a width on
+   an <i>, so the transition moves with it. */
+.tcard .fillbar [data-slot='progress-indicator'] {
   border-radius: 6px;
   background: var(--grad);
-  width: 0;
-  transition: width 1s var(--ease);
+  transition: transform 1s var(--ease);
 }
 .tcard .tc-foot {
   display: flex;

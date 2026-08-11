@@ -26,7 +26,8 @@
   color: var(--text);
   transform: translateY(-1px);
 }
-.tab.on {
+/* Radix marks the selected trigger with data-state rather than a class. */
+.tab[data-state='active'] {
   color: var(--on-gold);
   background: var(--grad);
   border-color: transparent;

@@ -29,14 +29,6 @@
    draws these now, which is what brought the tooltips the CSS version never had.
    Its glow shadow went with it: a graphic does not need a light source. */
 
-/* Placeholder held while the lazy chart chunk loads, so the card does not
-   collapse and reflow the page underneath it. */
-.chart-ph {
-  width: 100%;
-  border-radius: var(--r-sm);
-  background: var(--track);
-}
-
 /* fill-rate meter */
 .donut-wrap {
   display: flex;

@@ -25,6 +25,8 @@ import Textarea from '../components/ui/Textarea'
 import Select from '../components/ui/Select'
 import { Label } from '@/components/shadcn/label'
 import { Checkbox } from '@/components/shadcn/checkbox'
+import { Avatar, AvatarFallback } from '@/components/shadcn/avatar'
+import { Badge } from '@/components/shadcn/badge'
 
 const STAGES: Stage[] = ['SCREENING', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']
 
@@ -80,9 +82,9 @@ function CandidateCard({
   return (
     <div className={`glass kan-card rv in ${delay}`}>
       <div className="kc-top">
-        <span className="wav" style={{ background: avatarGradient(c.name) }}>
-          {initials(c.name)}
-        </span>
+        <Avatar className="wav">
+            <AvatarFallback style={{ background: avatarGradient(c.name) }}>{initials(c.name)}</AvatarFallback>
+          </Avatar>
         <div className="kc-id">
           <b>{c.name}</b>
           <span>{c.email}</span>
@@ -445,9 +447,9 @@ export default function Hiring() {
 
       {selectedJob && (
         <div className="job-meta glass rv in" >
-          <span className="tier">
+          <Badge variant="outline" className="tier">
             <Icon name="briefcase" /> {EMPLOYMENT_LABELS[selectedJob.employmentType]}
-          </span>
+          </Badge>
           <span>
             <Icon name="pin" /> {selectedJob.location || 'Remote'}
           </span>

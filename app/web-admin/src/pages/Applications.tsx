@@ -11,6 +11,16 @@ import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
 import Textarea from '../components/ui/Textarea'
 import { Label } from '@/components/shadcn/label'
+import { Avatar, AvatarFallback } from '@/components/shadcn/avatar'
+import { Badge } from '@/components/shadcn/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shadcn/table'
 
 export default function Applications() {
   const { data, loading, error, reload, setData } = useApi((signal) =>
@@ -81,51 +91,51 @@ export default function Applications() {
         </Glass>
       ) : (
         <Glass reveal delay="d1" className="tablewrap">
-          <table className="dt">
-            <thead>
-              <tr>
-                <th>Applicant</th>
-                <th>Task</th>
-                <th>Tier</th>
-                <th>KYC</th>
-                <th>Pitch</th>
-                <th>Status</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="dt">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Applicant</TableHead>
+                <TableHead>Task</TableHead>
+                <TableHead>Tier</TableHead>
+                <TableHead>KYC</TableHead>
+                <TableHead>Pitch</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {apps.map((a) => {
                 const name = a.worker?.name ?? 'Worker'
                 const pill = appPill(a.status)
                 const tier = a.worker?.tiers?.[0]
                 const kyc = a.worker?.kycStatus ? kycPill(a.worker.kycStatus) : null
                 return (
-                  <tr key={a.id}>
-                    <td>
+                  <TableRow key={a.id}>
+                    <TableCell>
                       <div className="wname">
-                        <span className="wav" style={{ background: avatarGradient(name) }}>
-                          {initials(name)}
-                        </span>
+                        <Avatar className="wav">
+                            <AvatarFallback style={{ background: avatarGradient(name) }}>{initials(name)}</AvatarFallback>
+                          </Avatar>
                         {name}
                       </div>
-                    </td>
-                    <td>{a.task?.title ?? '—'}</td>
-                    <td>
+                    </TableCell>
+                    <TableCell>{a.task?.title ?? '—'}</TableCell>
+                    <TableCell>
                       {tier ? (
-                        <span className="tier">
-                          <span className="d" style={{ background: TIER_COLORS[tier] }} />
-                          {TIER_LABELS[tier]}
-                        </span>
+                        <Badge variant="outline" className="tier">
+                            <span className="d" style={{ background: TIER_COLORS[tier] }} />
+                            {TIER_LABELS[tier]}
+                          </Badge>
                       ) : (
                         '—'
                       )}
-                    </td>
-                    <td>{kyc ? <StatusPill variant={kyc.variant} label={kyc.label} /> : '—'}</td>
-                    <td style={{ maxWidth: 260, color: 'var(--muted)' }}>{a.pitch || '—'}</td>
-                    <td>
+                    </TableCell>
+                    <TableCell>{kyc ? <StatusPill variant={kyc.variant} label={kyc.label} /> : '—'}</TableCell>
+                    <TableCell style={{ maxWidth: 260, color: 'var(--muted)' }}>{a.pitch || '—'}</TableCell>
+                    <TableCell>
                       <StatusPill variant={pill.variant} label={pill.label} />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       {a.status === 'APPLIED' ? (
                         <div style={{ display: 'flex', gap: 8 }}>
                           <Button
@@ -150,12 +160,12 @@ export default function Applications() {
                       ) : (
                         <span style={{ fontSize: 12, color: 'var(--muted)' }}>{a.reason || '—'}</span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </Glass>
       )}
 
