@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef } from 'react'
+import { lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import { useApi } from '../lib/useApi'
@@ -11,11 +11,15 @@ import { ErrorState, LoadingState } from '../components/ui/StateView'
 import type { DashboardActivity, DashboardUrgent } from '../api/types'
 import './Dashboard.css'
 
-/* Lazy so Recharts (~370kB) stays out of the initial bundle. The dashboard is
-   the landing route, so this is the one that matters most: the KPIs and the
-   payment queue paint without waiting on a charting library. */
+/* Lazy so bklit's visx and Motion dependencies stay out of the initial bundle.
+   The dashboard is the landing route, so this is the one that matters most: the
+   KPIs and the payment release queue paint without waiting on a charting
+   library. Both come from the same module, so they share one chunk. */
 const CategoryBars = lazy(() =>
-  import('../components/charts').then((m) => ({ default: m.CategoryBars })),
+  import('../components/chart-views').then((m) => ({ default: m.CategoryBars })),
+)
+const FillRateMeter = lazy(() =>
+  import('../components/chart-views').then((m) => ({ default: m.FillRateMeter })),
 )
 
 const URGENT_ICON: Record<string, { icon: IconName; color: string }> = {
@@ -31,44 +35,6 @@ const ACTIVITY_ICON: Record<string, { icon: IconName; color: string }> = {
   contract: { icon: 'tasks', color: 'var(--gold)' },
   publish: { icon: 'send', color: 'var(--indigo)' },
   payment: { icon: 'card', color: 'var(--money)' },
-}
-
-/* A meter, not a chart, and deliberately not a two-slice pie. Fill rate is a
-   single ratio against a limit, which is the one case where a pie of two
-   segments is the wrong form: the ring already carries the ratio, so the old
-   "Filled / Open" swatch legend was inviting the reader to compare two
-   categories that are really one value and its remainder. The counts stay as
-   plain text underneath. */
-function FillRateMeter({ pct, filled, open }: { pct: number; filled: number; open: number }) {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    el.style.setProperty('--p', '0')
-    const id = requestAnimationFrame(() => el.style.setProperty('--p', String(pct)))
-    return () => cancelAnimationFrame(id)
-  }, [pct])
-  return (
-    <div className="donut-wrap">
-      <div
-        className="donut"
-        ref={ref}
-        role="meter"
-        aria-valuenow={pct}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={`Task fill rate: ${pct} percent`}
-      >
-        <div className="mid">
-          <b className="tnum">{pct}%</b>
-          <span>filled</span>
-        </div>
-      </div>
-      <p className="meter-note">
-        <b className="tnum">{filled}</b> filled of <b className="tnum">{filled + open}</b> slots
-      </p>
-    </div>
-  )
 }
 
 function UrgentRow({ item, onGo }: { item: DashboardUrgent; onGo: (t: string) => void }) {
@@ -218,7 +184,9 @@ export default function Dashboard() {
               <div className="sub">This month</div>
             </div>
           </div>
-          <FillRateMeter pct={data.fillRate} filled={data.fill.filled} open={data.fill.open} />
+          <Suspense fallback={<div className="chart-ph" style={{ height: 200 }} />}>
+            <FillRateMeter pct={data.fillRate} filled={data.fill.filled} open={data.fill.open} />
+          </Suspense>
         </Glass>
       </div>
 

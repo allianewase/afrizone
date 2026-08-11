@@ -12,12 +12,16 @@ import type { ReportsSummary } from '../api/types'
 import '../pages/Dashboard.css'
 import './Reports.css'
 
-/* Lazy so Recharts (~370kB) stays out of the initial bundle. See components/charts.tsx. */
+/* Lazy so bklit's visx and Motion dependencies stay out of the initial bundle.
+   All three come from the same module, so they share one chunk. */
 const SpendChart = lazy(() =>
-  import('../components/charts').then((m) => ({ default: m.SpendChart })),
+  import('../components/chart-views').then((m) => ({ default: m.SpendChart })),
 )
 const CategoryChart = lazy(() =>
-  import('../components/charts').then((m) => ({ default: m.CategoryChart })),
+  import('../components/chart-views').then((m) => ({ default: m.CategoryChart })),
+)
+const FillRateTrendChart = lazy(() =>
+  import('../components/chart-views').then((m) => ({ default: m.FillRateTrendChart })),
 )
 
 function exportSummary(data: ReportsSummary) {
@@ -169,7 +173,22 @@ export default function Reports() {
           </Suspense>
         </Glass>
 
-        <Glass reveal delay="d3" className="tablewrap" style={{ padding: 0 }}>
+        <Glass reveal delay="d3" style={{ padding: 22 }}>
+          <div className="card-h">
+            <div>
+              <h3>Fill rate trend</h3>
+              <div className="sub">Per monthly task cohort</div>
+            </div>
+            <span className="chip">%</span>
+          </div>
+          <Suspense fallback={<div className="chart-ph" style={{ height: 220 }} />}>
+            <FillRateTrendChart data={data.fillRateTrend} />
+          </Suspense>
+        </Glass>
+      </div>
+
+      <div className="dash section-gap">
+        <Glass reveal delay="d1" className="tablewrap" style={{ padding: 0 }}>
           <div className="card-h" style={{ padding: '22px 22px 0' }}>
             <div>
               <h3>Top categories</h3>

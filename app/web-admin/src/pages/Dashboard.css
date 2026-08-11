@@ -44,42 +44,9 @@
   gap: 22px;
   flex-wrap: wrap;
 }
-.donut {
-  --p: 0;
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  flex: none;
-  /* --chart-1, not the brand orange and not --clay-deep: Sea Buckthorn is 1.90:1
-     against a white card and --clay-deep 2.99:1, both under the 3:1 WCAG 1.4.11
-     floor for a meaningful graphic. --chart-1 is 4.06:1. */
-  background: conic-gradient(var(--chart-1) calc(var(--p) * 1%), var(--track) 0);
-  display: grid;
-  place-items: center;
-  position: relative;
-  transition: --p 1.2s var(--ease);
-}
-.donut::before {
-  content: '';
-  position: absolute;
-  inset: 14px;
-  border-radius: 50%;
-  background: var(--bg2);
-}
-.donut .mid {
-  position: relative;
-  text-align: center;
-}
-.donut .mid b {
-  font-family: 'Raleway', sans-serif;
-  font-size: 28px;
-  font-weight: 800;
-}
-.donut .mid span {
-  font-size: 11px;
-  color: var(--muted);
-  display: block;
-}
+/* The hand-rolled conic-gradient ring and its .mid centre are gone; bklit's
+   RingChart and RingCenter draw the fill-rate meter now. .donut-wrap above
+   survives as the layout for the ring plus its caption. */
 /* Replaces the two-swatch legend the ring used to carry. A meter shows one
    ratio, so there are no series to key. */
 .meter-note {
