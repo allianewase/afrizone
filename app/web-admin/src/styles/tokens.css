@@ -96,6 +96,23 @@
      literal repeated across Dashboard, Reports and Tasks. */
   --track: rgba(28, 25, 23, 0.09);
 
+  /* ---------------------------------------------------------------------------
+     Chart fills. Every visualisation in the admin is single-series, so these
+     are a sequential ramp rather than a categorical set: magnitude is carried
+     by length or angle, and one hue keeps it legible.
+
+     --chart-1 is NOT the brand orange. Sea Buckthorn measures 1.90:1 against a
+     white card and --clay-deep only 2.99:1, both under the 3:1 floor WCAG
+     1.4.11 sets for a meaningful graphic. #b0700c is the same hue at 4.06:1.
+
+     --chart-2 exists only for the two-series case. The pair passes the full
+     validator: adjacent ΔE 18.5 normal, 8.8 deuteranopia, both above 3:1.
+     There is deliberately no --chart-3: a third slot has no legitimate value
+     in this palette, because everything left is a reserved status colour.
+     ------------------------------------------------------------------------ */
+  --chart-1: #b0700c;
+  --chart-2: #1f9d6b;
+
   /* Radii — aligned to the showcase and the mobile app, which already agreed
      with each other (16/12/22); the admin was the outlier at 18/13/26. */
   --r: 16px;

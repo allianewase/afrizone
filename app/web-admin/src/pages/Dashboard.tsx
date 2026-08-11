@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import { useApi } from '../lib/useApi'
@@ -11,13 +11,12 @@ import { ErrorState, LoadingState } from '../components/ui/StateView'
 import type { DashboardActivity, DashboardUrgent } from '../api/types'
 import './Dashboard.css'
 
-const TONE_COLOR: Record<string, string> = {
-  clay: 'var(--clay)',
-  gold: 'var(--gold)',
-  money: 'var(--money)',
-  indigo: 'var(--indigo)',
-  amber: 'var(--amber)',
-}
+/* Lazy so Recharts (~370kB) stays out of the initial bundle. The dashboard is
+   the landing route, so this is the one that matters most: the KPIs and the
+   payment queue paint without waiting on a charting library. */
+const CategoryBars = lazy(() =>
+  import('../components/charts').then((m) => ({ default: m.CategoryBars })),
+)
 
 const URGENT_ICON: Record<string, { icon: IconName; color: string }> = {
   payments: { icon: 'card', color: 'var(--money)' },
@@ -34,35 +33,13 @@ const ACTIVITY_ICON: Record<string, { icon: IconName; color: string }> = {
   payment: { icon: 'card', color: 'var(--money)' },
 }
 
-function Bars({ data }: { data: { label: string; value: number; tone?: string }[] }) {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setMounted(true))
-    return () => cancelAnimationFrame(id)
-  }, [])
-  const max = Math.max(...data.map((d) => d.value), 1)
-  return (
-    <div className="bars">
-      {data.map((d, i) => (
-        <div className="bar-col" key={d.label + i}>
-          <div className="bar-track">
-            <i
-              className="bar"
-              style={{
-                height: mounted ? `${(d.value / max) * 100}%` : 0,
-                transitionDelay: `${i * 70}ms`,
-                background: d.tone ? TONE_COLOR[d.tone] ?? 'var(--grad)' : 'var(--grad)',
-              }}
-            />
-          </div>
-          <span className="bar-lbl">{d.label}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function Donut({ pct, filled, open }: { pct: number; filled: number; open: number }) {
+/* A meter, not a chart, and deliberately not a two-slice pie. Fill rate is a
+   single ratio against a limit, which is the one case where a pie of two
+   segments is the wrong form: the ring already carries the ratio, so the old
+   "Filled / Open" swatch legend was inviting the reader to compare two
+   categories that are really one value and its remainder. The counts stay as
+   plain text underneath. */
+function FillRateMeter({ pct, filled, open }: { pct: number; filled: number; open: number }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const el = ref.current
@@ -73,22 +50,23 @@ function Donut({ pct, filled, open }: { pct: number; filled: number; open: numbe
   }, [pct])
   return (
     <div className="donut-wrap">
-      <div className="donut" ref={ref}>
+      <div
+        className="donut"
+        ref={ref}
+        role="meter"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Task fill rate: ${pct} percent`}
+      >
         <div className="mid">
           <b className="tnum">{pct}%</b>
           <span>filled</span>
         </div>
       </div>
-      <div className="legend">
-        <div className="li">
-          <span className="sw" style={{ background: 'var(--clay-deep)' }} />
-          Filled · {filled}
-        </div>
-        <div className="li">
-          <span className="sw" style={{ background: 'var(--line-2)' }} />
-          Open · {open}
-        </div>
-      </div>
+      <p className="meter-note">
+        <b className="tnum">{filled}</b> filled of <b className="tnum">{filled + open}</b> slots
+      </p>
     </div>
   )
 }
@@ -228,7 +206,9 @@ export default function Dashboard() {
             </div>
             <span className="chip">Monthly</span>
           </div>
-          <Bars data={data.spendByCategory} />
+          <Suspense fallback={<div className="chart-ph" style={{ height: 200 }} />}>
+            <CategoryBars data={data.spendByCategory} />
+          </Suspense>
         </Glass>
 
         <Glass reveal delay="d2" style={{ padding: 22 }}>
@@ -238,7 +218,7 @@ export default function Dashboard() {
               <div className="sub">This month</div>
             </div>
           </div>
-          <Donut pct={data.fillRate} filled={data.fill.filled} open={data.fill.open} />
+          <FillRateMeter pct={data.fillRate} filled={data.fill.filled} open={data.fill.open} />
         </Glass>
       </div>
 

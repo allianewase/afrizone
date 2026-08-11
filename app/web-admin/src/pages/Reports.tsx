@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense } from 'react'
 import { api } from '../api/client'
 import { useApi } from '../lib/useApi'
 import { formatNaira, formatNairaCompact } from '../lib/format'
@@ -12,66 +12,13 @@ import type { ReportsSummary } from '../api/types'
 import '../pages/Dashboard.css'
 import './Reports.css'
 
-function SpendBars({ data }: { data: { month: string; spend: number }[] }) {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setMounted(true))
-    return () => cancelAnimationFrame(id)
-  }, [])
-  const max = Math.max(...data.map((d) => d.spend), 1)
-  return (
-    <div className="bars">
-      {data.map((d, i) => (
-        <div className="bar-col" key={d.month + i}>
-          <div className="bar-track">
-            <i
-              className="bar"
-              style={{
-                height: mounted ? `${(d.spend / max) * 100}%` : 0,
-                transitionDelay: `${i * 70}ms`,
-              }}
-            />
-          </div>
-          <span className="bar-lbl">{d.month}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function CategoryBreakdown({
-  data,
-}: {
-  data: { label: string; amount: number; pct: number }[]
-}) {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setMounted(true))
-    return () => cancelAnimationFrame(id)
-  }, [])
-  return (
-    <div className="catlist">
-      {data.map((d, i) => (
-        <div className="catrow" key={d.label + i}>
-          <div className="catrow-h">
-            <span>{d.label}</span>
-            <span className="tnum">
-              {formatNaira(d.amount)} · <b>{d.pct}%</b>
-            </span>
-          </div>
-          <div className="catbar">
-            <i
-              style={{
-                width: mounted ? `${Math.min(100, d.pct)}%` : 0,
-                transitionDelay: `${i * 60}ms`,
-              }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
+/* Lazy so Recharts (~370kB) stays out of the initial bundle. See components/charts.tsx. */
+const SpendChart = lazy(() =>
+  import('../components/charts').then((m) => ({ default: m.SpendChart })),
+)
+const CategoryChart = lazy(() =>
+  import('../components/charts').then((m) => ({ default: m.CategoryChart })),
+)
 
 function exportSummary(data: ReportsSummary) {
   // Non-blocking stub: download the summary as JSON.
@@ -168,7 +115,9 @@ export default function Reports() {
             </div>
             <span className="chip">Naira</span>
           </div>
-          <SpendBars data={data.spendByMonth} />
+          <Suspense fallback={<div className="chart-ph" style={{ height: 220 }} />}>
+            <SpendChart data={data.spendByMonth} />
+          </Suspense>
         </Glass>
 
         <Glass reveal delay="d2" style={{ padding: 22 }}>
@@ -215,7 +164,9 @@ export default function Reports() {
               <div className="sub">{data.spendByCategory.length} categories</div>
             </div>
           </div>
-          <CategoryBreakdown data={data.spendByCategory} />
+          <Suspense fallback={<div className="chart-ph" style={{ height: 240 }} />}>
+            <CategoryChart data={data.spendByCategory} />
+          </Suspense>
         </Glass>
 
         <Glass reveal delay="d3" className="tablewrap" style={{ padding: 0 }}>

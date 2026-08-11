@@ -106,6 +106,11 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
+  /* Chart fills, so shadcn's ChartStyle can resolve `var(--color-<key>)` from a
+     ChartConfig. See tokens.css for why --chart-1 is not the brand orange. */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+
   --font-sans: 'Raleway', system-ui, sans-serif;
 
   --ease-brand: var(--ease);
