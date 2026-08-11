@@ -6,6 +6,22 @@ const router = Router();
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+/**
+ * First of `d`'s month as a plain calendar date (YYYY-MM-01).
+ *
+ * The `month` label alone is ambiguous: these series are a rolling six-month
+ * window, so it crosses a year boundary and "Jan" cannot say which January.
+ * Charts also need an ordered value rather than a name to place points on a
+ * time axis.
+ *
+ * Built by hand rather than with toISOString(): `d` is constructed in local
+ * time, so in any zone ahead of UTC (Lagos is UTC+1) toISOString() would roll
+ * the first of the month back into the previous one.
+ */
+function monthKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
 function monthBounds(year: number, month: number) {
   return {
     start: new Date(year, month, 1),
@@ -58,7 +74,7 @@ router.get("/summary", requireAuth, async (_req: AuthedRequest, res: Response) =
     const spend = payments
       .filter((p) => p.createdAt >= start && p.createdAt <= end)
       .reduce((s, p) => s + p.gross, 0);
-    spendByMonth.push({ month: MONTHS[d.getMonth()], spend });
+    spendByMonth.push({ month: MONTHS[d.getMonth()], monthStart: monthKey(d), spend });
   }
 
   // Fill-rate trend — last 6 months, per task-creation cohort
@@ -70,7 +86,7 @@ router.get("/summary", requireAuth, async (_req: AuthedRequest, res: Response) =
     const cohort = allTasks.filter((t) => t.createdAt >= start && t.createdAt <= end);
     const filled = cohort.filter((t) => t.status === "FILLED" || t.status === "CLOSED").length;
     const rate = cohort.length > 0 ? Math.round((filled / cohort.length) * 100) : 0;
-    fillRateTrend.push({ month: MONTHS[d.getMonth()], rate });
+    fillRateTrend.push({ month: MONTHS[d.getMonth()], monthStart: monthKey(d), rate });
   }
 
   // Spend by department — derived from categories (no department field in v1)

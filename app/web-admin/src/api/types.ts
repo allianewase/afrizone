@@ -324,12 +324,20 @@ export interface Funding {
   authorizationUrl?: string
 }
 
+/** A point in a rolling six-month series. `month` is the short label ("Jan");
+ *  `monthStart` is the unambiguous calendar date (YYYY-MM-01) a time axis needs,
+ *  since the window crosses a year boundary. */
+interface MonthPoint {
+  month: string
+  monthStart: string
+}
+
 export interface ReportsSummary {
-  spendByMonth: { month: string; spend: number }[]
+  spendByMonth: (MonthPoint & { spend: number })[]
   spendByCategory: { label: string; amount: number; pct: number }[]
   spendByDepartment: { label: string; amount: number }[]
   tax: { whtCollected: number; vatCollected: number; remittedToFirs: number }
-  fillRateTrend: { month: string; rate: number }[]
+  fillRateTrend: (MonthPoint & { rate: number })[]
   payrollEquivalent: {
     grossPaid: number
     totalWht: number
