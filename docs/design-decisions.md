@@ -158,14 +158,45 @@ has. Do not redraw it a fourth time. The artwork is published; use it.
 What the source pixels settled, all measured by decoding the PNG:
 
 - The brand navy is **`#000066` exactly**, matching `--navy`. The orange is in
-  the `#FBAC34` family. The tokens were already right.
+  the `#FBAC34` family, sampling `rgb(251,175,55)` in the flat interior.
 - The ground is **fully transparent**, all four corners at alpha 0, so one file
   works on white, sand and navy.
-- The wordmark is **single-colour navy**. Orange appears only in columns 44 to
-  149, and the text starts at 150. The tone-switched live text matches the
-  source rather than merely resembling it.
-- The source carries **no tagline**. For `x >= 150` the ink occupies only
-  `y 52..85`, one line of type. "Made in Africa, delivered worldwide" is ours.
+- The wordmark is **single-colour navy**, so the tone-switched live text matches
+  the source rather than merely resembling it.
+- The source **does** carry the tagline, as five word-shaped components at
+  `y 76..83`.
+
+### The wordmark overlaps the mark, and had to be removed
+
+This is the part that is easy to get wrong, and the first cut of this asset got
+it wrong. **The lockup is tight enough that the wordmark starts at x=104 and
+sits on top of the continent.** Cropping the mark at the last orange column,
+x=149, therefore kept `A f r i` whole and half of the `Z` baked into the mark.
+They were visible in the sidebar as navy marks on the orange.
+
+Separating them cannot be done with a column cut, because there is no column
+where the mark ends and the text begins. It is done by connected component:
+navy components starting at x >= 104 are letters, everything left of that is the
+cart. The cart survives as one component spanning x 43..115, because its handle
+rises to y32 on the right, which is why a naive x-threshold misclassifies it.
+
+Removing the letters leaves two problems that a plain delete does not fix:
+
+- **Ghosts.** The letters' antialiased edges sit at alpha 1 to 40, below any
+  sensible "is this navy" threshold, so they survive component detection. They
+  have to be cleared by proximity to a removed component, not by colour.
+- **A contaminated coastline.** Where a letter crossed the continent's edge, the
+  edge pixels are blends like `rgb(181,127,68)`, a muddy brown that is neither
+  orange nor navy. The band `y 51..71` is therefore rebuilt as flat
+  `rgb(251,175,55)` out to the coast, with a one-pixel feather.
+- **An occluded coast.** The letters covered the real edge, so it is not
+  recoverable. It is reconstructed by interpolating across the occluded rows from
+  the unoccluded ones above and below, which restores a monotonic taper from 148
+  down to 131. Rows are flagged occluded when a removed pixel sits within three
+  columns of the surviving orange edge.
+
+The Gulf of Aden notch at `y 42..43` and the Horn tip at `x 147..149` are real
+and are outside the rebuilt band. Do not "fix" them.
 
 ### Why the lockup is still composed
 

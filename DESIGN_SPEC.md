@@ -32,7 +32,9 @@ Full wordmark: **AfriZoneMart.com** in the display face, with "Made in Africa, d
 
 The mark is **the real brand artwork**, cropped from `afrizonemart.com/images/logo.png` to its ink bounds at 107x113 with a transparent ground. It is not redrawn. `logo-mark-reversed.png` is the white-continent variant, generated from the same pixels.
 
-The lockup is still **composed from the mark plus live text**, not shipped as one image. The brand asset carries no tagline, and a fixed 2.4:1 lockup would shrink the wordmark inside the 186px sidebar. Composing keeps the wordmark as live text, which the source renders single-colour navy exactly as the CSS does.
+In the published lockup **the wordmark overlaps the continent**, starting at x=104, so isolating the mark means removing the letters `A f r i Z` from on top of it and healing the orange behind them. That is not a crop, and `docs/design-decisions.md` records how it is done and what it reconstructs.
+
+The lockup is still **composed from the mark plus live text**, not shipped as one image. A fixed 2.4:1 lockup would shrink the wordmark inside the 186px sidebar, and composing keeps the wordmark as live text, which the source renders single-colour navy exactly as the CSS does.
 
 The mark lives in **four places that must change together**: both `Logo.tsx` components, the pre-boot markup in `web-admin/index.html` (which references the asset directly, since it paints before any JS loads), and `favicon.png`.
 
