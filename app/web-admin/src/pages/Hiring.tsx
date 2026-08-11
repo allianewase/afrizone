@@ -83,8 +83,10 @@ function CandidateCard({
     <div className={`glass kan-card rv in ${delay}`}>
       <div className="kc-top">
         <Avatar className="wav">
-            <AvatarFallback style={{ background: avatarGradient(c.name) }}>{initials(c.name)}</AvatarFallback>
-          </Avatar>
+          <AvatarFallback style={{ background: avatarGradient(c.name) }}>
+            {initials(c.name)}
+          </AvatarFallback>
+        </Avatar>
         <div className="kc-id">
           <b>{c.name}</b>
           <span>{c.email}</span>

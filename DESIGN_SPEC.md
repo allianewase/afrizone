@@ -30,7 +30,11 @@ A **Sea Buckthorn-orange silhouette of the African continent** (including Madaga
 
 Full wordmark: **AfriZoneMart.com** in the display face, with "Made in Africa, delivered worldwide" as an italic tagline. It is a **single colour**, tone-switched: white on the navy rail and the splash, navy on light cards. It is not split into two tones, and **"Part Time" does not appear in the interface** (it remains the product's name in this document and in `app.json`).
 
-The lockup is **composed in CSS from an inline SVG mark plus live text**, not shipped as one raster image. Two reasons: the reversed variant is a fill swap rather than a second asset, and a fixed-aspect lockup at roughly 2.3:1 would shrink the tagline to around 6px inside the 186px sidebar. The pre-boot markup in `web-admin/index.html` duplicates the mark by necessity, since it paints before any JS loads; the two must be kept in step.
+The lockup is **composed in CSS from an inline SVG mark plus live text**, not shipped as one raster image. Two reasons: the reversed variant is a fill swap rather than a second asset, and a fixed-aspect lockup at roughly 2.3:1 would shrink the tagline to around 6px inside the 186px sidebar.
+
+The mark lives in **four places that must change together**: both `Logo.tsx` components, the pre-boot markup in `web-admin/index.html` (which duplicates it by necessity, since it paints before any JS loads), and `favicon.svg`.
+
+The silhouette is a 35-point hand-drawn path, and the cart inside it is **fitted by scanline search** so every point clears the coastline. Both constraints, and the reason the shape's width profile has to taper monotonically, are recorded in `docs/design-decisions.md`. It is still an approximation of the source artwork rather than a trace of it.
 
 ### 1.3 Color system
 

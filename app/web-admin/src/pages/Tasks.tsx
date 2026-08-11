@@ -46,9 +46,9 @@ function TaskCard({ task, delay }: { task: Task; delay: string }) {
     <div className={`glass tcard rv in ${delay}`} onPointerMove={onMove}>
       <div className="tc-top">
         <Badge variant="outline" className="tier">
-            <span className="d" style={{ background: TIER_COLORS[task.tier] }} />
-            {TIER_LABELS[task.tier]}
-          </Badge>
+          <span className="d" style={{ background: TIER_COLORS[task.tier] }} />
+          {TIER_LABELS[task.tier]}
+        </Badge>
         <span className="pay">{taskPay(task.rate, task.budget, task.payModel)}</span>
       </div>
       <h4>{task.title}</h4>

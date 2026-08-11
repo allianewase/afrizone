@@ -114,8 +114,10 @@ export default function Applications() {
                     <TableCell>
                       <div className="wname">
                         <Avatar className="wav">
-                            <AvatarFallback style={{ background: avatarGradient(name) }}>{initials(name)}</AvatarFallback>
-                          </Avatar>
+                          <AvatarFallback style={{ background: avatarGradient(name) }}>
+                            {initials(name)}
+                          </AvatarFallback>
+                        </Avatar>
                         {name}
                       </div>
                     </TableCell>
@@ -123,9 +125,9 @@ export default function Applications() {
                     <TableCell>
                       {tier ? (
                         <Badge variant="outline" className="tier">
-                            <span className="d" style={{ background: TIER_COLORS[tier] }} />
-                            {TIER_LABELS[tier]}
-                          </Badge>
+                          <span className="d" style={{ background: TIER_COLORS[tier] }} />
+                          {TIER_LABELS[tier]}
+                        </Badge>
                       ) : (
                         '—'
                       )}

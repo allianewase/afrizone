@@ -440,8 +440,10 @@ export default function Workers() {
                     <TableCell>
                       <div className="wname">
                         <Avatar className="wav">
-                            <AvatarFallback style={{ background: avatarGradient(w.name) }}>{initials(w.name)}</AvatarFallback>
-                          </Avatar>
+                          <AvatarFallback style={{ background: avatarGradient(w.name) }}>
+                            {initials(w.name)}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
                           {w.name}
                           <div style={{ fontSize: 12, color: 'var(--muted)' }}>{w.email}</div>
@@ -452,9 +454,9 @@ export default function Workers() {
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {(w.tiers ?? []).map((t) => (
                           <Badge variant="outline" className="tier" key={t}>
-                              <span className="d" style={{ background: TIER_COLORS[t] }} />
-                              {TIER_LABELS[t]}
-                            </Badge>
+                            <span className="d" style={{ background: TIER_COLORS[t] }} />
+                            {TIER_LABELS[t]}
+                          </Badge>
                         ))}
                       </div>
                     </TableCell>

@@ -157,18 +157,28 @@ splash both need it. A fixed 2.3:1 lockup would also shrink the tagline to aroun
 The wordmark is one colour, tone-switched, because `--text` and `--navy` are both
 dark inks and a single value leaves it invisible on the rail.
 
-**The cart coordinates are constrained, not chosen.** Every point of the cart has
-to sit inside the continent polygon, or the navy shows against the page instead of
-against the orange. The first placement put the left wheel 2.5 units outside the
-coastline at y=90, where the continent has narrowed toward its southern tip.
-Shifting the group +3x/-4y clears all 14 points by at least 3.2 units. Verify with
-a scanline check against the polygon before moving any of it.
+**The silhouette is 35 points, and the shape is load-bearing.** An earlier
+24-point version read as a blob rather than as Africa. The current outline exists
+to carry four features that survive at a 38px mark: a flat Mediterranean coast,
+the Horn spiking east to x=100, a sharp x-drop up the west side that gives the
+West Africa bulge its shape, and a taper to a 2-unit Cape. Its scanline width
+profile peaks at y=40 and narrows monotonically from y=48 down. That monotonic
+taper is what stops it reading as an oval, so preserve it if you edit points.
 
-**Known limitation:** the Africa silhouette is hand-drawn straight-line geometry,
-not traced from the source artwork, so its outline approximates the real mark. If
-the source SVG becomes available, replace the path data and nothing else. Note
-that doing so invalidates the cart placement above, since it is fitted to this
-polygon.
+**The cart coordinates are solved, not chosen.** Every point of the cart has to
+sit inside the continent polygon, or the navy shows against the page instead of
+against the orange. On the old outline the left wheel sat 2.5 units outside the
+coastline, in the narrowing southern tip.
+
+The current placement is the largest cart that clears the coastline everywhere,
+fitted by scanline search against the path: 1.14 scale, offset +8x/-16y, with all
+18 checked points clearing by at least 3.0 units. Madagascar keeps a 2-unit
+channel from the mainland. Re-run that search if the outline changes; the fit is
+specific to this polygon.
+
+**Known limitation:** the silhouette is still hand-drawn rather than traced from
+the source artwork, so it approximates the real mark. If the source SVG becomes
+available, replace the path data, then re-solve the cart fit.
 
 ## Things that are deliberate and look like bugs
 
@@ -182,5 +192,11 @@ polygon.
   ahead of UTC rolls the first of the month into the previous one.
 - `.glass` is an opaque white card, not glass. The name has 53 call sites and
   still means "the standard raised surface".
-- The `'—'` in a detail row means "no value set". It is a typographic convention,
-  not an oversight.
+- A bare em dash in a detail row means "no value set". It is a typographic
+  convention, and the 23 of them left in the codebase are deliberate.
+- `--clay-deep` (`#C98518`) measures 3.06:1 on white, which clears the 3:1 floor
+  for a non-text graphic but only just. It is used for input focus borders, the
+  spinner arc and the KYC thumbnail hover border. In each case a second, stronger
+  indicator is present (the 3px gold focus ring, motion on the spinner), so the
+  thin margin is not load-bearing. Do not reuse it for anything that carries
+  meaning alone; use `--gold-ink` (5.92:1) instead.

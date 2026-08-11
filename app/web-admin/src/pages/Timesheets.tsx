@@ -121,8 +121,10 @@ export default function Timesheets() {
                     <TableCell>
                       <div className="wname">
                         <Avatar className="wav">
-                            <AvatarFallback style={{ background: avatarGradient(name) }}>{initials(name)}</AvatarFallback>
-                          </Avatar>
+                          <AvatarFallback style={{ background: avatarGradient(name) }}>
+                            {initials(name)}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
                           {name}
                           {t.gpsNote && (

@@ -130,8 +130,10 @@ export default function Disputes() {
                     <TableCell>
                       <div className="wname">
                         <Avatar className="wav">
-                            <AvatarFallback style={{ background: avatarGradient(name) }}>{initials(name)}</AvatarFallback>
-                          </Avatar>
+                          <AvatarFallback style={{ background: avatarGradient(name) }}>
+                            {initials(name)}
+                          </AvatarFallback>
+                        </Avatar>
                         {name}
                       </div>
                     </TableCell>
