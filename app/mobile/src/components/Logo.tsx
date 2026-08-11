@@ -10,7 +10,7 @@ interface LogoProps {
   size?: number;
   wordmark?: boolean;
   tagline?: boolean;
-  /** dark = white "Afrizone" (for dark bg, default); light = navy "Afrizone". */
+  /** dark = white wordmark (for dark bg, default); light = navy wordmark. */
   tone?: Tone;
 }
 
@@ -64,13 +64,15 @@ export default function Logo({
   tone = 'dark',
 }: LogoProps) {
   return (
-    <View style={styles.row} accessibilityLabel="Afrizone Part Time" accessibilityRole="image">
+    <View style={styles.row} accessibilityLabel="AfriZoneMart.com" accessibilityRole="image">
       <LogoMark size={size} />
       {wordmark && (
         <View style={styles.words}>
-          <Text style={styles.word}>
-            <Text style={tone === 'dark' ? styles.afriDark : styles.afriLight}>Afrizone</Text>
-            <Text style={styles.part}> Part Time</Text>
+          {/* One colour, not the previous two-tone "Afrizone" + orange "Part
+              Time": the identity does not split the wordmark, and "Part Time"
+              no longer appears in the interface. */}
+          <Text style={[styles.word, tone === 'dark' ? styles.wordDark : styles.wordLight]}>
+            AfriZoneMart.com
           </Text>
           {tagline && <Text style={styles.tag}>Made in Africa, delivered worldwide</Text>}
         </View>
@@ -83,8 +85,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   words: { flexDirection: 'column' },
   word: { fontFamily: fontFamily.extrabold, fontSize: 19, letterSpacing: -0.4 },
-  afriDark: { color: colors.white },
-  afriLight: { color: colors.navy },
-  part: { color: colors.goldBright },
+  wordDark: { color: colors.white },
+  wordLight: { color: colors.navy },
   tag: { fontSize: 11, fontStyle: 'italic', color: colors.textMuted, marginTop: 3 },
 });

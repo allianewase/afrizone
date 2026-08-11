@@ -26,7 +26,11 @@ These five principles resolve trade-offs when specs are silent.
 Afrizone connects people to honest, flexible work across Africa, under the official **Afrizonemart.com** identity: **Deep Navy Blue** (trust, stability) paired with **Sea Buckthorn orange** (energy, opportunity). The feeling: warm, capable, locally proud, financially trustworthy.
 
 ### 1.2 Logo mark
-A **Sea Buckthorn-orange silhouette of the African continent** (including Madagascar) with a **Deep Navy Blue shopping-cart glyph** overlaid at its center — reading simultaneously as "Africa" and "marketplace." `markTone="reversed"` swaps the continent fill to white for use on solid orange/navy backgrounds. Full wordmark: **Afrizone** in the display face, with "Part Time" as a lighter sub-label.
+A **Sea Buckthorn-orange silhouette of the African continent** (including Madagascar) with a **Deep Navy Blue shopping-cart glyph** carrying goods, overlaid at its center, reading simultaneously as "Africa" and "marketplace." `markTone="reversed"` swaps the continent fill to white for use on solid orange/navy backgrounds.
+
+Full wordmark: **AfriZoneMart.com** in the display face, with "Made in Africa, delivered worldwide" as an italic tagline. It is a **single colour**, tone-switched: white on the navy rail and the splash, navy on light cards. It is not split into two tones, and **"Part Time" does not appear in the interface** (it remains the product's name in this document and in `app.json`).
+
+The lockup is **composed in CSS from an inline SVG mark plus live text**, not shipped as one raster image. Two reasons: the reversed variant is a fill swap rather than a second asset, and a fixed-aspect lockup at roughly 2.3:1 would shrink the tagline to around 6px inside the 186px sidebar. The pre-boot markup in `web-admin/index.html` duplicates the mark by necessity, since it paints before any JS loads; the two must be kept in step.
 
 ### 1.3 Color system
 

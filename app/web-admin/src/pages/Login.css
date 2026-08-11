@@ -35,26 +35,9 @@
   gap: 12px;
   margin-bottom: 26px;
 }
-.login-brand .mark {
-  width: 44px;
-  height: 44px;
-  border-radius: 13px;
-  background: var(--grad);
-  display: grid;
-  place-items: center;
-  box-shadow: var(--grad-glow);
-  flex: none;
-}
-.login-brand b {
-  font-family: 'Raleway', sans-serif;
-  font-weight: 800;
-  font-size: 19px;
-  display: block;
-}
-.login-brand .sub {
-  font-size: 11px;
-  color: var(--muted);
-}
+/* .login-brand .mark / b / .sub are gone: the three auth screens render the
+   Logo component inside this wrapper and nothing else, so those rules had
+   nothing to match. */
 .login-card h1 {
   font-size: 28px;
   font-weight: 800;

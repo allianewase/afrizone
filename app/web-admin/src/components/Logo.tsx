@@ -4,9 +4,9 @@ type Tone = 'dark' | 'light'
 type MarkTone = 'full' | 'reversed'
 
 interface LogoProps {
-  /** pixel size of the square mark */
+  /** pixel size of the mark */
   size?: number
-  /** show the "Afrizone Part Time" wordmark */
+  /** show the "AfriZoneMart.com" wordmark */
   wordmark?: boolean
   /** show the "Made in Africa, delivered worldwide" tagline */
   tagline?: boolean
@@ -15,36 +15,69 @@ interface LogoProps {
   className?: string
 }
 
-// Hand-drawn (not auto-traced) simplified Africa silhouette — straight-line
-// points only, matching mobile's src/components/Logo.tsx exactly.
+/* Hand-drawn (not auto-traced) simplified Africa silhouette, straight-line
+   points only so the path data stays easy to verify and adjust. Keeps the West
+   Africa bulge and the Horn as the two recognisable features, plus Madagascar
+   as a separate shape. Kept identical to mobile's src/components/Logo.tsx. */
 const AFRICA_PATH =
-  'M38 6 L58 8 L66 16 L86 30 L72 40 L76 58 L68 78 L58 100 L50 116 L42 100 L30 84 L14 66 L6 50 L16 34 L24 18 Z'
+  'M32 6 L48 3 L62 8 L68 14 L74 22 L88 26 L100 34 L86 40 L80 52 L84 60 L76 72 L68 84 L58 96 L50 104 L40 96 L32 84 L26 70 L20 60 L10 54 L0 48 L12 40 L8 28 L18 16 Z'
+const MADAGASCAR_PATH = 'M80 78 Q86 82 84 90 Q80 95 77 89 Q75 82 80 78 Z'
 
 /**
- * Afrizone logo mark — a Sea Buckthorn-orange Africa silhouette with a Deep
- * Navy Blue shopping-cart glyph, per the official Afrizonemart.com logo
- * redesign spec. `markTone="reversed"` swaps the continent to white for use
- * on solid orange/navy backgrounds where the default orange fill would
- * otherwise have no contrast.
+ * Afrizone logo mark: a Sea Buckthorn-orange Africa silhouette with a Deep Navy
+ * shopping-cart glyph carrying goods, per the AfriZoneMart.com identity.
+ *
+ * `markTone="reversed"` swaps the continent to white for solid orange or navy
+ * grounds, where the default orange fill has no contrast against the surface.
+ * That switch is the reason this stays an inline SVG rather than an image asset:
+ * a raster lockup would need a second file per ground, and would not stay crisp
+ * across the 38px sidebar and 56px splash uses.
  */
 export function LogoMark({ size = 38, markTone = 'full' }: { size?: number; markTone?: MarkTone }) {
-  const height = size * 1.2
+  const height = size * 1.05
   const continentFill = markTone === 'reversed' ? '#fff' : 'var(--gold-bright)'
   return (
     <span className="az-mark" style={{ width: size, height }}>
-      <svg viewBox="0 0 100 120" width="100%" height="100%" aria-hidden="true">
+      <svg viewBox="0 0 100 105" width="100%" height="100%" aria-hidden="true">
         <path d={AFRICA_PATH} fill={continentFill} />
-        <path d="M66 50 L40 62" stroke="var(--navy)" strokeWidth="4" strokeLinecap="round" fill="none" />
-        <path d="M40 62 L62 62 L56 84 L34 84 Z" fill="var(--navy)" />
-        <rect x="42" y="52" width="8" height="10" rx="2" fill="var(--navy)" />
-        <rect x="52" y="54" width="7" height="8" rx="2" fill="var(--navy)" />
-        <circle cx="40" cy="90" r="5" fill="var(--navy)" />
-        <circle cx="50" cy="90" r="5" fill="var(--navy)" />
+        <path d={MADAGASCAR_PATH} fill={continentFill} />
+        {/* cart: handle, basket, three goods, two wheels */}
+        <path
+          d="M66 38 L38 52"
+          stroke="var(--navy)"
+          strokeWidth="4"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <path d="M38 52 L64 52 L56 80 L31 80 Z" fill="var(--navy)" />
+        <path
+          d="M34 62 L60 62 M32 71 L58 71"
+          stroke="#fff"
+          strokeWidth="1.5"
+          fill="none"
+          opacity="0.5"
+        />
+        <rect x="32" y="44" width="6" height="8" rx="2" fill="var(--navy)" />
+        <rect x="40" y="40" width="9" height="12" rx="2" fill="var(--navy)" />
+        <rect x="51" y="42" width="8" height="10" rx="2" fill="var(--navy)" />
+        <circle cx="39" cy="90" r="5.5" fill="var(--navy)" />
+        <circle cx="53" cy="90" r="5.5" fill="var(--navy)" />
       </svg>
     </span>
   )
 }
 
+/**
+ * The full AfriZoneMart.com lockup: mark, wordmark, tagline.
+ *
+ * The wordmark is one colour rather than the previous two-tone "Afrizone" plus
+ * orange "Part Time", because the identity does not split it. "Part Time" no
+ * longer appears in the interface at all.
+ *
+ * Composed in CSS rather than shipped as one fixed-aspect image so it can sit in
+ * the 186px sidebar without the tagline shrinking to unreadable, which a 2.3:1
+ * raster lockup would have done.
+ */
 export default function Logo({
   size = 38,
   wordmark = true,
@@ -53,15 +86,12 @@ export default function Logo({
   className = '',
 }: LogoProps) {
   return (
-    <span className={`az-logo ${className}`} aria-label="Afrizone Part Time">
+    <span className={`az-logo ${className}`} aria-label="AfriZoneMart.com">
       <LogoMark size={size} />
       {wordmark && (
         <span className="az-words">
-          <span className="az-word">
-            <span className={tone === 'dark' ? 'az-afri-dark' : 'az-afri-light'}>Afrizone</span>
-            <span className={tone === 'dark' ? 'az-part-dark' : 'az-part-light'}>
-              Part&nbsp;Time
-            </span>
+          <span className={`az-word ${tone === 'dark' ? 'az-word-dark' : 'az-word-light'}`}>
+            AfriZoneMart.com
           </span>
           {tagline && (
             <span className={`az-tag ${tone === 'dark' ? 'az-tag-dark' : 'az-tag-light'}`}>

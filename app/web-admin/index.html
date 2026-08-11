@@ -19,17 +19,23 @@
         <div style="display: flex; flex-direction: column; align-items: center; gap: 26px">
           <div style="display: flex; align-items: center; gap: 12px">
             <span style="width: 40px; height: 48px; display: grid; place-items: center">
-              <svg width="40" height="48" viewBox="0 0 100 120">
-                <path d="M38 6 L58 8 L66 16 L86 30 L72 40 L76 58 L68 78 L58 100 L50 116 L42 100 L30 84 L14 66 L6 50 L16 34 L24 18 Z" fill="#fbac34"/>
-                <path d="M66 50 L40 62" stroke="#000066" stroke-width="4" stroke-linecap="round" fill="none"/>
-                <path d="M40 62 L62 62 L56 84 L34 84 Z" fill="#000066"/>
-                <rect x="42" y="52" width="8" height="10" rx="2" fill="#000066"/>
-                <rect x="52" y="54" width="7" height="8" rx="2" fill="#000066"/>
-                <circle cx="40" cy="90" r="5" fill="#000066"/>
-                <circle cx="50" cy="90" r="5" fill="#000066"/>
+              <!-- Duplicated from src/components/Logo.tsx on purpose: this markup
+                   paints before any JS loads, so it cannot import the component.
+                   Keep the two in step. -->
+              <svg width="40" height="42" viewBox="0 0 100 105">
+                <path d="M32 6 L48 3 L62 8 L68 14 L74 22 L88 26 L100 34 L86 40 L80 52 L84 60 L76 72 L68 84 L58 96 L50 104 L40 96 L32 84 L26 70 L20 60 L10 54 L0 48 L12 40 L8 28 L18 16 Z" fill="#fbac34"/>
+                <path d="M80 78 Q86 82 84 90 Q80 95 77 89 Q75 82 80 78 Z" fill="#fbac34"/>
+                <path d="M66 38 L38 52" stroke="#000066" stroke-width="4" stroke-linecap="round" fill="none"/>
+                <path d="M38 52 L64 52 L56 80 L31 80 Z" fill="#000066"/>
+                <path d="M34 62 L60 62 M32 71 L58 71" stroke="#fff" stroke-width="1.5" fill="none" opacity=".5"/>
+                <rect x="32" y="44" width="6" height="8" rx="2" fill="#000066"/>
+                <rect x="40" y="40" width="9" height="12" rx="2" fill="#000066"/>
+                <rect x="51" y="42" width="8" height="10" rx="2" fill="#000066"/>
+                <circle cx="39" cy="90" r="5.5" fill="#000066"/>
+                <circle cx="53" cy="90" r="5.5" fill="#000066"/>
               </svg>
             </span>
-            <span style="font-weight: 800; font-size: 22px; letter-spacing: -.02em"><span style="color:#fff">Afrizone</span><span style="color:#fbac34">&nbsp;Part&nbsp;Time</span></span>
+            <span style="font-weight: 800; font-size: 22px; letter-spacing: -.02em; color: #fff">AfriZoneMart.com</span>
           </div>
           <div style="width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(255,255,255,.15); border-top-color: #fbac34; animation: azspin .8s linear infinite"></div>
         </div>
