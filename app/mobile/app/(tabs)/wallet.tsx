@@ -241,7 +241,7 @@ function WithdrawSheet({
             </View>
             <Text style={styles.sheetTitle}>Withdrawal queued</Text>
             <Text style={styles.sheetSub}>
-              {formatNaira(value)} to {bankMasked ?? 'your bank'} — arrives T+1 (next business day).
+              {formatNaira(value)} to {bankMasked ?? 'your bank'}: arrives T+1 (next business day).
             </Text>
             <Button label="Done" onPress={close} />
           </View>

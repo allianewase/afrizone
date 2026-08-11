@@ -352,7 +352,7 @@ export default function KycScreen() {
         )}
 
         {step === 'tin' && (
-          <Field label="Tax Identification Number (TIN)" hint="Optional — you can add this later in Profile. Required for WHT statements.">
+          <Field label="Tax Identification Number (TIN)" hint="Optional: you can add this later in Profile. Required for WHT statements.">
             <TextInput
               value={tin}
               onChangeText={setTin}
@@ -655,7 +655,7 @@ function UploadStep({
         <Text style={styles.uploadErr}>{uploadError}</Text>
       ) : null}
 
-      {/* Action buttons — always shown so user can retake */}
+      {/* Action buttons: always shown so user can retake */}
       {!done && (
         <View style={styles.pickRow}>
           {preferCamera ? (

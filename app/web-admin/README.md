@@ -1,4 +1,4 @@
-# Afrizone Part Time — Admin Web
+# Afrizone Part Time: Admin Web
 
 Premium dark-glassmorphism admin console for the Afrizone Part Time gig platform.
 Built with **Vite + React + TypeScript + React Router v6** and plain CSS ported from
@@ -37,7 +37,7 @@ valid session is present.
 
 | Route            | API                                                                       |
 | ---------------- | ------------------------------------------------------------------------- |
-| `/` Dashboard    | `GET /api/dashboard/stats` — KPIs (count-up), bar chart, donut, urgent, activity |
+| `/` Dashboard    | `GET /api/dashboard/stats`: KPIs (count-up), bar chart, donut, urgent, activity |
 | `/tasks`         | `GET /api/tasks`, `POST /api/tasks` (New task modal)                       |
 | `/applications`  | `GET /api/applications?status=APPLIED`, approve / reject-with-reason       |
 | `/timesheets`    | `GET /api/timesheets?status=SUBMITTED`, approve / dispute, SLA countdown   |
@@ -46,7 +46,7 @@ valid session is present.
 
 Every page renders explicit **loading / error / empty** states. Money uses the
 `formatNaira` helper (₦ + thousands separators, `tabular-nums`). Status is never
-communicated by colour alone — every pill carries an icon and a word.
+communicated by colour alone: every pill carries an icon and a word.
 
 ## Project structure
 
@@ -56,7 +56,7 @@ src/
   auth/       AuthContext.tsx (login/logout/me + ProtectedRoute)
   components/ AppShell, Sidebar, Topbar, Background, PageHeader, Icon
     ui/       Button, Glass, StatusPill, KpiCard, Modal, StateView  ← branded, hand-written
-    shadcn/   generated shadcn/ui primitives — kept stock, never hand-edited
+    shadcn/   generated shadcn/ui primitives: kept stock, never hand-edited
   lib/        format.ts, useApi.ts, useCountUp.ts, utils.ts (`cn`)
   pages/      Login, Dashboard, Tasks, Payments, Workers, Applications, Timesheets,
               Hiring, Disputes, Reports, Settings, ForgotPassword, ResetPassword
@@ -87,7 +87,7 @@ Three rules keep the two systems from fighting:
    Per-component stylesheets stay unlayered and still outrank utilities.
 
 shadcn's semantic colours are mapped onto the existing tokens (`--sd-*` in
-`tailwind.css`) — `bg-primary` is Sea Buckthorn, `border-border` is `--line`,
+`tailwind.css`): `bg-primary` is Sea Buckthorn, `border-border` is `--line`,
 `rounded-lg` is `--r-sm`. No shadcn component introduces a colour of its own.
 
 Respects `prefers-reduced-motion`, uses visible focus rings, and keeps 44px tap targets.

@@ -19,7 +19,7 @@ const emailValid = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
 
 /**
  * Worker sign-in HUB (AUTH_FLOW §A2): a single screen offering all three
- * methods — phone OTP, Google, and email+password — plus Sign up / Forgot
+ * methods: phone OTP, Google, and email+password, plus Sign up / Forgot
  * password links. Keeps the existing phone-entry step (collapsible) so the
  * passwordless OTP flow is fully preserved.
  *

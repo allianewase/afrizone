@@ -4,7 +4,7 @@ import { colors, radii, type } from '../theme';
 import { Icon, IconName } from './Icon';
 
 /**
- * The 6 canonical statuses (DESIGN_SPEC §1.3) — one color + word + icon
+ * The 6 canonical statuses (DESIGN_SPEC §1.3): one color + word + icon
  * everywhere. Never color-alone (§7). `status` accepts the API enum-ish values
  * and maps to a canonical key.
  */

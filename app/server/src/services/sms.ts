@@ -1,10 +1,10 @@
-// SMS delivery for worker phone-OTP — env-driven, mirrors services/paystack.ts.
+// SMS delivery for worker phone-OTP: env-driven, mirrors services/paystack.ts.
 //
 // Set SMS_PROVIDER to "termii" or "twilio" plus the matching keys to go live.
 // With no provider configured, `enabled` is false and the OTP flow runs in
 // SIMULATED mode: nothing is sent over the wire, the code is logged, and the
 // request handler returns it as `devCode` (dev only). Master code 123456 also
-// works in dev — see routes/authOtp.ts.
+// works in dev: see routes/authOtp.ts.
 
 const PROVIDER = (process.env.SMS_PROVIDER || "").trim().toLowerCase();
 const TERMII_API_KEY = process.env.TERMII_API_KEY || "";

@@ -52,7 +52,7 @@ export default function ContractDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Custom header — Screen's built-in scroll prop doesn't let us pin a footer */}
+      {/* Custom header: Screen's built-in scroll prop doesn't let us pin a footer */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Button
           label=""

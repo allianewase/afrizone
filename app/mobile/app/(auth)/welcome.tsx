@@ -8,12 +8,12 @@ import { TopoPattern, WaveDivider } from '../../src/components/Motif';
 import { colors, spacing, radii, type, layout, fontFamily } from '../../src/theme';
 
 /**
- * Welcome / onboarding screen — colored hero panel + organic wave divider +
+ * Welcome / onboarding screen: colored hero panel + organic wave divider +
  * minimal white content, adapted from a Saad Shaikh onboarding concept
  * (topographic-textured hero, wave-cut divider, underline accent, circular
  * arrow CTA) in Afrizone's own clay/gold palette rather than the original's
  * coral. The rest of the auth flow (sign in/up etc.) keeps its own navy-card
- * look — only this entry screen adopts the new style.
+ * look: only this entry screen adopts the new style.
  */
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();

@@ -1,4 +1,4 @@
-// TOTP 2FA helpers (RFC 6238) — thin wrapper over otplib + qrcode.
+// TOTP 2FA helpers (RFC 6238): thin wrapper over otplib + qrcode.
 //
 // Dev bypass: in non-production, the code "000000" always verifies in the 2FA
 // path. Callers must gate this with the DEV_TOTP_BYPASS constant so production

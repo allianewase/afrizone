@@ -1,5 +1,5 @@
 /* ============================================================================
-   Tailwind v4 + shadcn/ui — layered *underneath* the hand-written Afrizone CSS
+   Tailwind v4 + shadcn/ui: layered *underneath* the hand-written Afrizone CSS
    so the two systems can coexist while we migrate incrementally.
 
    Two deliberate deviations from a stock shadcn install:
@@ -8,8 +8,8 @@
       `button { border:none; background:none }`, …). Loading Tailwind's Preflight
       on top of it would fight that reset and restyle every existing page. We
       import only the `theme` (design tokens) and `utilities` layers. The one
-      thing Preflight gives us that we still need — a default `border-style` so
-      `border`/`border-b` utilities actually paint — is re-added in `@layer base`
+      thing Preflight gives us that we still need, a default `border-style` so
+      `border`/`border-b` utilities actually paint, is re-added in `@layer base`
       below.
 
    2. **`global.css` is imported into its own `app` layer**, declared *before*
@@ -19,7 +19,7 @@
       fixes the cascade order: tokens → base → app CSS → utilities.
 
    Per-component stylesheets (AppShell.css, Sidebar.css, …) stay unlayered and
-   therefore still win over utilities — intentional, so this file cannot change
+   therefore still win over utilities. That is intentional, so this file cannot change
    how any existing screen renders.
    ========================================================================== */
 
@@ -44,20 +44,21 @@
    (its `--muted` is a *surface*, ours is a *text* colour used app-wide), so
    raw values live under the prefix and only the Tailwind `--color-*` mapping
    below exposes them as `bg-muted` / `text-muted-foreground` / etc.
-   Every value is expressed in terms of an existing token from tokens.css —
+   Every value is expressed in terms of an existing token from tokens.css:
    nothing here introduces a new colour to the brand.
    ------------------------------------------------------------------------ */
 :root {
   --sd-background: var(--bg);
   --sd-foreground: var(--text);
 
-  /* Elevated glass surfaces (cards, dialogs, popovers). */
+  /* Raised surfaces (cards, dialogs, popovers). Opaque white since the light
+     move, despite the .glass class name. */
   --sd-card: var(--surface-2);
   --sd-card-foreground: var(--text);
   --sd-popover: var(--surface-3);
   --sd-popover-foreground: var(--text);
 
-  /* Sea Buckthorn on Deep Navy-dark text — the brand's primary action pair. */
+  /* Sea Buckthorn on Deep Navy-dark text: the brand's primary action pair. */
   --sd-primary: var(--gold);
   --sd-primary-foreground: var(--on-gold);
 
@@ -196,7 +197,7 @@
 }
 
 @layer base {
-  /* Preflight substitute — see note 1 at the top of this file. Scoped to the
+  /* Preflight substitute: see note 1 at the top of this file. Scoped to the
      `base` layer so every rule in `global.css` and the component stylesheets
      still overrides it. */
   *,
@@ -219,7 +220,7 @@
 /* `<DialogContent>` renders its own overlay with a flat `bg-black/50`; these
    are the tinted, blurred values the admin's backdrop has always used. */
 /* The one backdrop-filter kept when the admin went light. Everything else was
-   blurring an opaque surface — a no-op. This is a scrim over live page content,
+   blurring an opaque surface: a no-op. This is a scrim over live page content,
    so the blur still does real work. */
 [data-slot='dialog-overlay'] {
   background: var(--scrim);

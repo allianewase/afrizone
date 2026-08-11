@@ -9,7 +9,7 @@ const schemaPath = p.join(__dirname, 'schema.prisma');
 const schema = fs.readFileSync(schemaPath, 'utf8');
 
 // Anchored to start-of-line so this can only match the real, active
-// `datasource db { ... }` block — the instructional comment above it is
+// `datasource db { ... }` block: the instructional comment above it is
 // indented and prefixed with `//`, so it never starts a line with
 // "datasource" and can't be mistaken for the real block.
 const blockRegex = /^datasource\s+db\s*\{[^}]*\}/m;

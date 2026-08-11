@@ -201,7 +201,7 @@ export default function Dashboard() {
           <div className="feed">
             {data.urgent.length === 0 ? (
               <div className="frow" style={{ color: 'var(--muted)' }}>
-                Nothing urgent — you&apos;re all caught up.
+                Nothing urgent: you&apos;re all caught up.
               </div>
             ) : (
               data.urgent.map((u, i) => <UrgentRow key={i} item={u} onGo={navigate} />)

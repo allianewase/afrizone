@@ -102,7 +102,7 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
  * ------------------------------------------------------------------ */
 
 export const api = {
-  /** POST /api/auth/otp/request — request a login OTP for a phone number. */
+  /** POST /api/auth/otp/request: request a login OTP for a phone number. */
   requestOtp(phone: string): Promise<OtpRequestResponse> {
     return request<OtpRequestResponse>('/auth/otp/request', {
       method: 'POST',
@@ -111,7 +111,7 @@ export const api = {
     });
   },
 
-  /** POST /api/auth/otp/verify — verify the code; returns {token, user, isNewUser}. */
+  /** POST /api/auth/otp/verify: verify the code; returns {token, user, isNewUser}. */
   verifyOtp(phone: string, code: string): Promise<VerifyOtpResponse> {
     return request<VerifyOtpResponse>('/auth/otp/verify', {
       method: 'POST',
@@ -126,7 +126,7 @@ export const api = {
    * auto-created as WORKERs (isNewUser: true) → KYC stepper.
    * ---------------------------------------------------------------- */
 
-  /** POST /api/auth/login — email+password; full session OR {requires2fa, challenge}. */
+  /** POST /api/auth/login: email+password; full session OR {requires2fa, challenge}. */
   login(email: string, password: string): Promise<LoginResponse> {
     return request<LoginResponse>('/auth/login', {
       method: 'POST',
@@ -135,7 +135,7 @@ export const api = {
     });
   },
 
-  /** POST /api/auth/register — create a WORKER; returns {token, user, isNewUser:true}. */
+  /** POST /api/auth/register: create a WORKER; returns {token, user, isNewUser:true}. */
   register(name: string, email: string, password: string): Promise<AuthSuccess> {
     return request<AuthSuccess>('/auth/register', {
       method: 'POST',
@@ -144,7 +144,7 @@ export const api = {
     });
   },
 
-  /** PATCH /api/me — update profile fields. Returns the updated user. */
+  /** PATCH /api/me: update profile fields. Returns the updated user. */
   patchMe(input: {
     name?: string;
     email?: string;
@@ -184,7 +184,7 @@ export const api = {
     return { csv, filename };
   },
 
-  /** POST /api/auth/2fa/verify — exchange a challenge + code for a session. */
+  /** POST /api/auth/2fa/verify: exchange a challenge + code for a session. */
   twoFactorVerify(challenge: string, code: string): Promise<AuthSuccess> {
     return request<AuthSuccess>('/auth/2fa/verify', {
       method: 'POST',
@@ -193,7 +193,7 @@ export const api = {
     });
   },
 
-  /** POST /api/auth/google — worker context; auto-creates a WORKER if unknown. */
+  /** POST /api/auth/google: worker context; auto-creates a WORKER if unknown. */
   googleSignIn(idToken: string): Promise<AuthSuccess> {
     return request<AuthSuccess>('/auth/google', {
       method: 'POST',
@@ -202,7 +202,7 @@ export const api = {
     });
   },
 
-  /** POST /api/auth/password/forgot — neutral confirmation (+ devToken in sim). */
+  /** POST /api/auth/password/forgot: neutral confirmation (+ devToken in sim). */
   passwordForgot(email: string): Promise<PasswordForgotResponse> {
     return request<PasswordForgotResponse>('/auth/password/forgot', {
       method: 'POST',
@@ -211,7 +211,7 @@ export const api = {
     });
   },
 
-  /** POST /api/auth/password/reset — set a new password from a reset token. */
+  /** POST /api/auth/password/reset: set a new password from a reset token. */
   passwordReset(token: string, password: string): Promise<PasswordResetResponse> {
     return request<PasswordResetResponse>('/auth/password/reset', {
       method: 'POST',
@@ -220,12 +220,12 @@ export const api = {
     });
   },
 
-  /** POST /api/auth/2fa/setup (auth) — pending secret + QR for enrolment. */
+  /** POST /api/auth/2fa/setup (auth): pending secret + QR for enrolment. */
   twoFactorSetup(): Promise<TwoFactorSetup> {
     return request<TwoFactorSetup>('/auth/2fa/setup', { method: 'POST' });
   },
 
-  /** POST /api/auth/2fa/enable (auth) — confirm pending secret with a code. */
+  /** POST /api/auth/2fa/enable (auth): confirm pending secret with a code. */
   twoFactorEnable(code: string): Promise<TwoFactorStatus> {
     return request<TwoFactorStatus>('/auth/2fa/enable', {
       method: 'POST',
@@ -233,7 +233,7 @@ export const api = {
     });
   },
 
-  /** POST /api/auth/2fa/disable (auth) — turn off 2FA (requires a current code). */
+  /** POST /api/auth/2fa/disable (auth): turn off 2FA (requires a current code). */
   twoFactorDisable(code: string): Promise<TwoFactorStatus> {
     return request<TwoFactorStatus>('/auth/2fa/disable', {
       method: 'POST',
@@ -241,17 +241,17 @@ export const api = {
     });
   },
 
-  /** GET /api/tasks — task feed (augmented with filledCount/applicantCount). */
+  /** GET /api/tasks: task feed (augmented with filledCount/applicantCount). */
   tasks(signal?: AbortSignal): Promise<Task[]> {
     return request<Task[]>('/tasks', { signal });
   },
 
-  /** GET /api/tasks/:id — detail + applications. */
+  /** GET /api/tasks/:id: detail + applications. */
   task(id: string, signal?: AbortSignal): Promise<Task> {
     return request<Task>(`/tasks/${id}`, { signal });
   },
 
-  /** GET /api/workers/:id — worker + derived wallet. */
+  /** GET /api/workers/:id: worker + derived wallet. */
   worker(id: string, signal?: AbortSignal): Promise<WorkerDetail> {
     return request<WorkerDetail>(`/workers/${id}`, { signal });
   },
@@ -262,17 +262,17 @@ export const api = {
     return w.wallet ?? { pending: 0, available: 0, withdrawn: 0 };
   },
 
-  /** GET /api/jobs — full-time openings (v2 contract; may not be enabled). */
+  /** GET /api/jobs: full-time openings (v2 contract; may not be enabled). */
   jobs(signal?: AbortSignal): Promise<Job[]> {
     return request<Job[]>('/jobs', { signal });
   },
 
-  /** GET /api/jobs/:id — job detail. */
+  /** GET /api/jobs/:id: job detail. */
   jobById(id: string, signal?: AbortSignal): Promise<Job> {
     return request<Job>(`/jobs/${id}`, { signal });
   },
 
-  /** POST /api/candidates — submit a job application. Returns the created candidate. */
+  /** POST /api/candidates: submit a job application. Returns the created candidate. */
   applyJob(input: {
     jobId: string;
     name: string;
@@ -284,21 +284,21 @@ export const api = {
   },
 
   /* ---------------------------------------------------------------- *
-   * v3 — worker-facing endpoints (mobile app). All worker-scoped to
+   * v3: worker-facing endpoints (mobile app). All worker-scoped to
    * the JWT subject; no workerId is passed from the client.
    * ---------------------------------------------------------------- */
 
-  /** GET /api/me — the authed worker's profile. */
+  /** GET /api/me: the authed worker's profile. */
   meWorker(signal?: AbortSignal): Promise<User> {
     return request<User>('/me', { signal });
   },
 
-  /** GET /api/me/applications — my applications, each joined with a task summary. */
+  /** GET /api/me/applications: my applications, each joined with a task summary. */
   myApplications(signal?: AbortSignal): Promise<Application[]> {
     return request<Application[]>('/me/applications', { signal });
   },
 
-  /** POST /api/applications — apply to a task. */
+  /** POST /api/applications: apply to a task. */
   apply(taskId: string, pitch?: string): Promise<Application> {
     return request<Application>('/applications', {
       method: 'POST',
@@ -306,7 +306,7 @@ export const api = {
     });
   },
 
-  /** POST /api/clock — clock IN/OUT of a field task. */
+  /** POST /api/clock: clock IN/OUT of a field task. */
   clock(input: {
     taskId: string;
     type: 'IN' | 'OUT';
@@ -316,12 +316,12 @@ export const api = {
     return request<ClockResult>('/clock', { method: 'POST', body: input });
   },
 
-  /** GET /api/me/clock/:taskId — resume state for the active-task screen. */
+  /** GET /api/me/clock/:taskId: resume state for the active-task screen. */
   clockState(taskId: string, signal?: AbortSignal): Promise<ClockState> {
     return request<ClockState>(`/me/clock/${taskId}`, { signal });
   },
 
-  /** POST /api/timesheets — submit hours for admin approval (status SUBMITTED). */
+  /** POST /api/timesheets: submit hours for admin approval (status SUBMITTED). */
   submitTimesheet(input: {
     taskId: string;
     periodStart: string;
@@ -331,17 +331,17 @@ export const api = {
     return request('/timesheets', { method: 'POST', body: input });
   },
 
-  /** GET /api/me/wallet — derived balances. */
+  /** GET /api/me/wallet: derived balances. */
   myWallet(signal?: AbortSignal): Promise<Wallet> {
     return request<Wallet>('/me/wallet', { signal });
   },
 
-  /** GET /api/me/transactions — earnings + withdrawals, newest-first. */
+  /** GET /api/me/transactions: earnings + withdrawals, newest-first. */
   myTransactions(signal?: AbortSignal): Promise<Transaction[]> {
     return request<Transaction[]>('/me/transactions', { signal });
   },
 
-  /** POST /api/wallet/withdraw — request a payout (PROCESSING). */
+  /** POST /api/wallet/withdraw: request a payout (PROCESSING). */
   withdraw(amount: number): Promise<Withdrawal> {
     return request<Withdrawal>('/wallet/withdraw', {
       method: 'POST',
@@ -349,27 +349,27 @@ export const api = {
     });
   },
 
-  /** GET /api/me/payments/:id — full payment detail (gross/WHT/net breakdown). */
+  /** GET /api/me/payments/:id: full payment detail (gross/WHT/net breakdown). */
   myPaymentDetail(id: string, signal?: AbortSignal): Promise<PaymentDetail> {
     return request<PaymentDetail>(`/me/payments/${id}`, { signal });
   },
 
-  /** GET /api/me/timesheets — worker's timesheet history, newest-first. */
+  /** GET /api/me/timesheets: worker's timesheet history, newest-first. */
   myTimesheets(signal?: AbortSignal): Promise<Timesheet[]> {
     return request<Timesheet[]>('/me/timesheets', { signal });
   },
 
-  /** GET /api/me/ratings — worker's individual rating history, newest-first. */
+  /** GET /api/me/ratings: worker's individual rating history, newest-first. */
   myRatings(signal?: AbortSignal): Promise<Rating[]> {
     return request<Rating[]>('/me/ratings', { signal });
   },
 
-  /** GET /api/me/disputes — worker's disputes with entity summary. */
+  /** GET /api/me/disputes: worker's disputes with entity summary. */
   myDisputes(signal?: AbortSignal): Promise<Dispute[]> {
     return request<Dispute[]>('/me/disputes', { signal });
   },
 
-  /** POST /api/me/disputes — raise a dispute on a payment or timesheet. */
+  /** POST /api/me/disputes: raise a dispute on a payment or timesheet. */
   raiseDispute(input: {
     entityType: 'PAYMENT' | 'TIMESHEET';
     entityId: string;
@@ -378,23 +378,23 @@ export const api = {
     return request<Dispute>('/me/disputes', { method: 'POST', body: input });
   },
 
-  /** GET /api/me/contracts — my contracts, joined with a task summary. */
+  /** GET /api/me/contracts: my contracts, joined with a task summary. */
   myContracts(signal?: AbortSignal): Promise<Contract[]> {
     return request<Contract[]>('/me/contracts', { signal });
   },
 
-  /** GET /api/me/contracts/:id — full contract detail with rendered sections. */
+  /** GET /api/me/contracts/:id: full contract detail with rendered sections. */
   myContractDetail(id: string, signal?: AbortSignal): Promise<ContractDetail> {
     return request<ContractDetail>(`/me/contracts/${id}`, { signal });
   },
 
-  /** POST /api/contracts/:id/sign — sign a contract with a typed full-name signature. */
+  /** POST /api/contracts/:id/sign: sign a contract with a typed full-name signature. */
   signContract(id: string, signerName: string): Promise<Contract> {
     return request<Contract>(`/contracts/${id}/sign`, { method: 'POST', body: { signerName } });
   },
 
   /**
-   * POST /api/me/kyc/documents — upload a KYC document image.
+   * POST /api/me/kyc/documents: upload a KYC document image.
    * Uses multipart/form-data (not JSON). Returns the created document record.
    */
   async uploadKycDocument(params: {
@@ -441,7 +441,7 @@ export const api = {
     return data as { id: string; docType: string };
   },
 
-  /** PATCH /api/me/push-token — register or refresh the Expo push token. */
+  /** PATCH /api/me/push-token: register or refresh the Expo push token. */
   registerPushToken(pushToken: string): Promise<{ ok: true }> {
     return request<{ ok: true }>('/me/push-token', {
       method: 'PATCH',
@@ -450,7 +450,7 @@ export const api = {
   },
 
   /**
-   * POST /api/me/kyc/submit — worker KYC submission. Normally sets kycStatus
+   * POST /api/me/kyc/submit: worker KYC submission. Normally sets kycStatus
    * PENDING for manual review; if Smile ID is configured server-side and
    * `idType` is passed, the server also runs automated Document Verification
    * and may return kycStatus VERIFIED or REJECTED (with `kycNote`) directly.

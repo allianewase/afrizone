@@ -1,10 +1,10 @@
-// Smile Identity — Document Verification (job_type 6): OCRs an ID document image,
+// Smile Identity: Document Verification (job_type 6): OCRs an ID document image,
 // checks its authenticity, and compares it against a live selfie for a face match.
 //
 // Env-driven: with SMILE_PARTNER_ID/SMILE_API_KEY blank, `enabled` is false and the
 // KYC flow falls back to pure manual admin review (the pre-existing behaviour).
 // With both set, worker submissions also run through an automated verification pass
-// whose result feeds (but does not fully replace) the admin decision — a REJECTED
+// whose result feeds (but does not fully replace) the admin decision: a REJECTED
 // result short-circuits straight to kycStatus REJECTED with the real reason attached;
 // an approved result moves the worker to kycStatus VERIFIED, still awaiting an admin's
 // final TIER_APPROVED call via POST /api/workers/:id/kyc.
@@ -18,7 +18,7 @@ const PARTNER_ID = process.env.SMILE_PARTNER_ID || "";
 const API_KEY = process.env.SMILE_API_KEY || "";
 // '0' = sandbox, '1' = production (see https://docs.usesmileid.com/further-reading/faqs)
 const SID_SERVER = process.env.SMILE_SID_SERVER || "0";
-// Optional — required for async human-review updates to reach POST /api/webhooks/smile.
+// Optional: required for async human-review updates to reach POST /api/webhooks/smile.
 // Without it, results still come back synchronously via return_job_status (see below).
 const CALLBACK_URL = process.env.SMILE_CALLBACK_URL || "";
 
@@ -58,7 +58,7 @@ export function isApprovedResultCode(resultCode: string | undefined): boolean {
  * and wait synchronously for the machine result via `return_job_status`.
  *
  * Note: per Smile's docs, a job that requires human review can still change after
- * this returns — CALLBACK_URL (POST /api/webhooks/smile) is how that final update
+ * this returns: CALLBACK_URL (POST /api/webhooks/smile) is how that final update
  * arrives. Without a public callback URL (e.g. local dev), this synchronous result
  * is the only one you'll get, which is fine for demoing the golden path.
  */

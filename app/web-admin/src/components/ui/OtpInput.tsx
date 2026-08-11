@@ -56,7 +56,7 @@ export default function OtpInput({
       setAt(i, '')
       return
     }
-    // typing into a cell may carry pasted overflow — distribute it.
+    // typing into a cell may carry pasted overflow: distribute it.
     const arr = digits.slice()
     let cursor = i
     for (const ch of only) {

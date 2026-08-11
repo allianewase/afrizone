@@ -23,7 +23,7 @@ export default function TaskDetailScreen() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [justApplied, setJustApplied] = useState(false);
 
-  // REAL: GET /api/tasks/:id — includes applications[] for this task.
+  // REAL: GET /api/tasks/:id, which includes applications[] for this task.
   const task = useAsync<Task | null>(
     (signal) => (id ? api.task(id, signal) : Promise.resolve(null)),
     [id]
@@ -137,7 +137,7 @@ export default function TaskDetailScreen() {
         <View style={{ marginTop: spacing.xl }}>
           {applied ? (
             <Button
-              label={myApp?.status === 'APPROVED' ? 'Approved — see My Tasks' : 'Applied — awaiting approval'}
+              label={myApp?.status === 'APPROVED' ? 'Approved: see My Tasks' : 'Applied: awaiting approval'}
               variant="secondary"
               icon={myApp?.status === 'APPROVED' ? 'check-circle' : 'check'}
               disabled

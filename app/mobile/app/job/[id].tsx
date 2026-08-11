@@ -225,7 +225,7 @@ function ApplySheet({
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
         <View style={styles.grabber} />
-        <Text style={styles.sheetTitle}>Apply — {job.title}</Text>
+        <Text style={styles.sheetTitle}>Apply: {job.title}</Text>
         <Text style={styles.sheetSub}>{TYPE_LABEL[job.employmentType]} · {job.department}</Text>
 
         <View style={styles.sheetFields}>

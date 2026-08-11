@@ -16,7 +16,7 @@ interface Props {
   className?: string
 }
 
-/** Status is never communicated by colour alone — always icon + word. */
+/** Status is never communicated by colour alone: always icon + word. */
 export default function StatusPill({ variant, label, className = '' }: Props) {
   return (
     <span className={`pill ${variant} ${className}`}>

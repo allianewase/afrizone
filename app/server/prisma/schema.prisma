@@ -1,4 +1,4 @@
-// Afrizone Part Time — Prisma schema
+// Afrizone Part Time: Prisma schema
 //
 // DEFAULT: SQLite (zero external services, runs on Windows with no DB install).
 //
@@ -41,23 +41,23 @@ model User {
   name           String
   email          String   @unique
   phone          String?  @unique           // worker OTP login (E.164, e.g. +2348030000001)
-  passwordHash   String?                     // nullable — workers are passwordless (phone OTP)
+  passwordHash   String?                     // nullable: workers are passwordless (phone OTP)
   totpSecret     String?                     // pending or active TOTP secret (RFC 6238)
   totpEnabled    Boolean  @default(false)
   googleId       String?  @unique            // Google SSO subject (admin)
   role           String   @default("WORKER") // Role enum
-  tiers          String   @default("")        // comma-separated Tier[] — see note above
+  tiers          String   @default("")        // comma-separated Tier[]: see note above
   kycStatus      String   @default("PENDING") // KycStatus enum
   kycNote        String?  // latest verification note (auto-reject reason from Smile ID, or admin note)
   location       String?
   rating         Float?
   completedCount Int      @default(0)
   bankMasked     String?
-  bankAccountNumber String? // real payout account (NUBAN) — required for live Paystack transfers
+  bankAccountNumber String? // real payout account (NUBAN): required for live Paystack transfers
   bankCode          String? // Paystack bank code, e.g. "058" (GTBank)
   bankName          String?
-  tin               String? // Tax Identification Number — stored from KYC / profile edit
-  pushToken         String? // Expo push token (ExponentPushToken[...]) — updated on each login
+  tin               String? // Tax Identification Number: stored from KYC / profile edit
+  pushToken         String? // Expo push token (ExponentPushToken[...]): updated on each login
   notifTasks     Boolean  @default(true)  // push: task matches & approval status changes
   notifPay       Boolean  @default(true)  // push: payment releases & withdrawal updates
   notifEmail     Boolean  @default(false) // email summary digest (future)
@@ -93,8 +93,8 @@ model Task {
   endDate        DateTime
   locationType   String // LocationType enum (PHYSICAL | REMOTE)
   address        String?
-  lat            Float?   // task site latitude  — required for real geofence check
-  lng            Float?   // task site longitude — required for real geofence check
+  lat            Float?   // task site latitude : required for real geofence check
+  lng            Float?   // task site longitude: required for real geofence check
   geofenceRadius Int      @default(100)
   slots          Int
   status         String   @default("OPEN") // TaskStatus enum
@@ -262,7 +262,7 @@ model Withdrawal {
 // Platform-level inbound funding (Afrizone Mart topping up the balance that
 // worker withdrawals draw from). Mirrors Withdrawal's shape/lifecycle. The
 // running platform balance is derived (Σ SUCCESS fundings − Σ non-failed
-// withdrawals), not stored — same "derive, don't store" convention as the
+// withdrawals), not stored: same "derive, don't store" convention as the
 // per-worker wallet in wallet.ts.
 model Funding {
   id          String   @id @default(cuid())
@@ -285,7 +285,7 @@ model Contract {
   signedAt      DateTime?
   signerName    String? // typed full-name signature, captured at sign time (record of intent)
   signerIp      String? // requesting IP at sign time
-  signatureHash String? // SHA-256 of `${contractId}:${workerId}:${signerName}:${signedAt.toISOString()}` — tamper-evidence
+  signatureHash String? // SHA-256 of `${contractId}:${workerId}:${signerName}:${signedAt.toISOString()}`, for tamper-evidence
   createdAt     DateTime  @default(now())
 
   task   Task @relation(fields: [taskId], references: [id])

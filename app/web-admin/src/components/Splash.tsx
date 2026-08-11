@@ -2,7 +2,7 @@ import Logo from './Logo'
 import './Splash.css'
 
 /**
- * Branded full-screen boot splash — shown while the session hydrates (and as the
+ * Branded full-screen boot splash: shown while the session hydrates (and as the
  * static boot screen in index.html, so there's no white flash before React).
  */
 export default function Splash() {

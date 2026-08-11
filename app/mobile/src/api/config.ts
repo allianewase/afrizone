@@ -6,7 +6,7 @@ import Constants from 'expo-constants';
  *
  * - iOS simulator + web can reach the host machine via `localhost`.
  * - The Android emulator maps the host loopback to `10.0.2.2`, so `localhost`
- *   will NOT reach a backend running on the dev machine — we swap it here.
+ *   will NOT reach a backend running on the dev machine: we swap it here.
  * - On a physical device, set EXPO_PUBLIC_API_URL to your machine's LAN IP,
  *   e.g. `EXPO_PUBLIC_API_URL=http://192.168.1.20:4000/api npx expo start`.
  */

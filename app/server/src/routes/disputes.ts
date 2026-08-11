@@ -32,7 +32,7 @@ async function resolveEntity(
   }
 }
 
-/** Fetch the underlying entity by id only (no worker ownership check — for admin). */
+/** Fetch the underlying entity by id only (no worker ownership check: for admin). */
 async function resolveEntityAdmin(
   type: EntityType,
   entityId: string
@@ -56,7 +56,7 @@ async function resolveEntityAdmin(
 
 // ─── Admin routes (/api/disputes) ───────────────────────────────────────────
 
-// GET /api/disputes?status=OPEN — list all disputes with worker + entity info.
+// GET /api/disputes?status=OPEN: list all disputes with worker + entity info.
 adminRouter.get(
   "/",
   requireAuth,
@@ -82,7 +82,7 @@ adminRouter.get(
   }
 );
 
-// PATCH /api/disputes/:id — resolve (RESOLVED) or close (CLOSED) a dispute.
+// PATCH /api/disputes/:id: resolve (RESOLVED) or close (CLOSED) a dispute.
 // body: { status: "RESOLVED"|"CLOSED", resolution?: string }
 adminRouter.patch(
   "/:id",
@@ -141,7 +141,7 @@ adminRouter.patch(
   }
 );
 
-// POST /api/me/disputes — raise a dispute on a payment or timesheet.
+// POST /api/me/disputes: raise a dispute on a payment or timesheet.
 // body: { entityType: "PAYMENT"|"TIMESHEET", entityId: string, reason: string }
 router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
   const workerId = req.user!.id;
@@ -188,7 +188,7 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
   });
 });
 
-// GET /api/me/disputes — worker's disputes with entity summary.
+// GET /api/me/disputes: worker's disputes with entity summary.
 router.get("/", requireAuth, async (req: AuthedRequest, res: Response) => {
   const workerId = req.user!.id;
   const disputes = await prisma.dispute.findMany({

@@ -23,7 +23,7 @@ async function main() {
   const firstRun = !fs.existsSync(path.join(dataDir, 'PG_VERSION'));
 
   // initialise() runs initdb, which refuses to run against a non-empty data
-  // directory — only call it the first time the cluster is created.
+  // directory: only call it the first time the cluster is created.
   if (firstRun) {
     await pg.initialise();
   }
@@ -32,7 +32,7 @@ async function main() {
 
   if (firstRun) {
     // template1 defaults to a non-UTF8 encoding on Windows, which breaks
-    // inserting non-ASCII text (₦, etc.) — recreate the db explicitly.
+    // inserting non-ASCII text (₦, etc.): recreate the db explicitly.
     const client = pg.getPgClient();
     await client.connect();
     await client.query('DROP DATABASE IF EXISTS afrizone');

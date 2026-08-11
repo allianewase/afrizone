@@ -29,7 +29,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'How does clock in / clock out work?',
-    a: 'Go to My Tasks → Active, tap your approved task, then press the clock button to start recording time. Clock out before you leave. Once done, tap "Submit timesheet" — your hours go to the admin for approval.',
+    a: 'Go to My Tasks → Active, tap your approved task, then press the clock button to start recording time. Clock out before you leave. Once done, tap "Submit timesheet": your hours go to the admin for approval.',
   },
   {
     q: 'How long does KYC verification take?',

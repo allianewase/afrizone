@@ -21,7 +21,7 @@ interface Props {
  * Branded wrapper over the shadcn/Radix Dialog.
  *
  * The props are unchanged from the hand-rolled version this replaces, so every
- * call site stays as-is — but Radix now supplies the things the old markup was
+ * call site stays as-is, but Radix now supplies the things the old markup was
  * missing: a real focus trap, focus restored to the trigger on close, inert
  * background content for screen readers, and scroll-lock that survives nested
  * dialogs.

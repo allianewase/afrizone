@@ -1,4 +1,4 @@
-// Google SSO (admin + worker) — env-driven, mirrors services/paystack.ts.
+// Google SSO (admin + worker): env-driven, mirrors services/paystack.ts.
 //
 // Supports MULTIPLE allowed audiences so a single backend can verify tokens
 // from every Google OAuth client across our apps:
@@ -60,7 +60,7 @@ export const google = {
   async verifyIdToken(idToken: string): Promise<{ email: string; sub: string; name?: string }> {
     const ticket = await getClient().verifyIdToken({
       idToken,
-      // google-auth-library accepts a string[] — the token's aud must match one.
+      // google-auth-library accepts a string[]: the token's aud must match one.
       audience: CLIENT_IDS,
     });
     const payload = ticket.getPayload();

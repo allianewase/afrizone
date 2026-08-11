@@ -60,7 +60,7 @@ function TimesheetCard({
       {alreadyDisputed ? (
         <View style={styles.disputedNote}>
           <Icon name="alert" size={13} color={colors.amber} />
-          <Text style={styles.disputedText}>Dispute open — check Disputes for updates</Text>
+          <Text style={styles.disputedText}>Dispute open: check Disputes for updates</Text>
         </View>
       ) : canDispute ? (
         <Pressable

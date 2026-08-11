@@ -137,7 +137,7 @@ async function main() {
       bankMasked: "****7890",
     },
   });
-  // Bayo Adigun (TRADE, VERIFIED) — fills the single-slot AC servicing task below.
+  // Bayo Adigun (TRADE, VERIFIED), fills the single-slot AC servicing task below.
   const bayo = await prisma.user.create({
     data: {
       name: "Bayo Adigun",
@@ -158,14 +158,14 @@ async function main() {
   const hour = 3600 * 1000;
   const now = Date.now();
   const d = (offsetDays: number) => new Date(now + offsetDays * day);
-  // Same as d(), plus an hour offset — used to stagger task-posted vs.
+  // Same as d(), plus an hour offset, used to stagger task-posted vs.
   // application-approved timestamps so avg time-to-fill isn't ~0.
   const dh = (offsetDays: number, offsetHours = 0) => new Date(now + offsetDays * day + offsetHours * hour);
 
   // ── Tasks (from contract Seed data) ───────────────────────────────────────
   const tDispatch = await prisma.task.create({
     data: {
-      title: "Same-day parcel runs — Yaba",
+      title: "Same-day parcel runs, Yaba",
       description: "Pick up and deliver same-day parcels around Yaba. Own bike preferred.",
       category: "Dispatch",
       tier: "DISPATCH",
@@ -185,7 +185,7 @@ async function main() {
   });
   const tPromo = await prisma.task.create({
     data: {
-      title: "Weekend mall activation — Ikeja",
+      title: "Weekend mall activation, Ikeja",
       description: "Brand activation at Ikeja City Mall. Promo staff, fixed weekend fee.",
       category: "Promo",
       tier: "PROMO",
@@ -205,7 +205,7 @@ async function main() {
   });
   const tRemote = await prisma.task.create({
     data: {
-      title: "Product data cleanup — 20h",
+      title: "Product data cleanup, 20h",
       description: "Clean and normalise product catalogue data. Fully remote, ~20 hours.",
       category: "Remote",
       tier: "REMOTE",
@@ -224,7 +224,7 @@ async function main() {
   });
   const tTrade = await prisma.task.create({
     data: {
-      title: "AC servicing — Lekki",
+      title: "AC servicing, Lekki",
       description: "Service 4 split-unit air conditioners at a Lekki residence. Certified technicians only.",
       category: "Trade",
       tier: "TRADE",
@@ -244,7 +244,7 @@ async function main() {
   });
   const tCampus = await prisma.task.create({
     data: {
-      title: "Campus survey — UNILAG",
+      title: "Campus survey, UNILAG",
       description: "Conduct on-campus consumer surveys at UNILAG. Students welcome.",
       category: "Student",
       tier: "STUDENT",
@@ -272,7 +272,7 @@ async function main() {
     data: { taskId: tDispatch.id, workerId: tunde.id, pitch: "Yaba local, own bike, 89 deliveries.", status: "APPROVED", createdAt: dh(-2, 5) },
   });
   await prisma.application.create({
-    // APPROVED (not APPLIED) — matches the APPROVED payment he already has for this task below.
+    // APPROVED (not APPLIED), matches the APPROVED payment he already has for this task below.
     data: { taskId: tDispatch.id, workerId: ibrahim.id, pitch: "Reliable dispatch rider.", status: "APPROVED", createdAt: dh(-2, 20) },
   });
   await prisma.application.create({
@@ -285,7 +285,7 @@ async function main() {
     data: { taskId: tCampus.id, workerId: ngozi.id, pitch: "UNILAG alumna, knows the campus.", status: "APPLIED" },
   });
   await prisma.application.create({
-    // Fills tTrade's single slot — matches its status: "FILLED" above.
+    // Fills tTrade's single slot, matches its status: "FILLED" above.
     data: { taskId: tTrade.id, workerId: bayo.id, pitch: "Certified HVAC technician, 22 completed jobs.", status: "APPROVED", createdAt: dh(-1, 3) },
   });
 
@@ -309,7 +309,7 @@ async function main() {
       periodEnd: d(-1),
       hours: 10,
       status: "SUBMITTED",
-      gpsNote: "Remote — no geofence.",
+      gpsNote: "Remote, no geofence.",
     },
   });
 
@@ -321,7 +321,7 @@ async function main() {
       data: { workerId, taskId, gross, whtRate: 0.05, whtAmount, net, status },
     });
   };
-  // Amaka ₦18,000 (RELEASED — she has a withdrawal against it, so the wallet is coherent)
+  // Amaka ₦18,000 (RELEASED, she has a withdrawal against it, so the wallet is coherent)
   await mkPay(amaka.id, tPromo.id, 18000, "RELEASED");
   // Tunde ₦12,500 (review/PENDING)
   await mkPay(tunde.id, tDispatch.id, 12500, "PENDING");
@@ -350,7 +350,7 @@ async function main() {
   // A second PROMO task so Amaka has a tier-matching "Applied" item.
   const tPromo2 = await prisma.task.create({
     data: {
-      title: "Brand sampling — Lekki Mall",
+      title: "Brand sampling, Lekki Mall",
       description: "In-store product sampling and customer engagement over a long weekend.",
       category: "Promo",
       tier: "PROMO",
@@ -407,7 +407,7 @@ async function main() {
     },
   });
 
-  // ── v2: Hiring — Jobs ─────────────────────────────────────────────────────
+  // ── v2: Hiring and Jobs ─────────────────────────────────────────────────────
   const jobOps = await prisma.job.create({
     data: {
       title: "Operations Associate",
@@ -485,7 +485,7 @@ async function main() {
     });
   }
 
-  // ── v2: Settings — Tax rates ───────────────────────────────────────────────
+  // ── v2: Settings, tax rates ───────────────────────────────────────────────
   await prisma.taxRate.create({
     data: { jurisdiction: "Federal", category: "Services", whtRate: 0.05, vatRate: 0.075, active: true },
   });
@@ -493,7 +493,7 @@ async function main() {
     data: { jurisdiction: "Lagos", category: "default", whtRate: 0.05, vatRate: 0, active: true },
   });
 
-  // ── v2: Settings — Categories ──────────────────────────────────────────────
+  // ── v2: Settings, categories ──────────────────────────────────────────────
   const cats: Array<{ name: string; tier: string; defaultPayModel: string }> = [
     { name: "Dispatch", tier: "DISPATCH", defaultPayModel: "HOURLY" },
     { name: "Promo", tier: "PROMO", defaultPayModel: "FIXED" },
@@ -505,7 +505,7 @@ async function main() {
     await prisma.category.create({ data: { ...cat, active: true } });
   }
 
-  // ── v2: Settings — Templates ───────────────────────────────────────────────
+  // ── v2: Settings, templates ───────────────────────────────────────────────
   const templates: Array<{ key: string; value: string }> = [
     { key: "contract.default", value: "This agreement is between Afrizone and {{worker}} for {{task}}." },
     { key: "notify.application_approved", value: "Hi {{worker}}, your application for {{task}} was approved." },

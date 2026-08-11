@@ -1,10 +1,10 @@
-# Afrizone Part Time — Design Specification v0.1
+# Afrizone Part Time: Design Specification v0.1
 
 **Companion to:** Product Blueprint v1.0
 **Covers:** Brand & design system, information architecture, key flows, component inventory, and screen-by-screen specs for the **Worker mobile app** and the **Admin web dashboard**.
 **Status:** Shipped and evolving. The code in `app/web-admin` and `app/mobile` is the source of truth; where this document and the code disagree, the code is right and this document is stale.
 
-**On the root HTML mocks:** `design-system.html` remains the reference for **brand and status language only — not layout**. It is a palette and component showcase, not a screen spec. `admin-premium.html` has been **deleted**: it was the dark mock the admin dashboard was originally built from, and it kept the pre-rebrand forest-black palette long after the code moved on, so validating against it actively misled. Neither file has ever been generated from the real tokens, so treat both as illustrative.
+**On the root HTML mocks:** `design-system.html` remains the reference for **brand and status language only, not layout**. It is a palette and component showcase, not a screen spec. `admin-premium.html` has been **deleted**: it was the dark mock the admin dashboard was originally built from, and it kept the pre-rebrand forest-black palette long after the code moved on, so validating against it actively misled. Neither file has ever been generated from the real tokens, so treat both as illustrative.
 
 ---
 
@@ -12,15 +12,15 @@
 
 These five principles resolve trade-offs when specs are silent.
 
-1. **Trust is the product.** Money and identity move through this app. Every screen should feel safe, legible, and predictable. No dark patterns, no surprise deductions — show the math (gross → WHT/VAT → net) plainly.
+1. **Trust is the product.** Money and identity move through this app. Every screen should feel safe, legible, and predictable. No dark patterns, no surprise deductions: show the math (gross → WHT/VAT → net) plainly.
 2. **Built for the field, on a cheap phone, on bad network.** Big tap targets, offline-tolerant flows, clear sync state, low data weight. Performance is a feature.
-3. **Confident and unmistakably African — not generic fintech.** The brand draws on the continent's silhouette and the "Sunrise Cut" angular chevron geometry, expressed with restraint so data stays clear.
+3. **Confident and unmistakably African, not generic fintech.** The brand draws on the continent's silhouette and the "Sunrise Cut" angular chevron geometry, expressed with restraint so data stays clear.
 4. **One status language everywhere.** Pending / Active / Approved / Paid use the same colors, words, and pill shape across mobile and web. A worker and a manager describe the same state with the same word.
 5. **Progressive disclosure.** KYC, task posting, and tax detail are heavy. Reveal in steps; never wall a 12-field form in front of a first-time user.
 
 ---
 
-## 1. Brand Foundation — Afrizone
+## 1. Brand Foundation: Afrizone
 
 ### 1.1 Concept
 Afrizone connects people to honest, flexible work across Africa, under the official **Afrizonemart.com** identity: **Deep Navy Blue** (trust, stability) paired with **Sea Buckthorn orange** (energy, opportunity). The feeling: warm, capable, locally proud, financially trustworthy.
@@ -37,9 +37,9 @@ The lockup is **composed in CSS from an inline SVG mark plus live text**, not sh
 Primary brand:
 | Token | Hex | Use |
 |---|---|---|
-| `--navy` (primary) | `#000066` | Deep Navy Blue — brand ink, logo square, dark surfaces, primary CTAs on light |
-| `--navy-deep` | `#00004D` | Darker navy — dark-mode base, pressed states |
-| `--clay` / `--gold` / `--gold-bright` (accent) | `#FBAC34` | Sea Buckthorn orange — key CTAs, active nav, highlights, logo continent fill, badges |
+| `--navy` (primary) | `#000066` | Deep Navy Blue: brand ink, logo square, dark surfaces, primary CTAs on light |
+| `--navy-deep` | `#00004D` | Darker navy: dark-mode base, pressed states |
+| `--clay` / `--gold` / `--gold-bright` (accent) | `#FBAC34` | Sea Buckthorn orange: key CTAs, active nav, highlights, logo continent fill, badges |
 | `--clay-light` | `#FCC066` | Lightened tint for hover/pressed states |
 | `--forest-900` (ink) | `#14302B` | Dark surfaces, headers, primary text on light |
 | `--forest-700` | `#1E4B41` | Secondary dark, dark-mode cards |
@@ -52,14 +52,14 @@ Functional / semantic (shared status language):
 | `--money-600` | `#1F9D6B` | Available balance, Paid, success |
 | `--indigo-600` | `#2D5BA8` | Info, links, "in review" (adire indigo) |
 | `--pending-700` | `#6B3F94` | Pending, awaiting approval |
-| `--amber-500` | `#E08A1E` | Warnings and alerts **only** — no longer the Pending status |
+| `--amber-500` | `#E08A1E` | Warnings and alerts **only**, no longer the Pending status |
 | `--danger-600` | `#C8453A` | Errors, rejected, disputes |
 
 Pending was moved off amber deliberately. Sea Buckthorn is the action colour used for `Active`, and amber sits close enough to it on the hue wheel that the two statuses read as one signal. Violet sits 53° from the nearest other status hue; slate and steel were both rejected for landing within 10° of `--indigo-600`. `--amber-500` survives because most of its call sites are genuine warnings (banners, contract alerts, disputed timesheets), not status pills.
 
-**Ink variants.** The values above are *fill* colours. Three of them are illegible as small text on a light ground — Sea Buckthorn is 1.90:1 on white and `--money-600` only 3.45:1 — so pill labels and coloured body text use darkened pairs of the same hue instead: `--money-ink #15794F`, `--danger-ink #A6362C`, `--gold-ink #8A5A0F`. `--indigo-600` (6.62:1) and `--pending-700` (7.60:1) need no variant. Verify any new colour numerically before using it as type; several of the brand's own values fail.
+**Ink variants.** The values above are *fill* colours. Three of them are illegible as small text on a light ground: Sea Buckthorn is 1.90:1 on white and `--money-600` only 3.45:1, so pill labels and coloured body text use darkened pairs of the same hue instead: `--money-ink #15794F`, `--danger-ink #A6362C`, `--gold-ink #8A5A0F`. `--indigo-600` (6.62:1) and `--pending-700` (7.60:1) need no variant. Verify any new colour numerically before using it as type; several of the brand's own values fail.
 
-Neutrals — **"Warm Refined"**. Still warm-tinted, never pure gray:
+Neutrals: **"Warm Refined"**. Still warm-tinted, never pure gray:
 | Token | Hex | Note |
 |---|---|---|
 | `--sand-50` (app bg) | `#FAF9F6` | 29% saturation |
@@ -68,13 +68,13 @@ Neutrals — **"Warm Refined"**. Still warm-tinted, never pure gray:
 | `--line` | `#E8E3DA` | hairline |
 | `--line-2` | `#D8D1C4` | input borders, stronger edges |
 | `--text` | `#1C1917` | 16.61:1 on app bg |
-| `--text-muted` | `#57534E` | 7.25:1 — near-neutral, **not brown** |
-| `--text-faint` | `#706963` | 5.13:1 — placeholders, hints |
+| `--text-muted` | `#57534E` | 7.25:1, near-neutral, **not brown** |
+| `--text-faint` | `#706963` | 5.13:1, placeholders and hints |
 | `--rail` | `#0A1140` | the one dark surface; see below |
 
 The first light build used cream (`#FBF5EC`, **65% saturation**) with brown greys (`--text-muted` was `#5F5344`, 17% saturation). On screen that read as hospitality rather than finance: warm cream surfaces and brown-grey body text are the two clearest "dated" tells in a dashboard. This revision keeps the warm cast §0.3 asks for while dropping page saturation to 29% and making the grey ramp near-neutral at 5%. Cool-neutral and navy-forward alternatives were rendered side by side and rejected in favour of keeping the brand's character.
 
-**The nav rail is the one dark surface in a light app.** A sand rail was tried first and read as washed out for a measurable reason: every tone in the warm family sits within a few percent luminance of every other, so a sand rail against the sand page separated at only **1.10:1** — and white would have given 1.084:1, no better. Navy separates at **17.1:1** and gives Sea Buckthorn a dark ground to be an accent against. `--rail` is `#0A1140` rather than the brand's `#000066`: that hex stays exact on the logo mark, but a fully saturated pure blue-violet reads harsh across a full-height panel. The **topbar deliberately stays light** — dark left rail plus light top bar is the familiar shape, and darkening both walls in the content. Rail-scoped text tokens: `--rail-text #FAF9F6` (17.09:1), `--rail-muted #A1A5C4` (7.45:1), `--rail-faint #878CAF` (5.48:1).
+**The nav rail is the one dark surface in a light app.** A sand rail was tried first and read as washed out for a measurable reason: every tone in the warm family sits within a few percent luminance of every other, so a sand rail against the sand page separated at only **1.10:1**, and white would have given 1.084:1, no better. Navy separates at **17.1:1** and gives Sea Buckthorn a dark ground to be an accent against. `--rail` is `#0A1140` rather than the brand's `#000066`: that hex stays exact on the logo mark, but a fully saturated pure blue-violet reads harsh across a full-height panel. The **topbar deliberately stays light**: dark left rail plus light top bar is the familiar shape, and darkening both walls in the content. Rail-scoped text tokens: `--rail-text #FAF9F6` (17.09:1), `--rail-muted #A1A5C4` (7.45:1), `--rail-faint #878CAF` (5.48:1).
 
 **Status → color → word (canonical):**
 - `Pending` → violet → "Awaiting approval"
@@ -84,21 +84,21 @@ The first light build used cream (`#FBF5EC`, **65% saturation**) with brown grey
 - `Paid / Withdrawn` → forest → "Paid out"
 - `Rejected / Dispute` → danger → "Needs attention"
 
-**Both apps are light.** The admin dashboard ran a dark glassmorphic theme until August 2026 and now uses the same light sand system as the worker app: white cards on `--sand-50`, separated by a `--line` hairline and a soft warm shadow. This was the change that finally made §0.4 achievable — while the two grounds differed in lightness, no single hex could be legible on both, so the four semantic colours had silently diverged between the apps.
+**Both apps are light.** The admin dashboard ran a dark glassmorphic theme until August 2026 and now uses the same light sand system as the worker app: white cards on `--sand-50`, separated by a `--line` hairline and a soft warm shadow. This was the change that finally made §0.4 achievable: while the two grounds differed in lightness, no single hex could be legible on both, so the four semantic colours had silently diverged between the apps.
 
 There is deliberately **no dark mode and no theme switch.** Supporting both was considered and rejected: it doubles the QA surface on every screen forever, and no user has asked for it. `--navy` / `--navy-deep` remain in the palette for the logo lockup and the splash screen, which does still sit on brand navy.
 
 ### 1.4 Typography
-- **Display / headings:** `Raleway` (700/800, extrabold) — the official brand typeface; geometric, confident, works across mobile and web.
-- **Body / UI:** `Raleway` (500 medium) — kept to one family for a consistent brand voice; weight alone carries the display/body split.
-- **Numeric / money:** `Raleway` with `font-variant-numeric: tabular-nums` (web) — on mobile, static font weights are registered as separate family names via `@expo-google-fonts/raleway`, so `fontFamily.extrabold` / `fontFamily.medium` are applied explicitly on brand-critical text (headers, logo, buttons) rather than as a blanket override.
+- **Display / headings:** `Raleway` (700/800, extrabold): the official brand typeface; geometric, confident, works across mobile and web.
+- **Body / UI:** `Raleway` (500 medium): kept to one family for a consistent brand voice; weight alone carries the display/body split.
+- **Numeric / money:** `Raleway` with `font-variant-numeric: tabular-nums` (web): on mobile, static font weights are registered as separate family names via `@expo-google-fonts/raleway`, so `fontFamily.extrabold` / `fontFamily.medium` are applied explicitly on brand-critical text (headers, logo, buttons) rather than as a blanket override.
 
 Scale (mobile / web): 12, 13, 14 (base), 16, 18, 20, 24, 30, 38, 48. Body base **16px**, line-height **1.5** (blueprint §6 Typography rules).
 
 ### 1.5 Shape, depth, motion
 - **Radius:** inputs/buttons 12px, cards 16px, sheets 22px, pills 100px.
-- **Depth:** soft warm shadows (`0 12px 30px rgba(36,28,21,.10)`); restrained — this is fintech, not glass.
-- **Pattern:** the "Sunrise Cut" repeating chevron motif (echoing the angular lines of the Africa+cart logo mark) at low opacity for headers, empty states, and brand moments only — never behind dense data. The Welcome/onboarding screen additionally uses an organic topographic-contour texture and a wave-shaped divider as a one-off treatment (§5 Splash/Auth).
+- **Depth:** soft warm shadows (`0 12px 30px rgba(36,28,21,.10)`); restrained, this is fintech and not glass.
+- **Pattern:** the "Sunrise Cut" repeating chevron motif (echoing the angular lines of the Africa+cart logo mark) at low opacity for headers, empty states, and brand moments only, never behind dense data. The Welcome/onboarding screen additionally uses an organic topographic-contour texture and a wave-shaped divider as a one-off treatment (§5 Splash/Auth).
 - **Motion:** 150–300ms, `cubic-bezier(.22,1,.36,1)`. Motion conveys spatial continuity (sheets rise, steps slide). Respect `prefers-reduced-motion`.
 
 ### 1.6 Iconography
@@ -108,19 +108,19 @@ Single stroke set (Lucide, 2px). No emoji as icons (blueprint §4 `no-emoji-icon
 
 ## 2. Information Architecture
 
-### 2.1 Worker mobile app — bottom tab nav (≤5, per blueprint §navigation)
+### 2.1 Worker mobile app: bottom tab nav (≤5, per blueprint §navigation)
 ```
 [ Home ]  [ My Tasks ]  [ Wallet ]  [ Jobs ]  [ Profile ]
 ```
-- **Home** — matched task feed, KYC nudge, earnings snapshot
-- **My Tasks** — Applied / Active / Completed (segmented); active-task & clock-in live here
-- **Wallet** — balances, transactions, withdraw, tax statements
-- **Jobs** — full-time openings + applications
-- **Profile** — tiers, KYC status, documents, bank, tax info, notification prefs, support
+- **Home**: matched task feed, KYC nudge, earnings snapshot
+- **My Tasks**: Applied / Active / Completed (segmented); active-task & clock-in live here
+- **Wallet**: balances, transactions, withdraw, tax statements
+- **Jobs**: full-time openings + applications
+- **Profile**: tiers, KYC status, documents, bank, tax info, notification prefs, support
 
 Onboarding/KYC is a **pre-tab gated flow** (full-screen stepper). Contracts and Notifications are accessed contextually + from Profile/Home.
 
-### 2.2 Admin web dashboard — left sidebar
+### 2.2 Admin web dashboard: left sidebar
 ```
 Dashboard
 Tasks            (create / manage / archive)
@@ -161,17 +161,17 @@ Any earning surface shows: **Gross → − WHT (e.g. 5%) → − VAT flag (if ap
 
 **Primitives:** Button (primary/secondary/ghost/danger), IconButton, Input, Textarea, Select, DatePicker, FileUpload/Dropzone, Checkbox, Radio, Switch, OTP input, Slider (geofence radius), SearchField.
 
-**Status & data:** StatusPill (the 6 canonical states), TierBadge (Student/Rider/Freelancer/Promo/Trade), Avatar, ProgressRail (stepper), ProgressBar/Meter, Money (tabular, with currency), DataTable (sortable, admin), KPIStat card, Chart (bar/line/donut — legends + tooltips, not color-alone).
+**Status & data:** StatusPill (the 6 canonical states), TierBadge (Student/Rider/Freelancer/Promo/Trade), Avatar, ProgressRail (stepper), ProgressBar/Meter, Money (tabular, with currency), DataTable (sortable, admin), KPIStat card, Chart (bar/line/donut: legends + tooltips, not color-alone).
 
 **Surfaces:** Card, ListRow, BottomSheet, Modal, Banner (KYC nudge / offline / dispute), Toast, Tabs/Segmented, EmptyState (with Sunrise Cut chevron motif), SkeletonLoader.
 
 **App-specific:** TaskCard (feed), ApplicationRow, ClockInButton (with geofence state: in-fence / out-of-fence / syncing), GeofenceMap, TimesheetEntry, WalletBalanceCard (3 balances), TransactionRow, ContractViewer + SignaturePad, KYCStepCard, NotificationRow, CandidatePipelineColumn (kanban).
 
-**Offline/sync:** SyncBadge (queued clock-events count), OfflineBanner, "Saved locally — will sync" inline note. (Blueprint §10 offline tolerance.)
+**Offline/sync:** SyncBadge (queued clock-events count), OfflineBanner, "Saved locally: will sync" inline note. (Blueprint §10 offline tolerance.)
 
 ---
 
-## 5. Worker App — Screen Specs (highlights)
+## 5. Worker App: Screen Specs (highlights)
 
 | Screen | Purpose | Key elements | States |
 |---|---|---|---|
@@ -186,7 +186,7 @@ Any earning surface shows: **Gross → − WHT (e.g. 5%) → − VAT flag (if ap
 | **Jobs** | Full-time | Openings list, job detail, apply (CV/cover/portfolio), my applications + stage | none open |
 | **Profile** | Manage self | Tiers + add-tier, KYC status, documents, bank, tax info/TIN, notification prefs (per-event channels), support | re-KYC due banner (12-mo) |
 
-## 6. Admin Dashboard — Screen Specs (highlights)
+## 6. Admin Dashboard: Screen Specs (highlights)
 
 | Screen | Purpose | Key elements |
 |---|---|---|
@@ -213,11 +213,11 @@ Any earning surface shows: **Gross → − WHT (e.g. 5%) → − VAT flag (if ap
 ---
 
 ## 8. Build plan (after visual sign-off)
-1. **`design-system.html`** — living brand & component showcase (this is the source of truth for tokens). ← *next deliverable*
-2. **Worker app hi-fi prototype** — phone-frame HTML of the §5 screens.
-3. **Admin dashboard hi-fi prototype** — web HTML of the §6 screens.
-4. **Code scaffold** — Expo (React Native) + React/Vite admin, sharing a `tokens` package generated from the showcase; NestJS API contract stubs to follow.
+1. **`design-system.html`**: living brand & component showcase (this is the source of truth for tokens). ← *next deliverable*
+2. **Worker app hi-fi prototype**: phone-frame HTML of the §5 screens.
+3. **Admin dashboard hi-fi prototype**: web HTML of the §6 screens.
+4. **Code scaffold**: Expo (React Native) + React/Vite admin, sharing a `tokens` package generated from the showcase; NestJS API contract stubs to follow.
 
 ---
 
-*End of design spec v0.1. Open product questions (§12 of blueprint) that affect UI — geofence hard-block vs warn, instant vs batch payout, external invite — are surfaced inline as state variations and flagged for decision.*
+*End of design spec v0.1. Open product questions (§12 of blueprint) that affect UI: geofence hard-block vs warn, instant vs batch payout, external invite: are surfaced inline as state variations and flagged for decision.*

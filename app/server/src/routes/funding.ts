@@ -7,7 +7,7 @@ import { paystack } from "../services/paystack";
 const router = Router();
 
 // Platform balance = Σ SUCCESS fundings − Σ non-failed withdrawals.
-// Informational only for now — does not gate withdrawal approval.
+// Informational only for now: does not gate withdrawal approval.
 async function platformBalance(): Promise<number> {
   const [fundings, withdrawals] = await Promise.all([
     prisma.funding.findMany({ where: { status: "SUCCESS" } }),
@@ -23,7 +23,7 @@ router.get("/balance", requireAuth, requireRole("SUPER_ADMIN"), async (_req: Aut
   res.json({ balance: await platformBalance() });
 });
 
-// GET /api/admin/funding — history, newest first.
+// GET /api/admin/funding: history, newest first.
 router.get("/", requireAuth, requireRole("SUPER_ADMIN"), async (_req: AuthedRequest, res: Response) => {
   const fundings = await prisma.funding.findMany({
     orderBy: { createdAt: "desc" },
@@ -81,7 +81,7 @@ router.post(
   }
 );
 
-// DEV ONLY — settle all PENDING fundings to SUCCESS, to demo the full flow
+// DEV ONLY: settle all PENDING fundings to SUCCESS, to demo the full flow
 // without a real Paystack webhook. Disabled when Paystack is live.
 router.post("/dev/settle", requireAuth, requireRole("SUPER_ADMIN"), async (_req: AuthedRequest, res: Response) => {
   if (paystack.enabled) {

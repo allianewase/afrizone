@@ -62,7 +62,7 @@ export default function ProfileScreen() {
     try {
       await api.patchMe(patch);
     } catch {
-      setNotifSaveError('Could not save — check your connection.');
+      setNotifSaveError('Could not save: check your connection.');
     }
   }
 
@@ -136,7 +136,7 @@ export default function ProfileScreen() {
             title="KYC status"
             subtitle={
               kyc === 'PENDING' || kyc === 'VERIFIED'
-                ? 'Under review — we\'ll notify you when done'
+                ? 'Under review: we\'ll notify you when done'
                 : kyc === 'TIER_APPROVED'
                   ? 'Verified · tap to add a tier or re-verify'
                   : 'Identity & tier verification'
@@ -415,7 +415,7 @@ function EditBankSheet({
                 <Icon name="chevron-down" size={18} color={colors.textMuted} />
               </Pressable>
             </SheetField>
-            <SheetField label="Account number (NUBAN)" hint="10-digit number — payouts go here">
+            <SheetField label="Account number (NUBAN)" hint="10-digit number: payouts go here">
               <TextInput
                 value={acct}
                 onChangeText={(t) => setAcct(t.replace(/\D/g, '').slice(0, 10))}

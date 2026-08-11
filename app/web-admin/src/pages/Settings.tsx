@@ -916,7 +916,7 @@ function BillingTab({ canEdit }: { canEdit: boolean }) {
               {simulated && (
                 <span className="twofa-status">
                   <span className="dot" />
-                  Simulated mode — set PAYSTACK_SECRET for live charges
+                  Simulated mode: set PAYSTACK_SECRET for live charges
                 </span>
               )}
             </div>

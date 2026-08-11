@@ -29,7 +29,7 @@ function haversineMetres(lat1: number, lng1: number, lat2: number, lng2: number)
 export default function ActiveTaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  // Task context — fetched once on mount for the header card.
+  // Task context: fetched once on mount for the header card.
   const taskQ = useAsync<Task | null>(
     (signal) => (id ? api.task(id, signal) : Promise.resolve(null)),
     [id]
@@ -80,7 +80,7 @@ export default function ActiveTaskScreen() {
     };
   }, [id]);
 
-  // GPS geofence check — starts once task data loads.
+  // GPS geofence check: starts once task data loads.
   useEffect(() => {
     if (!t) return;
     if (t.locationType === 'REMOTE' || t.lat == null || t.lng == null) {
@@ -261,7 +261,7 @@ export default function ActiveTaskScreen() {
           tone="money"
           icon="check-circle"
           title="Timesheet submitted"
-          message="Awaiting approval — check status in Profile › Timesheets."
+          message="Awaiting approval: check status in Profile › Timesheets."
         />
       ) : (
         <View style={{ marginTop: spacing.xxl, gap: spacing.md }}>

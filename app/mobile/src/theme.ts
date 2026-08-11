@@ -1,68 +1,48 @@
 /**
- * Afrizone Part Time — design tokens for the worker mobile app.
- * Mirrors DESIGN_SPEC.md §1 (brand) and the web-admin tokens.css so the
- * two apps stay visually identical.
+ * Design tokens for the worker mobile app.
+ *
+ * These mirror web-admin's tokens.css value for value. Reasoning behind the
+ * values lives in docs/design-decisions.md; several look wrong until you read
+ * the measurement, so check there before changing one.
  */
 
 export const colors = {
-  // Brand — per the official Afrizonemart.com logo redesign spec: Deep Navy
-  // Blue #000066 + Sea Buckthorn orange #FBAC34 (Raleway typeface).
-  clay: '#FBAC34', // Sea Buckthorn — primary accent (was clay/terracotta)
+  // Brand, per the Afrizonemart.com identity.
+  clay: '#FBAC34', // Sea Buckthorn, primary accent (was clay/terracotta)
   clayLight: '#FCC066', // lightened tint for hover/pressed states
-  gold: '#FBAC34', // Sea Buckthorn (kept as separate token for existing call sites)
-  goldBright: '#FBAC34', // Sea Buckthorn — logo mark color
-  navy: '#000066', // Deep Navy Blue — logo square / brand navy
+  gold: '#FBAC34', // same hex; kept as a separate name for existing call sites
+  goldBright: '#FBAC34', // logo mark colour
+  navy: '#000066', // logo mark navy
   navyDeep: '#00004D',
-  forest: '#14302B', // --forest-900 ink / dark surfaces
+  forest: '#14302B', // dark surfaces, Paid status
   forest700: '#1E4B41',
 
-  // Functional / semantic (shared status language)
-  money: '#1F9D6B', // --money-600 available / paid / success
-  indigo: '#2D5BA8', // --indigo-600 info / in review
-  amber: '#E08A1E', // --amber-500 warnings / alerts (no longer the Pending status)
-  danger: '#C8453A', // --danger-600 errors / rejected
-  /**
-   * Pending / awaiting. Deliberately violet rather than amber: Sea Buckthorn is
-   * the action colour used for Active, and amber sits close enough to it that
-   * the two statuses read as the same signal. Violet is 53° from the nearest
-   * other status hue — slate and steel were rejected for colliding with indigo.
-   * `amber` above is kept for genuine warnings, which is most of its call sites.
-   */
-  pending: '#6B3F94',
+  // Status language, shared with web-admin and design-system.html.
+  money: '#1F9D6B', // available / paid / success
+  indigo: '#2D5BA8', // info / in review
+  amber: '#E08A1E', // warnings only, not a status
+  danger: '#C8453A', // errors / rejected
+  pending: '#6B3F94', // violet, not amber: docs/design-decisions.md
 
-  /**
-   * Ink variants, shared verbatim with web-admin. The fills above are surface
-   * colours and three of them are illegible as small text on a light ground —
-   * the Active pill shipped at 1.64:1 (Sea Buckthorn on claySoft), Available at
-   * 2.86:1 and Rejected at 3.65:1. These carry the same hues at >= 4.7:1.
-   * `indigo` (5.26:1) and `pending` (6.31:1) need no variant.
-   */
+  // Type versions of three fills that are illegible as small text on light.
+  // Active shipped at 1.64:1, Available 2.86:1, Rejected 3.65:1.
   moneyInk: '#15794F',
   dangerInk: '#A6362C',
   goldInk: '#8A5A0F',
 
-  /**
-   * Neutrals — "Warm Refined", matching web-admin's tokens.css.
-   *
-   * Still warm-tinted, never pure grey (DESIGN_SPEC §0.3), but the original
-   * values were cream at 65% saturation with a brown `textMuted` (#7A6B58, 17%
-   * saturation). Rendered, warm cream surfaces plus brown-grey type read as
-   * hospitality rather than finance. Saturation is now 29% and the grey ramp is
-   * near-neutral at 5%: same intent, sober delivery.
-   */
-  bg: '#FAF9F6', // app background — 16.61:1 against `text`
+  // Neutrals: "Warm Refined". docs/design-decisions.md
+  bg: '#FAF9F6', // app background, 16.61:1 against `text`
   surfaceSand: '#F4F2EC', // recessed surface
   surface: '#FFFFFF', // card
   line: '#E8E3DA', // hairline / border
   text: '#1C1917', // primary text
-  textMuted: '#57534E', // secondary text — 7.25:1
-  textFaint: '#706963', // placeholders and hints — 5.13:1
+  textMuted: '#57534E', // secondary text, 7.25:1
+  textFaint: '#706963', // placeholders and hints, 5.13:1
   white: '#FFFFFF',
 
-  // Tints for status pill backgrounds (semi-opaque feel without alpha math)
-  /* Pill fills. These are now the exact tints web-admin composes (each status
-     colour at 10–16% over white), so a pill renders identically in both apps
-     rather than merely similarly — which is what DESIGN_SPEC §0.4 asks for. */
+  // Pill fills: the exact tints web-admin composes (each status colour at 10 to
+  // 16% over white), so a pill renders identically in both apps rather than
+  // merely similarly, which is what DESIGN_SPEC 0.4 asks for.
   amberSoft: '#FBF1E4',
   pendingSoft: '#F0ECF4',
   claySoft: '#FFF5E7',
@@ -88,14 +68,14 @@ export const radii = {
   card: 16,
   sheet: 22,
   pill: 100,
-  /** "Sunrise Cut" signature — the sharp corner paired with `card`/`button`
+  /** "Sunrise Cut" signature: the sharp corner paired with `card`/`button`
    * on the opposite corner to give every surface an asymmetric, angular
    * silhouette instead of a uniform rounded rectangle. */
   cut: 4,
 } as const;
 
 /**
- * "Sunrise Cut" motif — a repeating chevron pattern echoing the angular
+ * "Sunrise Cut" motif: a repeating chevron pattern echoing the angular
  * lines of the Africa+cart logo mark. Used sparingly as a thin section
  * divider or a low-opacity background watermark on brand moments only
  * (never behind dense data, per DESIGN_SPEC §7).
@@ -108,7 +88,7 @@ export const motif = {
 } as const;
 
 export const shadow = {
-  // Soft warm shadow — restrained (fintech, not glass) per §1.5
+  // Soft warm shadow, restrained (fintech, not glass) per §1.5
   card: {
     shadowColor: '#1C1917',
     shadowOffset: { width: 0, height: 12 },
@@ -164,7 +144,7 @@ export const layout = {
  * Raleway (per the brand spec: extrabold headings, medium body), loaded via
  * @expo-google-fonts/raleway in app/_layout.tsx. Applied explicitly on the
  * highest-visibility shared/brand text (screen headers, logo, buttons)
- * rather than every style in the app — React Native registers each static
+ * rather than every style in the app, because React Native registers each static
  * weight as its own font family name, so a blanket global override isn't a
  * simple one-line change the way it is on web.
  */

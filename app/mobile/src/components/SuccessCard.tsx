@@ -12,7 +12,7 @@ interface SuccessCardProps {
   children?: React.ReactNode;
 }
 
-/** Full celebratory confirmation state (password reset, account created, etc.) — a
+/** Full celebratory confirmation state (password reset, account created, etc.): a
  * big gold check badge in place of a plain inline banner. */
 export function SuccessCard({ title, message, actionLabel, onAction, children }: SuccessCardProps) {
   return (

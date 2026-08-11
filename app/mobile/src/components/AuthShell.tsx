@@ -22,7 +22,7 @@ interface AuthShellProps {
 }
 
 /** Shared navy backdrop (brand glows + chevron watermark) used by every
- * auth screen — welcome, sign in/up, OTP, forgot/reset password — so the
+ * auth screen: welcome, sign in/up, OTP, forgot/reset password, so the
  * whole flow reads as one continuous dark, branded moment. */
 export function AuthShell({ children, watermarkSize = 320, watermarkStyle }: AuthShellProps) {
   const insets = useSafeAreaInsets();

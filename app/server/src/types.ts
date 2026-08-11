@@ -1,4 +1,4 @@
-// Enum union types (SQLite stores these as String — see schema.prisma notes).
+// Enum union types (SQLite stores these as String: see schema.prisma notes).
 
 export type Role = "SUPER_ADMIN" | "TASK_MANAGER" | "HR_ADMIN" | "WORKER";
 export type Tier = "STUDENT" | "DISPATCH" | "REMOTE" | "PROMO" | "TRADE";

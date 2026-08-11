@@ -27,35 +27,35 @@ interface AuthState {
   token: string | null;
   /** True until we've checked secure storage on launch. */
   loading: boolean;
-  /** POST /api/auth/otp/request — returns {sent, devCode?} (devCode only in dev/sim). */
+  /** POST /api/auth/otp/request: returns {sent, devCode?} (devCode only in dev/sim). */
   requestOtp: (phone: string) => Promise<OtpRequestResponse>;
   /**
-   * POST /api/auth/otp/verify — stores token+user and returns whether this is a
+   * POST /api/auth/otp/verify: stores token+user and returns whether this is a
    * brand-new (just-created) worker, so the caller can branch to KYC vs tabs.
    */
   verifyOtp: (phone: string, code: string) => Promise<boolean>;
   /**
-   * POST /api/auth/login — email+password. Resolves to either an authenticated
+   * POST /api/auth/login: email+password. Resolves to either an authenticated
    * session (token+user stored) OR a 2FA challenge (no token stored yet).
    */
   loginPassword: (email: string, password: string) => Promise<LoginResult>;
-  /** POST /api/auth/2fa/verify — exchange a challenge+code; stores the session. */
+  /** POST /api/auth/2fa/verify: exchange a challenge+code; stores the session. */
   verifyTwoFactor: (challenge: string, code: string) => Promise<boolean>;
-  /** POST /api/auth/register — create a WORKER; stores session, returns isNewUser. */
+  /** POST /api/auth/register: create a WORKER; stores session, returns isNewUser. */
   register: (name: string, email: string, password: string) => Promise<boolean>;
-  /** PATCH /api/me — persist name/email to the backend AND the cached user. */
+  /** PATCH /api/me: persist name/email to the backend AND the cached user. */
   updateProfile: (patch: { name?: string; email?: string }) => Promise<void>;
-  /** POST /api/auth/google (context:"worker") — stores session, returns isNewUser. */
+  /** POST /api/auth/google (context:"worker"): stores session, returns isNewUser. */
   googleSignIn: (idToken: string) => Promise<boolean>;
-  /** POST /api/auth/password/forgot — neutral confirmation (+ devToken in sim). */
+  /** POST /api/auth/password/forgot: neutral confirmation (+ devToken in sim). */
   passwordForgot: (email: string) => Promise<PasswordForgotResponse>;
-  /** POST /api/auth/password/reset — set a new password from a reset token. */
+  /** POST /api/auth/password/reset: set a new password from a reset token. */
   passwordReset: (token: string, password: string) => Promise<void>;
-  /** POST /api/auth/2fa/setup (auth) — pending secret + QR for Profile→Security. */
+  /** POST /api/auth/2fa/setup (auth): pending secret + QR for Profile→Security. */
   twoFactorSetup: typeof api.twoFactorSetup;
-  /** POST /api/auth/2fa/enable (auth) — confirm; refreshes user.totpEnabled. */
+  /** POST /api/auth/2fa/enable (auth): confirm; refreshes user.totpEnabled. */
   twoFactorEnable: (code: string) => Promise<void>;
-  /** POST /api/auth/2fa/disable (auth) — turn off; refreshes user.totpEnabled. */
+  /** POST /api/auth/2fa/disable (auth): turn off; refreshes user.totpEnabled. */
   twoFactorDisable: (code: string) => Promise<void>;
   /** Merge fields into the cached user (e.g. after KYC submit) and re-persist. */
   updateUser: (patch: Partial<User>) => Promise<void>;
@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (email: string, password: string): Promise<LoginResult> => {
       const res = await api.login(email.trim(), password);
       if (isTwoFactorRequired(res)) {
-        // 2FA challenge — do NOT store a token yet.
+        // 2FA challenge: do NOT store a token yet.
         return { kind: '2fa', challenge: res.challenge };
       }
       await applySession(res);

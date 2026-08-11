@@ -1,7 +1,7 @@
 # Smile ID Setup (Afrizone Part Time)
 
-This wires automated KYC — **Document Verification** (ID document + selfie,
-biometric face match, document authenticity check) — into the worker onboarding
+This wires automated KYC: **Document Verification** (ID document + selfie,
+biometric face match, document authenticity check): into the worker onboarding
 flow, on top of the existing manual admin review.
 
 Everything is env-gated: with no partner id / API key, KYC works exactly as it
@@ -10,7 +10,7 @@ tier). With both set, submissions also run through Smile ID automatically:
 
 - A **rejected** result moves the worker straight to `kycStatus: REJECTED`,
   with the real reason from Smile shown in the app (no more generic message).
-- An **approved** result moves the worker to `kycStatus: VERIFIED` — identity
+- An **approved** result moves the worker to `kycStatus: VERIFIED`: identity
   confirmed, but an admin still makes the final `TIER_APPROVED` call via the
   existing **Workers → KYC** review flow in web-admin. Nothing here removes
   the human in the loop.
@@ -21,10 +21,10 @@ tier). With both set, submissions also run through Smile ID automatically:
 
 1. Go to <https://portal.usesmileid.com/> and sign up (or log in).
 2. Your **Partner ID** is shown in the left-hand menu of the dashboard.
-3. Under **Developer → API Key**, click **Generate New API Key** and copy it —
+3. Under **Developer → API Key**, click **Generate New API Key** and copy it:
    make sure you're in the environment (Sandbox vs Live) you intend to use.
 
-Sandbox is free and requires no approval — it's what you want for local dev
+Sandbox is free and requires no approval: it's what you want for local dev
 and demoing. Live requires completing Smile's own KYC on your business before
 it processes real documents.
 
@@ -40,7 +40,7 @@ SMILE_SID_SERVER=0        # 0 = sandbox, 1 = production
 
 Restart the server after changing `.env`.
 
-That's it for local testing — `POST /api/me/kyc/submit` will call Smile ID
+That's it for local testing: `POST /api/me/kyc/submit` will call Smile ID
 synchronously (`return_job_status: true`) and get a machine result back
 immediately, no public URL required.
 
@@ -57,13 +57,13 @@ SMILE_CALLBACK_URL=https://<your-public-url>/api/webhooks/smile
 Locally this means tunnelling your dev server (e.g. `ngrok http 4000`) and
 setting `SMILE_CALLBACK_URL` to the tunnel URL + `/api/webhooks/smile`. In
 production, point it at your real domain. Without this set, you'll still get
-the synchronous machine result — fine for demoing the golden path, just not
+the synchronous machine result: fine for demoing the golden path, just not
 authoritative for jobs that need review.
 
 ## 4. Test
 
 - **Sandbox behaviour** (documented by Smile): the selfie is compared to the
-  photo on the ID — if they don't visually match, the job is rejected; the
+  photo on the ID: if they don't visually match, the job is rejected; the
   document's authenticity is never actually checked in sandbox (always
   "valid"); and `id_type`/`country` aren't validated against real support
   lists. So in sandbox, upload the *same face* for both the ID photo and the
@@ -80,5 +80,5 @@ authoritative for jobs that need review.
 
 Document Verification (`job_type: 6`) recognises these `id_type` keywords for
 Nigeria (see [supported documents](https://docs.usesmileid.com/supported-id-types/for-individuals-kyc/using-document-image/regions/africa)):
-`IDENTITY_CARD` (National ID), `PASSPORT`, `DRIVERS_LICENSE`, `VOTER_ID` — these
+`IDENTITY_CARD` (National ID), `PASSPORT`, `DRIVERS_LICENSE`, `VOTER_ID`: these
 are the four exposed in the mobile ID-type picker (`src/services/smileIdentity.ts` → `NG_ID_TYPES`).

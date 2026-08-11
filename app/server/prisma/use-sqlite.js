@@ -8,7 +8,7 @@ const schemaPath = p.join(__dirname, 'schema.prisma');
 const schema = fs.readFileSync(schemaPath, 'utf8');
 
 // See use-postgres.js for why this is anchored to start-of-line rather than
-// a bare string/regex search — the instructional comment above the real
+// a bare string/regex search: the instructional comment above the real
 // datasource block also contains example provider strings.
 const blockRegex = /^datasource\s+db\s*\{[^}]*\}/m;
 const blockMatch = schema.match(blockRegex);

@@ -4,7 +4,7 @@ import { requireAuth, requireRole, AuthedRequest } from "../auth";
 
 const router = Router();
 
-// POST /api/workers/:id/rate — admin rates a worker for a completed task.
+// POST /api/workers/:id/rate: admin rates a worker for a completed task.
 // body: { taskId, score (1–5), note? }
 // Upserts (one rating per worker per task); recalculates user.rating as average.
 router.post(

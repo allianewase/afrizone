@@ -85,7 +85,7 @@ describe("wallet withdrawals", () => {
     expect(withdraw.body.status).toBe("PROCESSING");
     expect(withdraw.body.simulated).toBe(true);
 
-    // Available balance is now fully committed — a second withdrawal should fail.
+    // Available balance is now fully committed: a second withdrawal should fail.
     const again = await request(app)
       .post("/api/wallet/withdraw")
       .set("Authorization", `Bearer ${token}`)

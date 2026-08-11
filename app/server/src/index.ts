@@ -33,12 +33,12 @@ const PORT = Number(process.env.PORT) || 4000;
 
 app.set("trust proxy", 1);
 // crossOriginResourcePolicy relaxed to "cross-origin": this API is deliberately
-// consumed from other origins (web-admin, mobile web preview) — including
+// consumed from other origins (web-admin, mobile web preview), including
 // /uploads, which admin web loads directly in <img> tags. helmet's default
 // "same-origin" policy would silently block those image loads.
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
-// CORS — Vite admin dev server, Expo web preview (8081/19006), + same-origin.
+// CORS: Vite admin dev server, Expo web preview (8081/19006), + same-origin.
 const corsOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173,http://localhost:4000,http://localhost:8081,http://localhost:19006")
   .split(",")
   .map((o) => o.trim())
@@ -49,16 +49,16 @@ app.use(
     credentials: true,
   })
 );
-// Paystack webhook needs the RAW body for HMAC signature verification —
+// Paystack webhook needs the RAW body for HMAC signature verification:
 // mount the raw parser on this path BEFORE the global JSON parser.
 app.use("/api/webhooks/paystack", express.raw({ type: "*/*" }));
 app.use(express.json());
 
-// Rate limiting is disabled under the automated test suite (NODE_ENV=test) —
+// Rate limiting is disabled under the automated test suite (NODE_ENV=test):
 // tests legitimately fire many requests at /api/auth in a short window, and
 // the limiter's own behaviour is covered separately, not via the app tests.
 if (process.env.NODE_ENV !== "test") {
-  // General API rate limit — generous, just a backstop against abuse/scraping.
+  // General API rate limit, generous, just a backstop against abuse/scraping.
   app.use(
     "/api",
     rateLimit({
@@ -68,7 +68,7 @@ if (process.env.NODE_ENV !== "test") {
       legacyHeaders: false,
     })
   );
-  // Tighter limit on auth endpoints (login/register/otp/google/password/2fa) —
+  // Tighter limit on auth endpoints (login/register/otp/google/password/2fa):
   // these are the brute-force/credential-stuffing targets.
   app.use(
     "/api/auth",
@@ -99,7 +99,7 @@ app.use("/api/candidates", candidatesRouter);
 app.use("/api/reports", reportsRouter);
 app.use("/api/settings", settingsRouter);
 
-// v3 — worker-facing (mobile app)
+// v3: worker-facing (mobile app)
 app.use("/api/me", meRouter);
 app.use("/api/me/kyc/documents", kycDocumentsRouter);
 app.use("/api/clock", clockRouter);
@@ -119,7 +119,7 @@ app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: "Not found" });
 });
 
-// Error handler — always returns { error } shape.
+// Error handler, always returns { error } shape.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err);
@@ -127,7 +127,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.status(status).json({ error: err.message || "Internal server error" });
 });
 
-// Only auto-listen when this file is run directly (node/ts-node-dev) — not
+// Only auto-listen when this file is run directly (node/ts-node-dev), not
 // when imported as a module (e.g. by the test suite via supertest).
 if (require.main === module) {
   app.listen(PORT, () => {

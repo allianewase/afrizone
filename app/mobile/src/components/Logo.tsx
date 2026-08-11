@@ -14,7 +14,7 @@ interface LogoProps {
   tone?: Tone;
 }
 
-// Hand-drawn (not auto-traced) simplified Africa silhouette — straight-line
+// Hand-drawn (not auto-traced) simplified Africa silhouette: straight-line
 // points only, so the path data stays easy to verify and adjust. Includes
 // the Horn of Africa (right) and West Africa bulge (left) as the two key
 // recognizable features, plus a small separate Madagascar blob.
@@ -23,7 +23,7 @@ const AFRICA_PATH =
 const MADAGASCAR_PATH = 'M80 78 Q86 82 84 90 Q80 95 77 89 Q75 82 80 78 Z';
 
 /**
- * Afrizone logo mark — a Sea Buckthorn-orange Africa silhouette with a Deep
+ * Afrizone logo mark: a Sea Buckthorn-orange Africa silhouette with a Deep
  * Navy Blue shopping-cart glyph, per the official Afrizonemart.com logo
  * redesign spec. `markTone="reversed"` swaps the continent to white for use
  * on solid orange/navy backgrounds, where the default orange fill would

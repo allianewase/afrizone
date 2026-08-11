@@ -1,9 +1,9 @@
 /**
- * Expo Push Notification Service — best-effort delivery via https://exp.host.
+ * Expo Push Notification Service: best-effort delivery via https://exp.host.
  * Routes through FCM (Android) and APNs (iOS) automatically.
  *
  * Env-driven: always active when a valid ExponentPushToken is stored.
- * No Firebase project credentials needed — Expo's relay handles delivery.
+ * No Firebase project credentials needed: Expo's relay handles delivery.
  * In production, swap for direct FCM/APNs or Expo's enhanced push service.
  */
 
@@ -21,7 +21,7 @@ export interface PushMessage {
 /**
  * Fire-and-forget push to one or more Expo push tokens.
  * Invalid tokens (non-Expo, empty) are silently dropped.
- * Network failures are logged but never thrown — push is always best-effort.
+ * Network failures are logged but never thrown: push is always best-effort.
  */
 export function sendPush(messages: PushMessage[]): void {
   const valid = messages.filter(

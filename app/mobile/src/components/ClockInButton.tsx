@@ -66,7 +66,7 @@ function GeofencePill({ state, blocked }: { state: GeofenceState; blocked: boole
       : state === 'syncing'
         ? { word: 'Checking location…', fg: colors.indigo, bg: colors.indigoSoft, icon: 'globe' as const }
         : {
-            word: blocked ? 'Outside zone — blocked' : 'Outside work zone',
+            word: blocked ? 'Outside zone: blocked' : 'Outside work zone',
             fg: colors.amber,
             bg: colors.amberSoft,
             icon: 'alert' as const,

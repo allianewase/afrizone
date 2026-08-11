@@ -52,7 +52,7 @@ export default function ResetScreen() {
         {done ? (
           <SuccessCard
             title="Password changed!"
-            message="No hassle anymore — you can now sign in with your new password."
+            message="No hassle anymore: you can now sign in with your new password."
             actionLabel="Back to sign in"
             onAction={() => router.replace('/(auth)/login')}
           />

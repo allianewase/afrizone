@@ -7,7 +7,7 @@ import { GOOGLE_CLIENT_IDS } from '../api/config';
 WebBrowser.maybeCompleteAuthSession();
 
 export interface GoogleAuthHook {
-  /** True when at least one platform Google client id is set — otherwise gate the UI. */
+  /** True when at least one platform Google client id is set: otherwise gate the UI. */
   configured: boolean;
   /** True while the request object is still being prepared. */
   ready: boolean;
@@ -20,7 +20,7 @@ export interface GoogleAuthHook {
  * env-driven from the per-platform GOOGLE_CLIENT_IDS (AUTH_FLOW §A2). The
  * provider picks the right client id for the running platform (web/iOS/Android).
  * When ALL ids are ABSENT, `configured` is false so the caller renders a disabled
- * button with a "Google sign-in not configured" note (mirrors web-admin) — never
+ * button with a "Google sign-in not configured" note (mirrors web-admin): never
  * crashes.
  *
  * On success it returns the Google ID token, which the caller hands to

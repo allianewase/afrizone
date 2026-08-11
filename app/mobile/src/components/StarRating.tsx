@@ -17,7 +17,7 @@ interface StarRatingProps {
 /**
  * Renders a row of 1–5 stars. Filled stars use `color` (gold by default);
  * empty stars use a faint stroke only. Supports fractional scores via a
- * half-filled middle star is not implemented — fractional scores are rounded
+ * half-filled middle star is not implemented: fractional scores are rounded
  * to the nearest whole star for display.
  */
 export function StarRating({

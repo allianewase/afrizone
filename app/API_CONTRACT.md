@@ -1,9 +1,9 @@
-# Afrizone Part Time — API Contract v1 (MVP slice)
+# Afrizone Part Time: API Contract v1 (MVP slice)
 
 Shared source of truth for the backend (`server/`) and admin frontend (`web-admin/`).
 Backend runs on **http://localhost:4000**, all routes prefixed **`/api`**. Frontend dev server proxies `/api` → `:4000`.
 
-Auth: `Authorization: Bearer <jwt>`. Money is in **kobo** is NOT used — all amounts are **whole Naira integers** (e.g. `18000` = ₦18,000). WHT default rate **5%** (`0.05`), configurable per task category later. `net = round(gross - gross*whtRate)`.
+Auth: `Authorization: Bearer <jwt>`. Money is in **kobo** is NOT used: all amounts are **whole Naira integers** (e.g. `18000` = ₦18,000). WHT default rate **5%** (`0.05`), configurable per task category later. `net = round(gross - gross*whtRate)`.
 
 ---
 
@@ -18,7 +18,7 @@ Auth: `Authorization: Bearer <jwt>`. Money is in **kobo** is NOT used — all am
 - `TimesheetStatus`: `SUBMITTED | APPROVED | DISPUTED`
 - `PaymentStatus`: `PENDING | APPROVED | RELEASED | DISPUTED`
 
-## Entities (Prisma models — backend owns exact schema)
+## Entities (Prisma models: backend owns exact schema)
 - **User**: `id, name, email, passwordHash, role, tiers (Tier[]), kycStatus, location, rating (float?), completedCount (int), bankMasked (string?), createdAt`
 - **Task**: `id, title, description, category, tier, payModel, rate (int?), budget (int?), startDate, endDate, locationType, address?, geofenceRadius (int default 100), slots (int), status, deadline, createdById, createdAt`
 - **Application**: `id, taskId, workerId, pitch?, status, reason?, createdAt`
@@ -91,12 +91,12 @@ Backend enables CORS for `http://localhost:5173` (Vite dev) and same-origin.
 
 ## Seed data (must match prototype demo)
 Workers: Amaka Obi (PROMO, VERIFIED, 47, 4.9), Tunde Bello (DISPATCH, VERIFIED, 89, 4.8), Ngozi Eze (REMOTE, PENDING, 12, 4.7), Ibrahim Kola (DISPATCH, VERIFIED), Funke Ade (PROMO).
-Tasks: "Same-day parcel runs — Yaba" (DISPATCH, HOURLY ₦2500), "Weekend mall activation — Ikeja" (PROMO, FIXED ₦18000, 5 slots), "Product data cleanup — 20h" (REMOTE, HOURLY ₦1800), "AC servicing — Lekki" (TRADE, FIXED ₦45000), "Campus survey — UNILAG" (STUDENT, HOURLY ₦1200, 10 slots).
+Tasks: "Same-day parcel runs: Yaba" (DISPATCH, HOURLY ₦2500), "Weekend mall activation: Ikeja" (PROMO, FIXED ₦18000, 5 slots), "Product data cleanup: 20h" (REMOTE, HOURLY ₦1800), "AC servicing: Lekki" (TRADE, FIXED ₦45000), "Campus survey: UNILAG" (STUDENT, HOURLY ₦1200, 10 slots).
 Payments: Amaka ₦18,000 (APPROVED), Tunde ₦12,500 (review/PENDING), Ngozi ₦36,000 (APPROVED), Ibrahim ₦9,000 (APPROVED), Funke ₦24,000 (DISPUTED). Net = gross − 5% WHT.
 
 ---
 
-# API Contract v2 — Hiring, Reports, Settings
+# API Contract v2: Hiring, Reports, Settings
 
 ## New enums
 - `EmploymentType`: `FULL_TIME | PART_TIME | CONTRACT`
@@ -109,7 +109,7 @@ Payments: Amaka ₦18,000 (APPROVED), Tunde ₦12,500 (review/PENDING), Ngozi �
 - **TaxRate**: `id, jurisdiction (e.g. "Federal", "Lagos"), category (e.g. "Services", "default"), whtRate (float), vatRate (float), active (bool default true)`
 - **Category** (task categories config): `id, name, tier (Tier), defaultPayModel (PayModel), active (bool default true)`
 
-(Settings templates can be a simple `Setting` key/value store: `Setting { key (unique), value (String/JSON) }` — used for notification/contract templates.)
+(Settings templates can be a simple `Setting` key/value store: `Setting { key (unique), value (String/JSON) }`: used for notification/contract templates.)
 
 ## Hiring endpoints
 - `GET /api/jobs` → `Job[]` augmented with `candidateCount (int)`
@@ -118,7 +118,7 @@ Payments: Amaka ₦18,000 (APPROVED), Tunde ₦12,500 (review/PENDING), Ngozi �
 - `PATCH /api/jobs/:id` → partial update (e.g. status) → `Job`
 - `GET /api/candidates?jobId=` → `JobApplication[]` joined with `job {id,title}`. The frontend groups these into a kanban by `stage`.
 - `POST /api/candidates` → body (jobId, name, email, phone?, cvNote?) → `201 JobApplication` (stage SCREENING)
-- `POST /api/candidates/:id/move` → body `{stage: Stage}` → `JobApplication`; writes AuditLog (`"candidate.move"`). (This is where status-emails would fire — model only.)
+- `POST /api/candidates/:id/move` → body `{stage: Stage}` → `JobApplication`; writes AuditLog (`"candidate.move"`). (This is where status-emails would fire: model only.)
 
 ## Reports endpoints
 - `GET /api/reports/summary` →
@@ -133,7 +133,7 @@ Payments: Amaka ₦18,000 (APPROVED), Tunde ₦12,500 (review/PENDING), Ngozi �
   "topCategories": [{"label":"Promo","tasks":18,"spend":540000}, ...]
 }
 ```
-Compute `tax.whtCollected`, `payrollEquivalent`, and `spendByCategory` from real Payment rows (status RELEASED + APPROVED). Monthly/trend arrays may be illustrative if history is thin — return at least the current month from real data.
+Compute `tax.whtCollected`, `payrollEquivalent`, and `spendByCategory` from real Payment rows (status RELEASED + APPROVED). Monthly/trend arrays may be illustrative if history is thin: return at least the current month from real data.
 
 ## Settings endpoints
 - `GET /api/settings/tax-rates` → `TaxRate[]`
@@ -149,16 +149,16 @@ All v2 mutating routes require auth; tax-rate / category / template writes requi
 
 ## v2 seed data
 - **Jobs**: "Operations Associate" (Logistics, FULL_TIME, ₦250k–₦400k), "Field Marketing Lead" (Marketing, FULL_TIME, ₦350k–₦500k), "Customer Support (Remote)" (Support, PART_TIME, ₦120k–₦180k).
-- **Candidates** (spread across stages): ~8 across the 3 jobs — e.g. SCREENING×3, INTERVIEW×2, OFFER×1, HIRED×1, REJECTED×1, with Nigerian names.
+- **Candidates** (spread across stages): ~8 across the 3 jobs: e.g. SCREENING×3, INTERVIEW×2, OFFER×1, HIRED×1, REJECTED×1, with Nigerian names.
 - **TaxRates**: Federal · Services · WHT 5% · VAT 7.5% (active); Lagos · default · WHT 5% · VAT 0% (active).
-- **Categories**: Dispatch (DISPATCH, HOURLY), Promo (PROMO, FIXED), Remote (REMOTE, HOURLY), Trade (TRADE, FIXED), Student (STUDENT, HOURLY) — all active.
+- **Categories**: Dispatch (DISPATCH, HOURLY), Promo (PROMO, FIXED), Remote (REMOTE, HOURLY), Trade (TRADE, FIXED), Student (STUDENT, HOURLY): all active.
 - **Templates**: keys `contract.default`, `notify.application_approved`, `notify.payment_available` with short placeholder strings.
 
 ---
 
-# API Contract v3 — Worker-facing endpoints (mobile app)
+# API Contract v3: Worker-facing endpoints (mobile app)
 
-All routes here are **worker-scoped**: `requireAuth`, and the acting worker is the JWT subject (`req.user.sub`) — never trust a workerId from the body for "me" data. The mobile app logs in via the existing `POST /api/auth/login` (seeded workers: `<first>.<last>@afrizone.work` / `worker123`).
+All routes here are **worker-scoped**: `requireAuth`, and the acting worker is the JWT subject (`req.user.sub`). Never trust a workerId from the body for "me" data. The mobile app logs in via the existing `POST /api/auth/login` (seeded workers: `<first>.<last>@afrizone.work` / `worker123`).
 
 ## New enums
 - `ClockType`: `IN | OUT`
@@ -176,7 +176,7 @@ All routes here are **worker-scoped**: `requireAuth`, and the acting worker is t
 - `POST /api/applications` → body `{taskId, pitch?}` (worker apply). Guards (return 400/409 with `{error}`): task must exist & be OPEN, deadline not passed, worker's `tiers` must include `task.tier`, no duplicate application by this worker for this task. → `201 Application`.
 
 ## Clock in/out (field tasks)
-- `POST /api/clock` → body `{taskId, type:"IN"|"OUT", lat?, lng?}`. Compute `withinFence`: if the task is PHYSICAL and lat/lng given, true when within `task.geofenceRadius` metres of the task location (you may store task lat/lng on Task or treat any provided coords as in-fence for the demo — document the choice). Persist a ClockEvent. → `{event, clockedIn: boolean, elapsedSeconds}` where clockedIn reflects the latest event for that task.
+- `POST /api/clock` → body `{taskId, type:"IN"|"OUT", lat?, lng?}`. Compute `withinFence`: if the task is PHYSICAL and lat/lng given, true when within `task.geofenceRadius` metres of the task location (you may store task lat/lng on Task or treat any provided coords as in-fence for the demo: document the choice). Persist a ClockEvent. → `{event, clockedIn: boolean, elapsedSeconds}` where clockedIn reflects the latest event for that task.
 - `GET /api/me/clock/:taskId` → `{clockedIn, lastEventAt, elapsedSeconds}` for resuming the active-task screen.
 
 ## Timesheets (worker submit)
@@ -192,41 +192,41 @@ All routes here are **worker-scoped**: `requireAuth`, and the acting worker is t
 - `POST /api/contracts/:id/sign` → marks SIGNED + `signedAt` (must belong to the authed worker) → `Contract`.
 - **Tie-in:** when an admin approves an application (`POST /api/applications/:id/approve`), also auto-create a `Contract` (PENDING_SIGNATURE) for that worker+task if none exists. "Active" in the app = approved **and** contract SIGNED.
 
-## KYC (worker submit — demo-simple)
+## KYC (worker submit: demo-simple)
 - `POST /api/me/kyc/submit` → body `{tin?, bankMasked?, tier?}`. Stores provided fields; if `tier` given and not already present, append to `tiers`. Sets `kycStatus = PENDING`. → updated `GET /api/me` shape. (Admin still finalises via `POST /api/workers/:id/kyc`.)
 
 ## v3 seed additions (so the mobile app shows real data on first run)
-Give **Amaka Obi** a live worker journey: an **APPROVED** application on "Weekend mall activation — Ikeja" with a **PENDING_SIGNATURE** Contract; an **APPLIED** application on another task; one **IN** ClockEvent (within fence) on an active task; one **SUBMITTED** timesheet; keep her existing ₦18,000 APPROVED Payment; and one example **Withdrawal** (₦10,000, PROCESSING). Other workers can stay as-is.
+Give **Amaka Obi** a live worker journey: an **APPROVED** application on "Weekend mall activation: Ikeja" with a **PENDING_SIGNATURE** Contract; an **APPLIED** application on another task; one **IN** ClockEvent (within fence) on an active task; one **SUBMITTED** timesheet; keep her existing ₦18,000 APPROVED Payment; and one example **Withdrawal** (₦10,000, PROCESSING). Other workers can stay as-is.
 
 ---
 
-# Payments provider — Paystack Transfers (payouts)
+# Payments provider: Paystack Transfers (payouts)
 
 Env-driven. `PAYSTACK_SECRET` blank → **SIMULATED** mode (no money moves, withdrawals stay PROCESSING). Set the secret → **LIVE**: withdrawal creates a Paystack transfer recipient + initiates a transfer; the webhook settles it.
 
 - `WithdrawalStatus` now `PROCESSING | PAID | FAILED`.
 - `Withdrawal` gains `provider ("paystack"|"simulated")`, `reference` (our idempotency key), `providerRef` (Paystack transfer_code), `failureReason?`.
 - `User` gains `bankAccountNumber?`, `bankCode?`, `bankName?` (required for live transfers; demo NUBAN seeded on Amaka).
-- `POST /api/wallet/withdraw` — unchanged request `{amount}`. In live mode without payout bank details → `400`. On provider error → withdrawal FAILED + `502`. Otherwise `201` Withdrawal (PROCESSING; `simulated:true` flag in sim mode).
-- `POST /api/webhooks/paystack` — verifies `x-paystack-signature` (HMAC-SHA512 over raw body); on `transfer.success` → PAID, on `transfer.failed`/`transfer.reversed` → FAILED. Always `200`. Set this URL in the Paystack dashboard (use an ngrok/tunnel in dev).
-- `POST /api/wallet/dev/settle` — **dev only** (sim mode): flips the caller's PROCESSING withdrawals to PAID so the full flow can be demoed without webhooks. Returns `403` when live.
+- `POST /api/wallet/withdraw`: unchanged request `{amount}`. In live mode without payout bank details → `400`. On provider error → withdrawal FAILED + `502`. Otherwise `201` Withdrawal (PROCESSING; `simulated:true` flag in sim mode).
+- `POST /api/webhooks/paystack`: verifies `x-paystack-signature` (HMAC-SHA512 over raw body); on `transfer.success` → PAID, on `transfer.failed`/`transfer.reversed` → FAILED. Always `200`. Set this URL in the Paystack dashboard (use an ngrok/tunnel in dev).
+- `POST /api/wallet/dev/settle`: **dev only** (sim mode): flips the caller's PROCESSING withdrawals to PAID so the full flow can be demoed without webhooks. Returns `403` when live.
 
-# Platform funding (Paystack inbound — Afrizone Mart funding the wallet)
+# Platform funding (Paystack inbound: Afrizone Mart funding the wallet)
 
-Env-driven, same `PAYSTACK_SECRET` gate as payouts. `PAYSTACK_SECRET` blank → **SIMULATED** (no real charge, `Funding` stays PENDING). Set the secret → **LIVE**: admin gets redirected to a real Paystack hosted-checkout page; the webhook settles it. Informational only for now — the platform balance is not used to gate withdrawal approval.
+Env-driven, same `PAYSTACK_SECRET` gate as payouts. `PAYSTACK_SECRET` blank → **SIMULATED** (no real charge, `Funding` stays PENDING). Set the secret → **LIVE**: admin gets redirected to a real Paystack hosted-checkout page; the webhook settles it. Informational only for now: the platform balance is not used to gate withdrawal approval.
 
 - `Funding` model: `id, amount, status (PENDING|SUCCESS|FAILED), provider ("paystack"|"simulated"), reference, providerRef?, initiatedBy, createdAt`.
 - Platform balance is derived, not stored: `Σ SUCCESS Funding.amount − Σ non-failed Withdrawal.amount`.
 - `GET /api/admin/funding/balance` (SUPER_ADMIN) → `{balance}`.
 - `GET /api/admin/funding` (SUPER_ADMIN) → funding history, newest first, with `admin {id, name}`.
-- `POST /api/admin/funding/initialize` (SUPER_ADMIN) — body `{amount}`. Creates a PENDING Funding row. Live mode also returns `authorizationUrl` (Paystack hosted checkout) for the admin web to redirect to; sim mode returns `{simulated: true}`.
-- `POST /api/webhooks/paystack` — now also handles `charge.success`/`charge.failed`, matched by `reference` (or `providerRef`/access_code), flipping the matching `Funding` to SUCCESS/FAILED.
-- `POST /api/admin/funding/dev/settle` — **dev only** (sim mode): flips all PENDING fundings to SUCCESS. Returns `403` when live.
+- `POST /api/admin/funding/initialize` (SUPER_ADMIN): body `{amount}`. Creates a PENDING Funding row. Live mode also returns `authorizationUrl` (Paystack hosted checkout) for the admin web to redirect to; sim mode returns `{simulated: true}`.
+- `POST /api/webhooks/paystack`: now also handles `charge.success`/`charge.failed`, matched by `reference` (or `providerRef`/access_code), flipping the matching `Funding` to SUCCESS/FAILED.
+- `POST /api/admin/funding/dev/settle`: **dev only** (sim mode): flips all PENDING fundings to SUCCESS. Returns `403` when live.
 
 # Contract e-signature (typed-name)
 
-`Contract` gains `signerName?, signerIp?, signatureHash?` alongside the existing `status`/`signedAt`. Signing is a typed full-name signature (no drawn/image capture) — the worker types their legal name, which is stored verbatim along with the requesting IP and a SHA-256 hash of `${contractId}:${workerId}:${signerName}:${signedAt.toISOString()}` for tamper-evidence.
+`Contract` gains `signerName?, signerIp?, signatureHash?` alongside the existing `status`/`signedAt`. Signing is a typed full-name signature (no drawn/image capture): the worker types their legal name, which is stored verbatim along with the requesting IP and a SHA-256 hash of `${contractId}:${workerId}:${signerName}:${signedAt.toISOString()}` for tamper-evidence.
 
-- `POST /api/contracts/:id/sign` — body `{signerName}` (required, ≥2 chars after trim, else `400`). Sets `status: SIGNED`, `signedAt`, `signerName`, `signerIp`, `signatureHash`. Ownership-checked; `400` if already signed.
+- `POST /api/contracts/:id/sign`: body `{signerName}` (required, ≥2 chars after trim, else `400`). Sets `status: SIGNED`, `signedAt`, `signerName`, `signerIp`, `signatureHash`. Ownership-checked; `400` if already signed.
 - The rendered "Entire Agreement" section now reads "Digitally signed by `{signerName}` on `{date}`" (falls back to the worker's profile name if `signerName` is absent, e.g. legacy contracts signed before this change).
-- No admin-web contract viewer exists — out of scope for this pass.
+- No admin-web contract viewer exists: out of scope for this pass.

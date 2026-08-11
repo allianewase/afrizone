@@ -287,7 +287,7 @@ function renderGlyph(
         </>
       );
     case 'star':
-      // Five-pointed star — filled when used with fill={color} override on the component.
+      // Five-pointed star: filled when used with fill={color} override on the component.
       return (
         <Path
           d="M12 2l2.9 6.3 6.8.6-5 4.7 1.5 6.8L12 17l-6.2 3.4 1.5-6.8-5-4.7 6.8-.6Z"

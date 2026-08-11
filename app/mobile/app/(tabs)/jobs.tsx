@@ -44,7 +44,7 @@ export default function JobsScreen() {
       {jobs.loading && !jobs.data ? (
         <LoadingState label="Loading openings…" />
       ) : open.length === 0 ? (
-        <EmptyState icon="briefcase" title="No openings right now" message="Check back soon — new roles are posted weekly." />
+        <EmptyState icon="briefcase" title="No openings right now" message="Check back soon: new roles are posted weekly." />
       ) : (
         <View style={{ gap: spacing.md }}>
           {open.map((j) => (

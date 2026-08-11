@@ -65,7 +65,7 @@ router.get("/summary", requireAuth, async (_req: AuthedRequest, res: Response) =
     .map(([label, amount]) => ({ label, tasks: taskCountByCategory.get(label) || 0, spend: amount }))
     .sort((a, b) => b.spend - a.spend);
 
-  // Spend by month — last 6 months, fully derived from payment createdAt
+  // Spend by month: last 6 months, fully derived from payment createdAt
   const now = new Date();
   const spendByMonth = [];
   for (let i = 5; i >= 0; i--) {
@@ -77,7 +77,7 @@ router.get("/summary", requireAuth, async (_req: AuthedRequest, res: Response) =
     spendByMonth.push({ month: MONTHS[d.getMonth()], monthStart: monthKey(d), spend });
   }
 
-  // Fill-rate trend — last 6 months, per task-creation cohort
+  // Fill-rate trend: last 6 months, per task-creation cohort
   // Rate = tasks created that month that are now FILLED or CLOSED / all tasks created that month.
   const fillRateTrend = [];
   for (let i = 5; i >= 0; i--) {
@@ -89,7 +89,7 @@ router.get("/summary", requireAuth, async (_req: AuthedRequest, res: Response) =
     fillRateTrend.push({ month: MONTHS[d.getMonth()], monthStart: monthKey(d), rate });
   }
 
-  // Spend by department — derived from categories (no department field in v1)
+  // Spend by department: derived from categories (no department field in v1)
   const spendByDepartment = spendByCategory.map(({ label, amount }) => ({
     label,
     amount,

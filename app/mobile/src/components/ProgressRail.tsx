@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, type, spacing } from '../theme';
 
-/** Stepper progress rail — "3 of 9" + segmented bar (KYC flow §3.1). */
+/** Stepper progress rail: "3 of 9" + segmented bar (KYC flow §3.1). */
 export function ProgressRail({
   current,
   total,

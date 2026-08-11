@@ -183,7 +183,7 @@ function NewTaskModal({
               id="t-title"
               value={form.title}
               onChange={(e) => set('title', e.target.value)}
-              placeholder="Same-day parcel runs — Yaba"
+              placeholder="Same-day parcel runs, Yaba"
               required
             />
           </div>
@@ -419,7 +419,7 @@ export default function Tasks() {
           <EmptyState
             icon="tasks"
             title="No tasks yet"
-            sub="Post your first task — hourly or fixed, with an optional geofence."
+            sub="Post your first task: hourly or fixed, with an optional geofence."
             action={
               <Button variant="primary" size="sm" icon="plus" onClick={() => setModalOpen(true)}>
                 New task

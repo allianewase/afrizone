@@ -21,7 +21,7 @@ export interface JwtPayload {
 }
 
 // Short-lived token issued after password step when 2FA is required. Carries no
-// role — it only authorises the /2fa/verify exchange, never a normal request.
+// role: it only authorises the /2fa/verify exchange, never a normal request.
 export interface ChallengePayload {
   sub: string; // user id
   twofa: true;

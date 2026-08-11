@@ -5,8 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radii, spacing, shadow } from '../theme';
 
 /**
- * Frosted-glass surface — reserved for "brand moment" screens (KYC stepper)
- * per DESIGN_SPEC.md §1.5 ("restrained — this is fintech, not glass" is the
+ * Frosted-glass surface: reserved for "brand moment" screens (KYC stepper)
+ * per DESIGN_SPEC.md §1.5 ("restrained: this is fintech, not glass" is the
  * default; this is the documented escape hatch, see Card.tsx). Built on the
  * same warm sand/clay/gold palette so it reads as Afrizone-glass, not
  * generic frosted-white.
@@ -74,7 +74,7 @@ export function GlassCard({
 }
 
 /**
- * Soft blurred brand-color glows behind a glass screen's content — the
+ * Soft blurred brand-color glows behind a glass screen's content: the
  * "Adinkra motif at low opacity" principle (§1.5), rendered as gradient
  * blobs instead of geometry. Sits behind the ScrollView; pointerEvents none.
  */

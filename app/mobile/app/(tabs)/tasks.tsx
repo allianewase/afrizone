@@ -81,7 +81,7 @@ export default function MyTasksScreen() {
             seg === 'Applied'
               ? 'Browse Home to find and apply to tasks.'
               : seg === 'Active'
-                ? 'Approved tasks will show here — clock in from the task.'
+                ? 'Approved tasks will show here: clock in from the task.'
                 : 'Completed and closed tasks land here.'
           }
         />

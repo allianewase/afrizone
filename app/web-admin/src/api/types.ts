@@ -175,7 +175,7 @@ export interface AuthSuccess {
 /** Returned by /auth/login when the account has 2FA enabled. */
 export interface TwoFactorRequired {
   requires2fa: true
-  /** short-lived (~5 min) 2FA challenge JWT — not a full session token */
+  /** short-lived (~5 min) 2FA challenge JWT: not a full session token */
   challenge: string
 }
 
@@ -186,7 +186,7 @@ export function isTwoFactorRequired(r: LoginResponse): r is TwoFactorRequired {
   return (r as TwoFactorRequired).requires2fa === true
 }
 
-/** /auth/2fa/setup — pending secret + provisioning material. */
+/** /auth/2fa/setup: pending secret + provisioning material. */
 export interface TwoFactorSetup {
   otpauthUrl: string
   qrDataUrl: string
@@ -198,7 +198,7 @@ export interface TwoFactorStatus {
   enabled: boolean
 }
 
-/** /auth/password/forgot — never enumerates accounts. */
+/** /auth/password/forgot: never enumerates accounts. */
 export interface PasswordForgotResponse {
   sent: true
   /** only present in sim/dev mode */

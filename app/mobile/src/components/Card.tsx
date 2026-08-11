@@ -7,11 +7,11 @@ import { colors, radii, spacing, shadow } from '../theme';
  * Card surface. DESIGN DECISION: RN backdrop-blur (expo-blur) adds a native
  * dependency and is GPU-heavy on the cheap field phones this app targets
  * (§0 principle 2). We therefore use a solid white surface with a soft warm
- * shadow + warm hairline — the "warm/glass" look adapted for mobile without
+ * shadow + warm hairline: the "warm/glass" look adapted for mobile without
  * the blur cost. (Swap to expo-blur later only for brand moments if desired.)
  *
  * Shape follows the "Sunrise Cut" system: the top-right corner is sharply
- * cut (radii.cut) while the rest stay generously rounded (radii.card) —
+ * cut (radii.cut) while the rest stay generously rounded (radii.card):
  * an asymmetric silhouette distinct from the uniform-rounded-rectangle look
  * of most fintech apps.
  */

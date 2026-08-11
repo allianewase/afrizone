@@ -183,7 +183,7 @@ export interface AuthSuccess {
 /** POST /api/auth/login returns this when the account has 2FA enabled. */
 export interface TwoFactorRequired {
   requires2fa: true;
-  /** short-lived (~5-min) 2FA challenge JWT — NOT a full session token */
+  /** short-lived (~5-min) 2FA challenge JWT: NOT a full session token */
   challenge: string;
 }
 
@@ -195,7 +195,7 @@ export function isTwoFactorRequired(r: LoginResponse): r is TwoFactorRequired {
   return (r as TwoFactorRequired).requires2fa === true;
 }
 
-/** POST /api/auth/2fa/setup — pending secret + provisioning material. */
+/** POST /api/auth/2fa/setup: pending secret + provisioning material. */
 export interface TwoFactorSetup {
   otpauthUrl: string;
   qrDataUrl: string;
@@ -207,7 +207,7 @@ export interface TwoFactorStatus {
   enabled: boolean;
 }
 
-/** POST /api/auth/password/forgot — never enumerates accounts. */
+/** POST /api/auth/password/forgot: never enumerates accounts. */
 export interface PasswordForgotResponse {
   sent: true;
   /** only present in sim/dev mode */
@@ -220,7 +220,7 @@ export interface PasswordResetResponse {
 }
 
 /**
- * Wallet transaction row — GET /api/me/transactions (v3).
+ * Wallet transaction row: GET /api/me/transactions (v3).
  * Earnings + withdrawals merged newest-first.
  */
 export interface Transaction {
@@ -232,7 +232,7 @@ export interface Transaction {
   createdAt: string;
 }
 
-/** Full payment detail — GET /api/me/payments/:id */
+/** Full payment detail: GET /api/me/payments/:id */
 export interface PaymentDetail {
   id: string;
   gross: number;
@@ -244,7 +244,7 @@ export interface PaymentDetail {
   task: Pick<Task, 'id' | 'title'>;
 }
 
-/** Worker's own timesheet — GET /api/me/timesheets */
+/** Worker's own timesheet: GET /api/me/timesheets */
 export interface Timesheet {
   id: string;
   taskId: string;
@@ -269,14 +269,14 @@ export interface ClockEvent {
   createdAt: string;
 }
 
-/** Response of POST /api/clock — reflects latest event for the task. */
+/** Response of POST /api/clock: reflects latest event for the task. */
 export interface ClockResult {
   event: ClockEvent;
   clockedIn: boolean;
   elapsedSeconds: number;
 }
 
-/** Response of GET /api/me/clock/:taskId — for resuming the active screen. */
+/** Response of GET /api/me/clock/:taskId: for resuming the active screen. */
 export interface ClockState {
   clockedIn: boolean;
   lastEventAt?: string | null;
@@ -293,7 +293,7 @@ export interface Withdrawal {
   createdAt: string;
 }
 
-/** Contract — GET /api/me/contracts (v3), joined with a task summary. */
+/** Contract: GET /api/me/contracts (v3), joined with a task summary. */
 export interface Contract {
   id: string;
   status: ContractStatus;
@@ -302,7 +302,7 @@ export interface Contract {
   task?: Pick<Task, 'id' | 'title'>;
 }
 
-/** Individual rating record — GET /api/me/ratings */
+/** Individual rating record: GET /api/me/ratings */
 export interface Rating {
   id: string;
   taskId: string;
@@ -334,7 +334,7 @@ export interface ContractSection {
   body: string;
 }
 
-/** Full contract detail — GET /api/me/contracts/:id */
+/** Full contract detail: GET /api/me/contracts/:id */
 export interface ContractDetail {
   id: string;
   status: ContractStatus;
