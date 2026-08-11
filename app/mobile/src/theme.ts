@@ -40,6 +40,10 @@ export const colors = {
   textFaint: '#706963', // placeholders and hints, 5.13:1
   white: '#FFFFFF',
 
+  // Secondary ink for navy grounds, the twin of web-admin's --rail-muted.
+  // 7.29:1 on navy, where textMuted is 2.31:1.
+  railMuted: '#A1A5C4',
+
   // Pill fills: the exact tints web-admin composes (each status colour at 10 to
   // 16% over white), so a pill renders identically in both apps rather than
   // merely similarly, which is what DESIGN_SPEC 0.4 asks for.

@@ -145,40 +145,61 @@ Three things in that migration were not swaps:
 - `.input.cell` stopped matching once the class changed, which left Settings'
   compact inline table editors at full width.
 
-## The logo lockup is composed, not an image
+## The logo mark is the real artwork, not a drawing of it
 
-Mark as inline SVG plus live text, rather than one raster lockup.
+`logo-mark.png`, 107x113, transparent ground. Cropped to its ink bounds from
+`https://afrizonemart.com/images/logo.png`.
 
-`markTone="reversed"` swaps the continent to white for solid orange or navy
-grounds, which a raster would need a second file for, and the navy rail and the
-splash both need it. A fixed 2.3:1 lockup would also shrink the tagline to around
-6px inside the 186px sidebar.
+Three hand-drawn SVG silhouettes preceded this and none of them matched. The
+last was 35 points with a cart fitted to it by scanline search, and it was still
+an approximation: a redrawn coastline is a guess no matter how many points it
+has. Do not redraw it a fourth time. The artwork is published; use it.
 
-The wordmark is one colour, tone-switched, because `--text` and `--navy` are both
-dark inks and a single value leaves it invisible on the rail.
+What the source pixels settled, all measured by decoding the PNG:
 
-**The silhouette is 35 points, and the shape is load-bearing.** An earlier
-24-point version read as a blob rather than as Africa. The current outline exists
-to carry four features that survive at a 38px mark: a flat Mediterranean coast,
-the Horn spiking east to x=100, a sharp x-drop up the west side that gives the
-West Africa bulge its shape, and a taper to a 2-unit Cape. Its scanline width
-profile peaks at y=40 and narrows monotonically from y=48 down. That monotonic
-taper is what stops it reading as an oval, so preserve it if you edit points.
+- The brand navy is **`#000066` exactly**, matching `--navy`. The orange is in
+  the `#FBAC34` family. The tokens were already right.
+- The ground is **fully transparent**, all four corners at alpha 0, so one file
+  works on white, sand and navy.
+- The wordmark is **single-colour navy**. Orange appears only in columns 44 to
+  149, and the text starts at 150. The tone-switched live text matches the
+  source rather than merely resembling it.
+- The source carries **no tagline**. For `x >= 150` the ink occupies only
+  `y 52..85`, one line of type. "Made in Africa, delivered worldwide" is ours.
 
-**The cart coordinates are solved, not chosen.** Every point of the cart has to
-sit inside the continent polygon, or the navy shows against the page instead of
-against the orange. On the old outline the left wheel sat 2.5 units outside the
-coastline, in the narrowing southern tip.
+### Why the lockup is still composed
 
-The current placement is the largest cart that clears the coastline everywhere,
-fitted by scanline search against the path: 1.14 scale, offset +8x/-16y, with all
-18 checked points clearing by at least 3.0 units. Madagascar keeps a 2-unit
-channel from the mainland. Re-run that search if the outline changes; the fit is
-specific to this polygon.
+The mark is an image now, but the lockup is not. The source has no tagline, and
+a fixed 2.4:1 lockup would shrink the wordmark inside the 186px sidebar.
+Composing keeps the wordmark as live text in Raleway, tone-switched because
+`--text` and `--navy` are both dark inks and one value leaves it invisible on
+the rail.
 
-**Known limitation:** the silhouette is still hand-drawn rather than traced from
-the source artwork, so it approximates the real mark. If the source SVG becomes
-available, replace the path data, then re-solve the cart fit.
+### The reversed variant swaps orange, not navy
+
+`markTone="reversed"` selects `logo-mark-reversed.png`, whose continent is white.
+Generated from the same pixels by lerping orange to white and leaving navy
+untouched, so the antialiased edges survive.
+
+It is used in exactly one place, mobile's welcome hero, which is a solid gold
+panel where an orange continent would vanish. **It is not for dark grounds.**
+The cart sits inside the continent, so it is navy-on-orange regardless of what
+is behind the mark, and the default variant is correct on the navy rail and the
+navy splash. An earlier version of this document had that backwards.
+
+### Known limitation: resolution
+
+The published artwork is 360x120 and that is the ceiling. `/images/logo.svg`,
+`logo@2x.png`, `favicon.ico` and `apple-touch-icon.png` were all checked and all
+404, and the homepage is a JS app with no static image references.
+
+At 107x113 the mark downscales cleanly at every web call site, including 46px on
+a 2x screen. The one upscale is **mobile's welcome hero at 56 logical px, which
+on a 3x screen asks for 168 device px from 113**, about 1.5x. Flat-colour art
+tolerates that better than photography, but it will read slightly soft.
+
+A vector original would fix it. Ask for the source file before trying anything
+cleverer; upscaling cannot invent detail that was never published.
 
 ## Things that are deliberate and look like bugs
 

@@ -8,6 +8,14 @@
   place-items: center;
   flex: none;
 }
+/* The mark is raster brand artwork at 107x113, so it is downscaled at every
+   call site. Pin it to the box and let the browser filter it. */
+.az-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
 .az-words {
   display: flex;
   flex-direction: column;

@@ -30,11 +30,13 @@ A **Sea Buckthorn-orange silhouette of the African continent** (including Madaga
 
 Full wordmark: **AfriZoneMart.com** in the display face, with "Made in Africa, delivered worldwide" as an italic tagline. It is a **single colour**, tone-switched: white on the navy rail and the splash, navy on light cards. It is not split into two tones, and **"Part Time" does not appear in the interface** (it remains the product's name in this document and in `app.json`).
 
-The lockup is **composed in CSS from an inline SVG mark plus live text**, not shipped as one raster image. Two reasons: the reversed variant is a fill swap rather than a second asset, and a fixed-aspect lockup at roughly 2.3:1 would shrink the tagline to around 6px inside the 186px sidebar.
+The mark is **the real brand artwork**, cropped from `afrizonemart.com/images/logo.png` to its ink bounds at 107x113 with a transparent ground. It is not redrawn. `logo-mark-reversed.png` is the white-continent variant, generated from the same pixels.
 
-The mark lives in **four places that must change together**: both `Logo.tsx` components, the pre-boot markup in `web-admin/index.html` (which duplicates it by necessity, since it paints before any JS loads), and `favicon.svg`.
+The lockup is still **composed from the mark plus live text**, not shipped as one image. The brand asset carries no tagline, and a fixed 2.4:1 lockup would shrink the wordmark inside the 186px sidebar. Composing keeps the wordmark as live text, which the source renders single-colour navy exactly as the CSS does.
 
-The silhouette is a 35-point hand-drawn path, and the cart inside it is **fitted by scanline search** so every point clears the coastline. Both constraints, and the reason the shape's width profile has to taper monotonically, are recorded in `docs/design-decisions.md`. It is still an approximation of the source artwork rather than a trace of it.
+The mark lives in **four places that must change together**: both `Logo.tsx` components, the pre-boot markup in `web-admin/index.html` (which references the asset directly, since it paints before any JS loads), and `favicon.png`.
+
+The source artwork is 360x120 and no larger or vector version is published, so the mark is a downscale everywhere except mobile's 56px welcome hero on a 3x screen. Details are in `docs/design-decisions.md`.
 
 ### 1.3 Color system
 
