@@ -15,8 +15,8 @@ export type GlassTone = 'neutral' | 'clay' | 'gold' | 'indigo' | 'money' | 'dang
 
 const TONE_GRADIENT: Record<GlassTone, [string, string]> = {
   neutral: ['rgba(255,255,255,0.60)', 'rgba(255,255,255,0.24)'],
-  clay: ['rgba(194,80,46,0.20)', 'rgba(255,255,255,0.30)'],
-  gold: ['rgba(233,162,59,0.24)', 'rgba(255,255,255,0.30)'],
+  clay: ['rgba(201,133,24,0.20)', 'rgba(255,255,255,0.30)'],
+  gold: ['rgba(251,172,52,0.24)', 'rgba(255,255,255,0.30)'],
   indigo: ['rgba(45,91,168,0.18)', 'rgba(255,255,255,0.30)'],
   money: ['rgba(31,157,107,0.18)', 'rgba(255,255,255,0.30)'],
   danger: ['rgba(200,69,58,0.18)', 'rgba(255,255,255,0.30)'],
@@ -24,8 +24,8 @@ const TONE_GRADIENT: Record<GlassTone, [string, string]> = {
 
 const TONE_BORDER: Record<GlassTone, string> = {
   neutral: 'rgba(255,255,255,0.55)',
-  clay: 'rgba(194,80,46,0.45)',
-  gold: 'rgba(233,162,59,0.55)',
+  clay: 'rgba(201,133,24,0.45)',
+  gold: 'rgba(251,172,52,0.55)',
   indigo: 'rgba(45,91,168,0.40)',
   money: 'rgba(31,157,107,0.40)',
   danger: 'rgba(200,69,58,0.40)',
@@ -82,11 +82,11 @@ export function GlassBackdrop() {
   return (
     <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
       <LinearGradient
-        colors={['rgba(233,162,59,0.22)', 'rgba(233,162,59,0)']}
+        colors={['rgba(251,172,52,0.22)', 'rgba(251,172,52,0)']}
         style={[styles.blob, { top: -90, right: -70, width: 280, height: 280 }]}
       />
       <LinearGradient
-        colors={['rgba(194,80,46,0.16)', 'rgba(194,80,46,0)']}
+        colors={['rgba(201,133,24,0.16)', 'rgba(201,133,24,0)']}
         style={[styles.blob, { top: 220, left: -100, width: 260, height: 260 }]}
       />
       <LinearGradient

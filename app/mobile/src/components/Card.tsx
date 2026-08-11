@@ -44,7 +44,7 @@ export function Card({ children, style, tinted, padded = true, accent }: CardPro
       >
         {accent && (
           <LinearGradient
-            colors={[colors.clay, colors.gold]}
+            colors={[colors.gold, colors.clayDeep]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.accentBar}

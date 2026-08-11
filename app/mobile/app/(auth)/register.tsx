@@ -152,5 +152,5 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontSize: type.size.md, color: colors.text, paddingVertical: spacing.sm },
   altRow: { alignItems: 'center', paddingVertical: spacing.sm },
   altText: { color: colors.textMuted, fontSize: type.size.base },
-  altLink: { color: colors.clay, fontWeight: '700' },
+  altLink: { color: colors.goldInk, fontWeight: '700' },
 });

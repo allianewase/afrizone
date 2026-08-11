@@ -10,6 +10,10 @@ export const colors = {
   // Brand, per the Afrizonemart.com identity.
   clay: '#FBAC34', // Sea Buckthorn, primary accent (was clay/terracotta)
   clayLight: '#FCC066', // lightened tint for hover/pressed states
+  // The deep end of the brand gradient, the twin of web-admin's --clay-deep.
+  // Every gradient needs it: clay and gold are the same hex, so a two-stop ramp
+  // between them renders as a flat fill. docs/design-decisions.md
+  clayDeep: '#C98518',
   gold: '#FBAC34', // same hex; kept as a separate name for existing call sites
   goldBright: '#FBAC34', // logo mark colour
   navy: '#000066', // logo mark navy
@@ -29,6 +33,10 @@ export const colors = {
   moneyInk: '#15794F',
   dangerInk: '#A6362C',
   goldInk: '#8A5A0F',
+  // Label colour for anything sitting on the gold gradient, the twin of
+  // web-admin's --on-gold. White on gold is 1.90:1; this is 9.20:1 on the light
+  // end of the ramp and 5.71:1 on the deep end.
+  onGold: '#1C1917',
 
   // Neutrals: "Warm Refined". docs/design-decisions.md
   bg: '#FAF9F6', // app background, 16.61:1 against `text`
@@ -43,6 +51,11 @@ export const colors = {
   // Secondary ink for navy grounds, the twin of web-admin's --rail-muted.
   // 7.29:1 on navy, where textMuted is 2.31:1.
   railMuted: '#A1A5C4',
+
+  // Backdrop behind modals and bottom sheets, derived from `text`. Held here
+  // because seven screens had it inlined as a literal, and two of those
+  // literals were still the pre-rebrand warm black.
+  scrim: 'rgba(28,25,23,0.45)',
 
   // Pill fills: the exact tints web-admin composes (each status colour at 10 to
   // 16% over white), so a pill renders identically in both apps rather than

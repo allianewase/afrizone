@@ -15,7 +15,7 @@ export function WalletBalanceCard({ wallet }: { wallet: Wallet }) {
     <View style={styles.shadowWrap}>
       <View style={styles.card} accessibilityLabel="Wallet balances">
         <LinearGradient
-          colors={[colors.clay, colors.gold]}
+          colors={[colors.gold, colors.clayDeep]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.accentBar}

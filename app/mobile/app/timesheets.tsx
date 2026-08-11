@@ -244,8 +244,8 @@ const styles = StyleSheet.create({
   },
   taskTitle: { flex: 1, color: colors.text, fontSize: type.size.md, fontWeight: '700' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
-  hours: { color: colors.clay, fontSize: type.size.sm, fontWeight: '700' },
-  dot: { color: colors.line, fontSize: type.size.sm },
+  hours: { color: colors.goldInk, fontSize: type.size.sm, fontWeight: '700' },
+  dot: { color: colors.textFaint, fontSize: type.size.sm },
   period: { color: colors.textMuted, fontSize: type.size.sm, flex: 1 },
   filed: { color: colors.textMuted, fontSize: type.size.xs },
   disputedNote: {
@@ -257,14 +257,14 @@ const styles = StyleSheet.create({
   disputedText: { color: colors.amber, fontSize: type.size.xs, flex: 1 },
   disputeBtn: { marginTop: spacing.xs, alignSelf: 'flex-start' },
   disputeBtnText: {
-    color: colors.clay,
+    color: colors.goldInk,
     fontSize: type.size.sm,
     fontWeight: '700',
     textDecorationLine: 'underline',
   },
 
   // Sheet
-  backdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: radii.sheet,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     minHeight: 96,
   },
   inputHint: { color: colors.textMuted, fontSize: type.size.xs },
-  inputError: { color: colors.danger, fontSize: type.size.sm },
+  inputError: { color: colors.dangerInk, fontSize: type.size.sm },
   doneWrap: { gap: spacing.md, alignItems: 'center' },
   doneIcon: {
     width: 64,

@@ -84,5 +84,5 @@ export default function TwoFactorScreen() {
 const styles = StyleSheet.create({
   lead: { color: colors.text, fontSize: type.size.md, lineHeight: 24 },
   altRow: { alignItems: 'center', paddingVertical: spacing.sm },
-  altLink: { color: colors.clay, fontSize: type.size.base, fontWeight: '700' },
+  altLink: { color: colors.goldInk, fontSize: type.size.base, fontWeight: '700' },
 });

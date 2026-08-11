@@ -269,8 +269,8 @@ const styles = StyleSheet.create({
   dividerMotif: { flex: 1 },
   dividerText: { color: colors.textMuted, fontSize: type.size.sm },
   forgotRow: { alignSelf: 'flex-end', paddingVertical: spacing.xs },
-  forgotText: { color: colors.clay, fontSize: type.size.base, fontWeight: '700' },
+  forgotText: { color: colors.goldInk, fontSize: type.size.base, fontWeight: '700' },
   altRow: { alignItems: 'center', paddingVertical: spacing.sm },
   altText: { color: colors.textMuted, fontSize: type.size.base },
-  altLink: { color: colors.clay, fontWeight: '700' },
+  altLink: { color: colors.goldInk, fontWeight: '700' },
 });

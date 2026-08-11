@@ -107,8 +107,8 @@ const styles = StyleSheet.create({
   desc: { color: colors.text, fontSize: type.size.base, lineHeight: 20, marginBottom: spacing.sm },
   foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   salary: { flexDirection: 'row', alignItems: 'baseline' },
-  salarySep: { color: colors.clay, fontWeight: '700' },
+  salarySep: { color: colors.goldInk, fontWeight: '700' },
   perMonth: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
   apply: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  applyText: { color: colors.clay, fontWeight: '700', fontSize: type.size.base },
+  applyText: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.base },
 });

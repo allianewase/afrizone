@@ -35,7 +35,7 @@ export function ProgressRail({
 const styles = StyleSheet.create({
   wrap: { gap: spacing.sm },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  count: { color: colors.clay, fontSize: type.size.sm, fontWeight: '700' },
+  count: { color: colors.goldInk, fontSize: type.size.sm, fontWeight: '700' },
   label: { color: colors.textMuted, fontSize: type.size.sm },
   bar: { flexDirection: 'row', gap: 4 },
   segment: { flex: 1, height: 6, borderRadius: 100 },

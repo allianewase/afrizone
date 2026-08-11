@@ -428,7 +428,7 @@ function EditBankSheet({
               {acct.length > 0 && acct.length < 10 ? (
                 <Text style={styles.fieldHint}>{10 - acct.length} more digits needed</Text>
               ) : acct.length === 10 ? (
-                <Text style={[styles.fieldHint, { color: colors.money }]}>✓ Valid NUBAN</Text>
+                <Text style={[styles.fieldHint, { color: colors.moneyInk }]}>✓ Valid NUBAN</Text>
               ) : null}
             </SheetField>
           </View>
@@ -451,7 +451,7 @@ function EditBankSheet({
                 onPress={() => { setBankCode(item.code); setPickerOpen(false); }}
                 style={[styles.bankItem, bankCode === item.code && styles.bankItemActive]}
               >
-                <Text style={[styles.bankItemText, bankCode === item.code && { color: colors.clay, fontWeight: '700' }]}>
+                <Text style={[styles.bankItemText, bankCode === item.code && { color: colors.goldInk, fontWeight: '700' }]}>
                   {item.name}
                 </Text>
                 {bankCode === item.code ? <Icon name="check" size={18} color={colors.clay} /> : null}
@@ -640,9 +640,9 @@ const styles = StyleSheet.create({
   contractTitle: { color: colors.text, fontSize: type.size.base, fontWeight: '700' },
   contractSub: { color: colors.textMuted, fontSize: type.size.xs },
   contractCta: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  contractCtaText: { color: colors.clay, fontWeight: '700', fontSize: type.size.base },
+  contractCtaText: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.base },
   notif: { gap: 0 },
-  notifError: { color: colors.danger, fontSize: type.size.sm, marginTop: spacing.xs },
+  notifError: { color: colors.dangerInk, fontSize: type.size.sm, marginTop: spacing.xs },
   notifRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.line },
   version: { color: colors.textMuted, fontSize: type.size.sm, textAlign: 'center', marginTop: spacing.lg },
   // sheets
-  backdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: radii.sheet,

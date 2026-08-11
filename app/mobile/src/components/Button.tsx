@@ -59,7 +59,7 @@ export function Button({
     >
       {isGradient && (
         <LinearGradient
-          colors={[colors.clay, colors.gold]}
+          colors={[colors.gold, colors.clayDeep]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={StyleSheet.absoluteFillObject}
@@ -77,12 +77,20 @@ export function Button({
   );
 }
 
+/**
+ * `primary` and `premium` label on `onGold`, not white: the gradient runs
+ * #FBAC34 to #C98518, where white measures 1.90:1 and 3.06:1. This is the same
+ * correction web-admin's .btn-primary carries.
+ *
+ * `ghost` has no fill, so its label sits on the page and uses the ink variant.
+ * The raw gold was 1.90:1 there.
+ */
 const VARIANTS: Record<Variant, { bg: string; fg: string; border: string }> = {
-  primary: { bg: 'transparent', fg: colors.white, border: 'transparent' },
+  primary: { bg: 'transparent', fg: colors.onGold, border: 'transparent' },
   secondary: { bg: colors.surface, fg: colors.text, border: colors.line },
-  ghost: { bg: 'transparent', fg: colors.clay, border: 'transparent' },
+  ghost: { bg: 'transparent', fg: colors.goldInk, border: 'transparent' },
   danger: { bg: colors.danger, fg: colors.white, border: colors.danger },
-  premium: { bg: 'transparent', fg: colors.white, border: 'transparent' },
+  premium: { bg: 'transparent', fg: colors.onGold, border: 'transparent' },
 };
 
 const styles = StyleSheet.create({

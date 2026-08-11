@@ -197,7 +197,7 @@ export default function OtpScreen() {
 
 const styles = StyleSheet.create({
   lead: { color: colors.text, fontSize: type.size.md, lineHeight: 24 },
-  phone: { fontWeight: '800', color: colors.clay },
+  phone: { fontWeight: '800', color: colors.goldInk },
   boxes: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   box: {
     flex: 1,
@@ -215,6 +215,6 @@ const styles = StyleSheet.create({
   boxFilled: { borderColor: colors.clay, backgroundColor: colors.claySoft },
   boxError: { borderColor: colors.danger },
   resendRow: { alignItems: 'center', paddingVertical: spacing.sm },
-  resend: { color: colors.clay, fontSize: type.size.base, fontWeight: '700' },
+  resend: { color: colors.goldInk, fontSize: type.size.base, fontWeight: '700' },
   resendDisabled: { color: colors.textMuted, fontWeight: '600' },
 });

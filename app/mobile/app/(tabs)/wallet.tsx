@@ -350,9 +350,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   statementText: { flex: 1, color: colors.text, fontWeight: '600', fontSize: type.size.base },
-  dlError: { color: colors.danger, fontSize: type.size.sm, marginTop: spacing.xs },
+  dlError: { color: colors.dangerInk, fontSize: type.size.sm, marginTop: spacing.xs },
   // sheet
-  backdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: radii.sheet,

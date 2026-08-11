@@ -117,5 +117,5 @@ const styles = StyleSheet.create({
   ctaPressed: { opacity: 0.85 },
   altRow: { alignItems: 'center', marginTop: spacing.lg },
   altText: { color: colors.textMuted, fontSize: type.size.base },
-  altLink: { color: colors.clay, fontWeight: '700' },
+  altLink: { color: colors.goldInk, fontWeight: '700' },
 });

@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   field: { gap: 6 },
   label: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
   hint: { color: colors.textMuted, fontSize: type.size.sm },
-  errorHint: { color: colors.danger, fontSize: type.size.sm },
+  errorHint: { color: colors.dangerInk, fontSize: type.size.sm },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',

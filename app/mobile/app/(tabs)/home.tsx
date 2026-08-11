@@ -205,7 +205,7 @@ export default function HomeScreen() {
           style={[styles.filterBtn, filtersActive && styles.filterBtnActive]}
           accessibilityLabel="Open filters"
         >
-          <Icon name="filter" size={18} color={filtersActive ? colors.white : colors.clay} />
+          <Icon name="filter" size={18} color={filtersActive ? colors.onGold : colors.goldInk} />
           {filtersActive ? (
             <View style={styles.filterBadge}>
               <Text style={styles.filterBadgeText}>
@@ -411,7 +411,7 @@ function FilterChip({
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
     >
-      {active && multi ? <Icon name="check" size={13} color={colors.white} /> : null}
+      {active && multi ? <Icon name="check" size={13} color={colors.onGold} /> : null}
       <Text style={[sheetStyles.fchipText, active && sheetStyles.fchipTextActive]}>{label}</Text>
     </Pressable>
   );
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
   },
-  chipText: { color: colors.clay, fontSize: type.size.sm, fontWeight: '700' },
+  chipText: { color: colors.goldInk, fontSize: type.size.sm, fontWeight: '700' },
   clearChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
 });
 
 const sheetStyles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: radii.sheet,
@@ -528,7 +528,7 @@ const sheetStyles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: { color: colors.text, fontSize: type.size.xl, fontWeight: '800' },
-  clearLink: { color: colors.clay, fontSize: type.size.base, fontWeight: '700' },
+  clearLink: { color: colors.goldInk, fontSize: type.size.base, fontWeight: '700' },
   group: { gap: spacing.sm },
   groupLabel: {
     color: colors.textMuted,
@@ -554,5 +554,5 @@ const sheetStyles = StyleSheet.create({
     borderColor: colors.clay,
   },
   fchipText: { color: colors.text, fontSize: type.size.sm, fontWeight: '600' },
-  fchipTextActive: { color: colors.white, fontWeight: '700' },
+  fchipTextActive: { color: colors.onGold, fontWeight: '700' },
 });

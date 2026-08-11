@@ -19,7 +19,7 @@ const STATUS_CONFIG: Record<
   { label: string; color: string; bg: string; icon: 'clock' | 'check-circle' | 'close' }
 > = {
   OPEN:     { label: 'Under review',   color: colors.amber,  bg: colors.amberSoft,  icon: 'clock' },
-  RESOLVED: { label: 'Resolved',       color: colors.money,  bg: colors.moneySoft,  icon: 'check-circle' },
+  RESOLVED: { label: 'Resolved',       color: colors.moneyInk,  bg: colors.moneySoft,  icon: 'check-circle' },
   CLOSED:   { label: 'Closed',         color: colors.textMuted, bg: colors.surface, icon: 'close' },
 };
 
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   resolutionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  resolutionLabel: { color: colors.money, fontSize: type.size.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  resolutionLabel: { color: colors.moneyInk, fontSize: type.size.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   resolutionText: { color: colors.text, fontSize: type.size.sm, lineHeight: 18 },
   pendingNote: { color: colors.textMuted, fontSize: type.size.xs, fontStyle: 'italic' },
   bottom: {
@@ -184,5 +184,5 @@ const styles = StyleSheet.create({
   },
   date: { color: colors.textMuted, fontSize: type.size.xs },
   entityLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  entityLinkText: { color: colors.clay, fontSize: type.size.xs, fontWeight: '700' },
+  entityLinkText: { color: colors.goldInk, fontSize: type.size.xs, fontWeight: '700' },
 });

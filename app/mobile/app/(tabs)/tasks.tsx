@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   payRow: { flexDirection: 'row', alignItems: 'baseline' },
   unit: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
   cta: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  ctaText: { color: colors.clay, fontWeight: '700', fontSize: type.size.base },
+  ctaText: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.base },
   rejection: {
     color: colors.textMuted,
     fontSize: type.size.sm,
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   },
   paymentLinkText: {
     flex: 1,
-    color: colors.money,
+    color: colors.moneyInk,
     fontSize: type.size.sm,
     fontWeight: '700',
   },

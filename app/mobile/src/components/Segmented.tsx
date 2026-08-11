@@ -50,5 +50,5 @@ const styles = StyleSheet.create({
   },
   segActive: { backgroundColor: colors.surface },
   label: { color: colors.textMuted, fontWeight: '600', fontSize: type.size.base },
-  labelActive: { color: colors.clay, fontWeight: '700' },
+  labelActive: { color: colors.goldInk, fontWeight: '700' },
 });

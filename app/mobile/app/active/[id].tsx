@@ -204,7 +204,7 @@ export default function ActiveTaskScreen() {
             {/* Pay */}
             <View style={styles.metaItem}>
               <Icon name="wallet" size={14} color={colors.money} />
-              <Text style={[styles.metaText, { color: colors.money, fontWeight: '700' }]}>
+              <Text style={[styles.metaText, { color: colors.moneyInk, fontWeight: '700' }]}>
                 {pay}
               </Text>
             </View>
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
     borderRadius: 99,
     backgroundColor: colors.money,
   },
-  liveText: { color: colors.money, fontSize: type.size.sm, fontWeight: '700' },
+  liveText: { color: colors.moneyInk, fontSize: type.size.sm, fontWeight: '700' },
   clock: { alignItems: 'center', marginTop: spacing.xl },
   hint: { color: colors.textMuted, fontSize: type.size.sm, textAlign: 'center' },
 });

@@ -392,7 +392,7 @@ export default function KycScreen() {
               {acct.length > 0 && acct.length < 10 ? (
                 <Text style={styles.acctHint}>{10 - acct.length} more digits needed</Text>
               ) : acct.length === 10 ? (
-                <Text style={[styles.acctHint, { color: colors.money }]}>✓ Valid NUBAN</Text>
+                <Text style={[styles.acctHint, { color: colors.moneyInk }]}>✓ Valid NUBAN</Text>
               ) : null}
             </Field>
           </View>
@@ -487,7 +487,7 @@ export default function KycScreen() {
                 onPress={() => { setBankCode(item.code); setBankPickerOpen(false); }}
                 style={[styles.bankItem, bankCode === item.code && styles.bankItemActive]}
               >
-                <Text style={[styles.bankItemText, bankCode === item.code && { color: colors.clay, fontWeight: '700' }]}>
+                <Text style={[styles.bankItemText, bankCode === item.code && { color: colors.goldInk, fontWeight: '700' }]}>
                   {item.name}
                 </Text>
                 {bankCode === item.code ? <Icon name="check" size={18} color={colors.clay} /> : null}
@@ -644,7 +644,7 @@ function UploadStep({
         <GlassCard tone={done ? 'money' : 'gold'} contentStyle={styles.dropzoneContent}>
           <View style={[styles.dropzoneRing, done && styles.dropzoneRingDone]}>
             <Icon name={done ? 'check-circle' : icon} size={40} color={done ? colors.money : colors.clay} />
-            <Text style={[styles.dropText, done && { color: colors.money }]}>
+            <Text style={[styles.dropText, done && { color: colors.moneyInk }]}>
               {done ? '✓ Document uploaded' : 'Choose how to add your document'}
             </Text>
           </View>
@@ -726,14 +726,14 @@ const styles = StyleSheet.create({
   dropzoneRing: {
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: 'rgba(194,80,46,0.35)',
+    borderColor: 'rgba(201,133,24,0.35)',
     borderRadius: radii.card - 4,
     paddingVertical: spacing.xxxl,
     alignItems: 'center',
     gap: spacing.md,
   },
   dropzoneRingDone: { borderColor: 'rgba(31,157,107,0.45)' },
-  dropText: { color: colors.clay, fontWeight: '700', fontSize: type.size.md },
+  dropText: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.md },
   thumbWrap: {
     width: '100%',
     height: 200,
@@ -744,7 +744,7 @@ const styles = StyleSheet.create({
   thumb: { width: '100%', height: '100%' },
   thumbOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(20,15,11,0.5)',
+    backgroundColor: 'rgba(28,25,23,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
@@ -761,8 +761,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     paddingVertical: spacing.md,
   },
-  pickBtnText: { color: colors.clay, fontWeight: '700', fontSize: type.size.sm },
-  uploadErr: { color: colors.danger, fontSize: type.size.sm, fontWeight: '600' },
+  pickBtnText: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.sm },
+  uploadErr: { color: colors.dangerInk, fontSize: type.size.sm, fontWeight: '600' },
   retakeLink: { color: colors.textMuted, fontSize: type.size.sm, textDecorationLine: 'underline', textAlign: 'center' },
   reviewRow: {
     flexDirection: 'row',
@@ -770,7 +770,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(36,28,21,0.08)',
+    borderBottomColor: 'rgba(28,25,23,0.08)',
     gap: spacing.lg,
   },
   reviewLabel: { color: colors.textMuted, fontSize: type.size.base },
@@ -795,9 +795,9 @@ const styles = StyleSheet.create({
   idTypeChipTextActive: { color: colors.indigo },
   acctHint: { fontSize: type.size.sm, color: colors.textMuted, marginTop: 4 },
   // bank picker modal
-  pickerBackdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
+  pickerBackdrop: { flex: 1, backgroundColor: colors.scrim },
   pickerSheet: {
-    backgroundColor: 'rgba(251,245,236,0.72)',
+    backgroundColor: 'rgba(250,249,246,0.72)',
     borderTopLeftRadius: radii.sheet,
     borderTopRightRadius: radii.sheet,
     borderWidth: 1,
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
     maxHeight: '70%',
     overflow: 'hidden',
   },
-  pickerGrabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 100, backgroundColor: 'rgba(36,28,21,0.2)', marginBottom: spacing.md },
+  pickerGrabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 100, backgroundColor: 'rgba(28,25,23,0.2)', marginBottom: spacing.md },
   pickerTitle: { fontSize: type.size.lg, fontWeight: '800', color: colors.text, marginBottom: spacing.md },
   bankItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md },
   bankItemActive: { backgroundColor: colors.claySoft, marginHorizontal: -layout.screenPadding, paddingHorizontal: layout.screenPadding },

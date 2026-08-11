@@ -235,5 +235,5 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: 'center',
   },
-  footerLink: { color: colors.clay, fontWeight: '700' },
+  footerLink: { color: colors.goldInk, fontWeight: '700' },
 });

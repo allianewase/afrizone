@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   salaryCard: { marginTop: spacing.sm, gap: 4 },
   salaryLabel: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
   salaryRow: { flexDirection: 'row', alignItems: 'baseline' },
-  salarySep: { color: colors.clay, fontWeight: '700', fontSize: type.size.displayLg },
+  salarySep: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.displayLg },
   metaGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.lg },
   metaItem: { flexDirection: 'row', gap: spacing.sm, width: '50%', paddingVertical: spacing.sm, alignItems: 'flex-start' },
   metaLabel: { color: colors.textMuted, fontSize: type.size.xs },
@@ -322,10 +322,10 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 10,
   },
-  reqText: { color: colors.money, fontSize: type.size.sm, fontWeight: '700' },
+  reqText: { color: colors.moneyInk, fontSize: type.size.sm, fontWeight: '700' },
   desc: { color: colors.text, fontSize: type.size.md, lineHeight: 24 },
   // sheet
-  backdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: radii.sheet,

@@ -62,7 +62,7 @@ export function ClockInButton({
 function GeofencePill({ state, blocked }: { state: GeofenceState; blocked: boolean }) {
   const meta =
     state === 'in-fence'
-      ? { word: 'Inside work zone', fg: colors.money, bg: colors.moneySoft, icon: 'map-pin' as const }
+      ? { word: 'Inside work zone', fg: colors.moneyInk, bg: colors.moneySoft, icon: 'map-pin' as const }
       : state === 'syncing'
         ? { word: 'Checking location…', fg: colors.indigo, bg: colors.indigoSoft, icon: 'globe' as const }
         : {

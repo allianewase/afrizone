@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   signedText: {
-    color: colors.money,
+    color: colors.moneyInk,
     fontSize: type.size.sm,
     fontWeight: '600',
   },
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   signedFooterText: {
-    color: colors.money,
+    color: colors.moneyInk,
     fontWeight: '700',
     fontSize: type.size.base,
   },
