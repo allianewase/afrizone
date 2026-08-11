@@ -103,8 +103,8 @@ export default function ContractDetailScreen() {
                 </View>
               ) : (
                 <View style={styles.signedRow}>
-                  <Icon name="alert" size={14} color={colors.amber} />
-                  <Text style={[styles.signedText, { color: colors.amber }]}>
+                  <Icon name="alert" size={14} color={colors.goldInk} />
+                  <Text style={[styles.signedText, { color: colors.goldInk }]}>
                     Review and sign to confirm your engagement
                   </Text>
                 </View>

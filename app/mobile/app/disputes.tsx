@@ -18,7 +18,7 @@ const STATUS_CONFIG: Record<
   Dispute['status'],
   { label: string; color: string; bg: string; icon: 'clock' | 'check-circle' | 'close' }
 > = {
-  OPEN:     { label: 'Under review',   color: colors.amber,  bg: colors.amberSoft,  icon: 'clock' },
+  OPEN:     { label: 'Under review',   color: colors.indigo, bg: colors.indigoSoft,  icon: 'clock' },
   RESOLVED: { label: 'Resolved',       color: colors.moneyInk,  bg: colors.moneySoft,  icon: 'check-circle' },
   CLOSED:   { label: 'Closed',         color: colors.textMuted, bg: colors.surface, icon: 'close' },
 };

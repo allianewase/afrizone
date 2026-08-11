@@ -88,6 +88,21 @@ Slate and steel were tried and rejected: both landed within **10 degrees** of
 `--amber-500` survives for genuine warnings, which is most of its call sites
 (banners, contract alerts, disputed timesheets). It is no longer a status colour.
 
+**Amber is a fill, never type and never an icon.** It is 2.55:1 on the page and
+2.40:1 on its own tint, so warning text and warning icons use `goldInk` instead,
+at 5.62:1 and 5.30:1. The warning still reads as a warning because the pale
+amber fill, the alert icon and the wording carry it, which is the same argument
+that lets violet and indigo coexist as pills.
+
+There is deliberately **no `amberInk`**. Amber and gold are adjacent hues, so any
+amber dark enough to clear 4.5:1 lands within a couple of units of `goldInk`
+(`#8A5A0F`). A second token with almost the same value is how `--clay` and
+`--gold` ended up identical and silently collapsed three gradients.
+
+In mobile this left `colors.amber` with no call sites. It stays defined, because
+`amberSoft` is still the warning fill and a full-strength amber is the right
+thing to reach for if a warning ever needs a solid ground.
+
 ## Chart colours are sequential, not categorical
 
 `--chart-1: #B0700C` at 4.06:1, `--chart-2: #1F9D6B` for the two-series case.

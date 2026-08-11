@@ -24,7 +24,10 @@ export const colors = {
   // Status language, shared with web-admin and design-system.html.
   money: '#1F9D6B', // available / paid / success
   indigo: '#2D5BA8', // info / in review
-  amber: '#E08A1E', // warnings only, not a status
+  // Warnings only, not a status, and a FILL only: as text or as an icon it is
+  // 2.55:1 on the page. Warning type uses goldInk. There is deliberately no
+  // amberInk, because darkening amber lands on goldInk. docs/design-decisions.md
+  amber: '#E08A1E',
   danger: '#C8453A', // errors / rejected
   pending: '#6B3F94', // violet, not amber: docs/design-decisions.md
 

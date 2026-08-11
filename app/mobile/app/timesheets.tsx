@@ -59,7 +59,7 @@ function TimesheetCard({
 
       {alreadyDisputed ? (
         <View style={styles.disputedNote}>
-          <Icon name="alert" size={13} color={colors.amber} />
+          <Icon name="alert" size={13} color={colors.goldInk} />
           <Text style={styles.disputedText}>Dispute open: check Disputes for updates</Text>
         </View>
       ) : canDispute ? (
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: spacing.xs,
   },
-  disputedText: { color: colors.amber, fontSize: type.size.xs, flex: 1 },
+  disputedText: { color: colors.goldInk, fontSize: type.size.xs, flex: 1 },
   disputeBtn: { marginTop: spacing.xs, alignSelf: 'flex-start' },
   disputeBtnText: {
     color: colors.goldInk,

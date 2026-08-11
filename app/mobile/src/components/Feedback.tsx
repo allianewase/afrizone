@@ -68,7 +68,7 @@ export function Banner({
   onAction?: () => void;
 }) {
   const palette = {
-    amber: { fg: colors.amber, bg: colors.amberSoft },
+    amber: { fg: colors.goldInk, bg: colors.amberSoft },
     indigo: { fg: colors.indigo, bg: colors.indigoSoft },
     danger: { fg: colors.dangerInk, bg: colors.dangerSoft },
     money: { fg: colors.moneyInk, bg: colors.moneySoft },

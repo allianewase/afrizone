@@ -27,7 +27,10 @@ export function ClockInButton({
 }: ClockInButtonProps) {
   const blocked = blockOutOfFence && geofence === 'out-of-fence';
   const disabled = busy || blocked;
-  const color = clockedIn ? colors.danger : colors.money;
+  // The fill has to carry a white label. `money` gave 3.45:1, and at 18px bold
+  // the label is just under the 18.66px large-text threshold, so the 4.5 floor
+  // applies. moneyInk gives 5.41:1. Clock-out keeps `danger`, already 4.81:1.
+  const color = clockedIn ? colors.danger : colors.moneyInk;
 
   return (
     <View style={styles.wrap}>
@@ -67,7 +70,7 @@ function GeofencePill({ state, blocked }: { state: GeofenceState; blocked: boole
         ? { word: 'Checking location…', fg: colors.indigo, bg: colors.indigoSoft, icon: 'globe' as const }
         : {
             word: blocked ? 'Outside zone: blocked' : 'Outside work zone',
-            fg: colors.amber,
+            fg: colors.goldInk,
             bg: colors.amberSoft,
             icon: 'alert' as const,
           };
