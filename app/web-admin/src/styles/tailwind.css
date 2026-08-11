@@ -57,7 +57,7 @@
 
   /* Sea Buckthorn on Deep Navy-dark text — the brand's primary action pair. */
   --sd-primary: var(--gold);
-  --sd-primary-foreground: #0b0f0e;
+  --sd-primary-foreground: var(--on-gold);
 
   --sd-secondary: var(--glass-2);
   --sd-secondary-foreground: var(--text);

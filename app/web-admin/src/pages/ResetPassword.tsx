@@ -5,6 +5,8 @@ import Button from '../components/ui/Button'
 import Icon from '../components/Icon'
 import Logo from '../components/Logo'
 import './Login.css'
+import Input from '../components/ui/Input'
+import { Label } from '@/components/shadcn/label'
 
 export default function ResetPassword() {
   const [params] = useSearchParams()
@@ -84,10 +86,10 @@ export default function ResetPassword() {
 
             <form onSubmit={onSubmit} noValidate>
               <div className="field" style={{ marginBottom: 14 }}>
-                <label htmlFor="pw">New password</label>
-                <input
+                <Label htmlFor="pw">New password</Label>
+                <Input
                   id="pw"
-                  className="input"
+                  
                   type="password"
                   autoComplete="new-password"
                   value={password}
@@ -96,10 +98,10 @@ export default function ResetPassword() {
                 />
               </div>
               <div className="field" style={{ marginBottom: 18 }}>
-                <label htmlFor="pw2">Confirm password</label>
-                <input
+                <Label htmlFor="pw2">Confirm password</Label>
+                <Input
                   id="pw2"
-                  className="input"
+                  
                   type="password"
                   autoComplete="new-password"
                   value={confirm}

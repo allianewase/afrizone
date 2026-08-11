@@ -16,6 +16,9 @@ import StatusPill from '../components/ui/StatusPill'
 import Modal from '../components/ui/Modal'
 import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
+import Select from '../components/ui/Select'
+import Textarea from '../components/ui/Textarea'
+import { Label } from '@/components/shadcn/label'
 
 const DOC_TYPE_LABEL: Record<string, string> = {
   ID: 'Government ID',
@@ -287,23 +290,16 @@ function RateModal({
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <label style={{ fontSize: 13, fontWeight: 600 }}>
-              Task
-              <select
+            <div className="field">
+              <Label htmlFor="rate-task">Task</Label>
+              <Select
+                id="rate-task"
                 value={taskId}
-                onChange={(e) => setTaskId(e.target.value)}
-                style={{
-                  display: 'block', width: '100%', marginTop: 6, padding: '8px 10px',
-                  borderRadius: 8, border: '1px solid var(--line)', background: 'var(--sand)',
-                  fontSize: 13, color: 'var(--text)',
-                }}
-              >
-                <option value="">Select a task…</option>
-                {approvedTasks.map((a) => (
-                  <option key={a.taskId} value={a.taskId}>{a.task!.title}</option>
-                ))}
-              </select>
-            </label>
+                onChange={setTaskId}
+                placeholder="Select a task…"
+                options={approvedTasks.map((a) => ({ value: a.taskId, label: a.task!.title }))}
+              />
+            </div>
 
             <label style={{ fontSize: 13, fontWeight: 600 }}>
               Score
@@ -317,20 +313,18 @@ function RateModal({
               </div>
             </label>
 
-            <label style={{ fontSize: 13, fontWeight: 600 }}>
-              Note <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(optional)</span>
-              <textarea
+            <div className="field">
+              <Label htmlFor="rate-note">
+                Note <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(optional)</span>
+              </Label>
+              <Textarea
+                id="rate-note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={3}
                 placeholder="Any feedback for the worker…"
-                style={{
-                  display: 'block', width: '100%', marginTop: 6, padding: '8px 10px',
-                  borderRadius: 8, border: '1px solid var(--line)', background: 'var(--sand)',
-                  fontSize: 13, color: 'var(--text)', resize: 'vertical', boxSizing: 'border-box',
-                }}
               />
-            </label>
+            </div>
 
             {submitErr && (
               <p style={{ color: 'var(--danger)', fontSize: 13, margin: 0 }}>{submitErr}</p>

@@ -17,6 +17,10 @@ import StatusPill from '../components/ui/StatusPill'
 import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
 import './Tasks.css'
+import Input from '../components/ui/Input'
+import Textarea from '../components/ui/Textarea'
+import Select from '../components/ui/Select'
+import { Label } from '@/components/shadcn/label'
 
 const TIERS: Tier[] = ['STUDENT', 'DISPATCH', 'REMOTE', 'PROMO', 'TRADE']
 
@@ -174,10 +178,9 @@ function NewTaskModal({
       <form onSubmit={submit}>
         <div className="formgrid">
           <div className="field span2">
-            <label htmlFor="t-title">Title</label>
-            <input
+            <Label htmlFor="t-title">Title</Label>
+            <Input
               id="t-title"
-              className="input"
               value={form.title}
               onChange={(e) => set('title', e.target.value)}
               placeholder="Same-day parcel runs — Yaba"
@@ -185,58 +188,50 @@ function NewTaskModal({
             />
           </div>
           <div className="field span2">
-            <label htmlFor="t-desc">Description</label>
-            <textarea
+            <Label htmlFor="t-desc">Description</Label>
+            <Textarea
               id="t-desc"
-              className="textarea"
               value={form.description}
               onChange={(e) => set('description', e.target.value)}
               placeholder="What the worker will do…"
             />
           </div>
           <div className="field">
-            <label htmlFor="t-cat">Category</label>
-            <input
+            <Label htmlFor="t-cat">Category</Label>
+            <Input
               id="t-cat"
-              className="input"
               value={form.category}
               onChange={(e) => set('category', e.target.value)}
               placeholder="Dispatch"
             />
           </div>
           <div className="field">
-            <label htmlFor="t-tier">Tier</label>
-            <select
+            <Label htmlFor="t-tier">Tier</Label>
+            <Select
               id="t-tier"
-              className="select"
               value={form.tier}
-              onChange={(e) => set('tier', e.target.value as Tier)}
-            >
-              {TIERS.map((t) => (
-                <option key={t} value={t}>
-                  {TIER_LABELS[t]}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => set('tier', v as Tier)}
+              options={TIERS.map((t) => ({ value: t, label: TIER_LABELS[t] }))}
+            />
           </div>
           <div className="field">
-            <label htmlFor="t-pm">Pay model</label>
-            <select
+            <Label htmlFor="t-pm">Pay model</Label>
+            <Select
               id="t-pm"
-              className="select"
               value={form.payModel}
-              onChange={(e) => set('payModel', e.target.value as PayModel)}
-            >
-              <option value="HOURLY">Hourly</option>
-              <option value="FIXED">Fixed</option>
-            </select>
+              onChange={(v) => set('payModel', v as PayModel)}
+              options={[
+                { value: 'HOURLY', label: 'Hourly' },
+                { value: 'FIXED', label: 'Fixed' },
+              ]}
+            />
           </div>
           {form.payModel === 'HOURLY' ? (
             <div className="field">
-              <label htmlFor="t-rate">Rate (₦/hour)</label>
-              <input
+              <Label htmlFor="t-rate">Rate (₦/hour)</Label>
+              <Input
                 id="t-rate"
-                className="input tnum"
+                className="tnum"
                 type="number"
                 min="0"
                 value={form.rate}
@@ -247,10 +242,10 @@ function NewTaskModal({
             </div>
           ) : (
             <div className="field">
-              <label htmlFor="t-budget">Budget (₦)</label>
-              <input
+              <Label htmlFor="t-budget">Budget (₦)</Label>
+              <Input
                 id="t-budget"
-                className="input tnum"
+                className="tnum"
                 type="number"
                 min="0"
                 value={form.budget}
@@ -261,10 +256,10 @@ function NewTaskModal({
             </div>
           )}
           <div className="field">
-            <label htmlFor="t-slots">Slots</label>
-            <input
+            <Label htmlFor="t-slots">Slots</Label>
+            <Input
               id="t-slots"
-              className="input tnum"
+              className="tnum"
               type="number"
               min="1"
               value={form.slots}
@@ -273,34 +268,33 @@ function NewTaskModal({
             />
           </div>
           <div className="field">
-            <label htmlFor="t-loc">Location type</label>
-            <select
+            <Label htmlFor="t-loc">Location type</Label>
+            <Select
               id="t-loc"
-              className="select"
               value={form.locationType}
-              onChange={(e) => set('locationType', e.target.value as LocationType)}
-            >
-              <option value="PHYSICAL">Physical</option>
-              <option value="REMOTE">Remote</option>
-            </select>
+              onChange={(v) => set('locationType', v as LocationType)}
+              options={[
+                { value: 'PHYSICAL', label: 'Physical' },
+                { value: 'REMOTE', label: 'Remote' },
+              ]}
+            />
           </div>
           {form.locationType === 'PHYSICAL' && (
             <>
               <div className="field span2">
-                <label htmlFor="t-addr">Address</label>
-                <input
+                <Label htmlFor="t-addr">Address</Label>
+                <Input
                   id="t-addr"
-                  className="input"
                   value={form.address}
                   onChange={(e) => set('address', e.target.value)}
                   placeholder="Ikeja City Mall"
                 />
               </div>
               <div className="field">
-                <label htmlFor="t-lat">Latitude (optional)</label>
-                <input
+                <Label htmlFor="t-lat">Latitude (optional)</Label>
+                <Input
                   id="t-lat"
-                  className="input tnum"
+                  className="tnum"
                   type="number"
                   step="any"
                   value={form.lat}
@@ -309,10 +303,10 @@ function NewTaskModal({
                 />
               </div>
               <div className="field">
-                <label htmlFor="t-lng">Longitude (optional)</label>
-                <input
+                <Label htmlFor="t-lng">Longitude (optional)</Label>
+                <Input
                   id="t-lng"
-                  className="input tnum"
+                  className="tnum"
                   type="number"
                   step="any"
                   value={form.lng}
@@ -321,10 +315,10 @@ function NewTaskModal({
                 />
               </div>
               <div className="field">
-                <label htmlFor="t-geo">Geofence radius (m)</label>
-                <input
+                <Label htmlFor="t-geo">Geofence radius (m)</Label>
+                <Input
                   id="t-geo"
-                  className="input tnum"
+                  className="tnum"
                   type="number"
                   min="0"
                   value={form.geofenceRadius}
@@ -334,30 +328,27 @@ function NewTaskModal({
             </>
           )}
           <div className="field">
-            <label htmlFor="t-start">Start date</label>
-            <input
+            <Label htmlFor="t-start">Start date</Label>
+            <Input
               id="t-start"
-              className="input"
               type="date"
               value={form.startDate}
               onChange={(e) => set('startDate', e.target.value)}
             />
           </div>
           <div className="field">
-            <label htmlFor="t-end">End date</label>
-            <input
+            <Label htmlFor="t-end">End date</Label>
+            <Input
               id="t-end"
-              className="input"
               type="date"
               value={form.endDate}
               onChange={(e) => set('endDate', e.target.value)}
             />
           </div>
           <div className="field span2">
-            <label htmlFor="t-deadline">Application deadline</label>
-            <input
+            <Label htmlFor="t-deadline">Application deadline</Label>
+            <Input
               id="t-deadline"
-              className="input"
               type="date"
               value={form.deadline}
               onChange={(e) => set('deadline', e.target.value)}

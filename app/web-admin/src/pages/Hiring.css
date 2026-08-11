@@ -198,10 +198,15 @@
   color: var(--text);
   cursor: pointer;
 }
-.check input {
+/* The Radix checkbox is a button, not an input, so accent-color no longer
+   applies. Its checked colours come from --sd-primary in tailwind.css. */
+.check [data-slot='checkbox'] {
   width: 17px;
   height: 17px;
-  accent-color: var(--gold);
+  flex: none;
+}
+.check label {
+  cursor: pointer;
 }
 
 @media (max-width: 1200px) {

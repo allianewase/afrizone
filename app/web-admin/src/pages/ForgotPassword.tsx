@@ -5,6 +5,8 @@ import Button from '../components/ui/Button'
 import Icon from '../components/Icon'
 import Logo from '../components/Logo'
 import './Login.css'
+import Input from '../components/ui/Input'
+import { Label } from '@/components/shadcn/label'
 
 const DEV = import.meta.env.DEV
 
@@ -72,10 +74,10 @@ export default function ForgotPassword() {
 
             <form onSubmit={onSubmit} noValidate>
               <div className="field" style={{ marginBottom: 18 }}>
-                <label htmlFor="email">Email</label>
-                <input
+                <Label htmlFor="email">Email</Label>
+                <Input
                   id="email"
-                  className="input"
+                  
                   type="email"
                   autoComplete="username"
                   value={email}

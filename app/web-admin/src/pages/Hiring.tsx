@@ -20,8 +20,16 @@ import {
 } from '@/components/shadcn/dropdown-menu'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
 import './Hiring.css'
+import Input from '../components/ui/Input'
+import Textarea from '../components/ui/Textarea'
+import Select from '../components/ui/Select'
+import { Label } from '@/components/shadcn/label'
+import { Checkbox } from '@/components/shadcn/checkbox'
 
 const STAGES: Stage[] = ['SCREENING', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']
+
+/** Stands in for "" in the job filter, which Radix Select will not accept. */
+const ALL_ROLES = '__all'
 
 const STAGE_LABELS: Record<Stage, string> = {
   SCREENING: 'Screening',
@@ -212,10 +220,10 @@ function NewJobModal({
       <form onSubmit={submit}>
         <div className="formgrid">
           <div className="field span2">
-            <label htmlFor="j-title">Title</label>
-            <input
+            <Label htmlFor="j-title">Title</Label>
+            <Input
               id="j-title"
-              className="input"
+              
               value={form.title}
               onChange={(e) => set('title', e.target.value)}
               placeholder="Operations Associate"
@@ -223,10 +231,10 @@ function NewJobModal({
             />
           </div>
           <div className="field">
-            <label htmlFor="j-dept">Department</label>
-            <input
+            <Label htmlFor="j-dept">Department</Label>
+            <Input
               id="j-dept"
-              className="input"
+              
               value={form.department}
               onChange={(e) => set('department', e.target.value)}
               placeholder="Logistics"
@@ -234,10 +242,10 @@ function NewJobModal({
             />
           </div>
           <div className="field">
-            <label htmlFor="j-loc">Location</label>
-            <input
+            <Label htmlFor="j-loc">Location</Label>
+            <Input
               id="j-loc"
-              className="input"
+              
               value={form.location}
               onChange={(e) => set('location', e.target.value)}
               placeholder="Lagos"
@@ -245,33 +253,33 @@ function NewJobModal({
             />
           </div>
           <div className="field">
-            <label htmlFor="j-emp">Employment type</label>
-            <select
+            <Label htmlFor="j-emp">Employment type</Label>
+            <Select
               id="j-emp"
-              className="select"
               value={form.employmentType}
-              onChange={(e) => set('employmentType', e.target.value as EmploymentType)}
-            >
-              <option value="FULL_TIME">Full-time</option>
-              <option value="PART_TIME">Part-time</option>
-              <option value="CONTRACT">Contract</option>
-            </select>
+              onChange={(v) => set('employmentType', v as EmploymentType)}
+              options={[
+                { value: 'FULL_TIME', label: 'Full-time' },
+                { value: 'PART_TIME', label: 'Part-time' },
+                { value: 'CONTRACT', label: 'Contract' },
+              ]}
+            />
           </div>
           <div className="field">
-            <label htmlFor="j-close">Closing date</label>
-            <input
+            <Label htmlFor="j-close">Closing date</Label>
+            <Input
               id="j-close"
-              className="input"
+              
               type="date"
               value={form.closingDate}
               onChange={(e) => set('closingDate', e.target.value)}
             />
           </div>
           <div className="field">
-            <label htmlFor="j-min">Salary min (₦/mo)</label>
-            <input
+            <Label htmlFor="j-min">Salary min (₦/mo)</Label>
+            <Input
               id="j-min"
-              className="input tnum"
+              className="tnum"
               type="number"
               min="0"
               value={form.salaryMin}
@@ -280,10 +288,10 @@ function NewJobModal({
             />
           </div>
           <div className="field">
-            <label htmlFor="j-max">Salary max (₦/mo)</label>
-            <input
+            <Label htmlFor="j-max">Salary max (₦/mo)</Label>
+            <Input
               id="j-max"
-              className="input tnum"
+              className="tnum"
               type="number"
               min="0"
               value={form.salaryMax}
@@ -292,10 +300,10 @@ function NewJobModal({
             />
           </div>
           <div className="field span2">
-            <label htmlFor="j-desc">Description</label>
-            <textarea
+            <Label htmlFor="j-desc">Description</Label>
+            <Textarea
               id="j-desc"
-              className="textarea"
+              
               value={form.description}
               onChange={(e) => set('description', e.target.value)}
               placeholder="What the role involves…"
@@ -303,31 +311,34 @@ function NewJobModal({
           </div>
           <div className="field span2">
             <label>Application requirements</label>
+            {/* Explicit id/htmlFor pairs rather than a wrapping <label>: the
+                Radix checkbox renders a button, and a label does not forward
+                clicks to a button the way it does to a native input. */}
             <div className="checkrow">
-              <label className="check">
-                <input
-                  type="checkbox"
+              <div className="check">
+                <Checkbox
+                  id="j-cv"
                   checked={form.needsCv}
-                  onChange={(e) => set('needsCv', e.target.checked)}
+                  onCheckedChange={(v) => set('needsCv', v === true)}
                 />
-                CV
-              </label>
-              <label className="check">
-                <input
-                  type="checkbox"
+                <Label htmlFor="j-cv">CV</Label>
+              </div>
+              <div className="check">
+                <Checkbox
+                  id="j-cover"
                   checked={form.needsCover}
-                  onChange={(e) => set('needsCover', e.target.checked)}
+                  onCheckedChange={(v) => set('needsCover', v === true)}
                 />
-                Cover letter
-              </label>
-              <label className="check">
-                <input
-                  type="checkbox"
+                <Label htmlFor="j-cover">Cover letter</Label>
+              </div>
+              <div className="check">
+                <Checkbox
+                  id="j-portfolio"
                   checked={form.needsPortfolio}
-                  onChange={(e) => set('needsPortfolio', e.target.checked)}
+                  onCheckedChange={(v) => set('needsPortfolio', v === true)}
                 />
-                Portfolio
-              </label>
+                <Label htmlFor="j-portfolio">Portfolio</Label>
+              </div>
             </div>
           </div>
         </div>
@@ -413,20 +424,18 @@ export default function Hiring() {
         }
         actions={
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            <select
-              className="select"
-              style={{ minHeight: 38, width: 'auto' }}
-              value={jobFilter}
-              onChange={(e) => setJobFilter(e.target.value)}
-              aria-label="Filter by job"
-            >
-              <option value="">All roles</option>
-              {jobs.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.title}
-                </option>
-              ))}
-            </select>
+            {/* Radix rejects an empty-string item value, which is what this
+                filter used for "all". ALL_ROLES is the sentinel it maps to. */}
+            <Select
+              value={jobFilter || ALL_ROLES}
+              onChange={(v) => setJobFilter(v === ALL_ROLES ? '' : v)}
+              options={[
+                { value: ALL_ROLES, label: 'All roles' },
+                ...jobs.map((j) => ({ value: j.id, label: j.title })),
+              ]}
+              ariaLabel="Filter by job"
+              className="h-[38px] w-auto"
+            />
             <Button variant="primary" size="sm" icon="plus" onClick={() => setModalOpen(true)}>
               Post a job
             </Button>

@@ -9,6 +9,8 @@ import StatusPill from '../components/ui/StatusPill'
 import Modal from '../components/ui/Modal'
 import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
+import Textarea from '../components/ui/Textarea'
+import { Label } from '@/components/shadcn/label'
 
 export default function Applications() {
   const { data, loading, error, reload, setData } = useApi((signal) =>
@@ -164,10 +166,9 @@ export default function Applications() {
         onClose={() => setRejectId(null)}
       >
         <div className="field" style={{ marginBottom: 18 }}>
-          <label htmlFor="reject-reason">Reason</label>
-          <textarea
+          <Label htmlFor="reject-reason">Reason</Label>
+          <Textarea
             id="reject-reason"
-            className="textarea"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="e.g. Tier requirements not met"

@@ -10,6 +10,8 @@ import StatusPill from '../components/ui/StatusPill'
 import Modal from '../components/ui/Modal'
 import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
+import Textarea from '../components/ui/Textarea'
+import { Label } from '@/components/shadcn/label'
 
 type Filter = 'ALL' | DisputeStatus
 
@@ -216,27 +218,14 @@ export default function Disputes() {
               </div>
             )}
 
-            <div>
-              <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
-                Resolution note (optional)
-              </label>
-              <textarea
+            <div className="field">
+              <Label htmlFor="dispute-note">Resolution note (optional)</Label>
+              <Textarea
+                id="dispute-note"
                 value={resolution}
                 onChange={(e) => setResolution(e.target.value)}
                 placeholder="Explain the decision to the worker…"
                 rows={3}
-                style={{
-                  width: '100%',
-                  background: 'var(--surface)',
-                  border: '1px solid var(--line-2)',
-                  borderRadius: 8,
-                  color: 'var(--text)',
-                  fontSize: 14,
-                  padding: '10px 12px',
-                  resize: 'vertical',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
               />
             </div>
 

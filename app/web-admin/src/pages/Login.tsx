@@ -8,6 +8,8 @@ import OtpInput from '../components/ui/OtpInput'
 import Icon from '../components/Icon'
 import Logo from '../components/Logo'
 import './Login.css'
+import Input from '../components/ui/Input'
+import { Label } from '@/components/shadcn/label'
 
 const DEV = import.meta.env.DEV
 
@@ -141,10 +143,10 @@ export default function Login() {
 
             <form onSubmit={onSubmit} noValidate>
               <div className="field" style={{ marginBottom: 14 }}>
-                <label htmlFor="email">Email</label>
-                <input
+                <Label htmlFor="email">Email</Label>
+                <Input
                   id="email"
-                  className="input"
+                  
                   type="email"
                   autoComplete="username"
                   value={email}
@@ -153,10 +155,10 @@ export default function Login() {
                 />
               </div>
               <div className="field" style={{ marginBottom: 10 }}>
-                <label htmlFor="password">Password</label>
-                <input
+                <Label htmlFor="password">Password</Label>
+                <Input
                   id="password"
-                  className="input"
+                  
                   type="password"
                   autoComplete="current-password"
                   value={password}

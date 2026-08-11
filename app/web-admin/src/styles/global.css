@@ -417,35 +417,9 @@ table.dt tbody tr:last-child td {
   font-weight: 600;
   color: var(--text);
 }
-.input,
-.textarea,
-.select {
-  font-size: 14px;
-  padding: 11px 14px;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--line-2);
-  background: var(--surface);
-  color: var(--text);
-  min-height: 44px;
-  width: 100%;
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-}
-.textarea {
-  min-height: 88px;
-  resize: vertical;
-}
-.input:focus,
-.textarea:focus,
-.select:focus {
-  outline: none;
-  border-color: var(--clay-deep);
-  background: var(--surface);
-  box-shadow: 0 0 0 3px rgba(251, 172, 52, 0.28);
-}
-.input::placeholder,
-.textarea::placeholder {
-  color: var(--faint);
-}
+/* The .input / .textarea / .select rules that lived here are gone. Those
+   controls are now shadcn components, sized and focused by the adapters in
+   components/ui/. The 44px min-height they enforced lives in Input.tsx. */
 .field .help {
   font-size: 12px;
   color: var(--muted);

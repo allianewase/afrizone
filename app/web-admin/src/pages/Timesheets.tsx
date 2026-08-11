@@ -9,6 +9,8 @@ import StatusPill from '../components/ui/StatusPill'
 import Modal from '../components/ui/Modal'
 import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
+import Textarea from '../components/ui/Textarea'
+import { Label } from '@/components/shadcn/label'
 
 function slaPill(hoursLeft?: number) {
   if (hoursLeft == null) return null
@@ -172,10 +174,9 @@ export default function Timesheets() {
         onClose={() => setDisputeId(null)}
       >
         <div className="field" style={{ marginBottom: 18 }}>
-          <label htmlFor="dispute-reason">Reason</label>
-          <textarea
+          <Label htmlFor="dispute-reason">Reason</Label>
+          <Textarea
             id="dispute-reason"
-            className="textarea"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="e.g. Clock-out outside geofence"
