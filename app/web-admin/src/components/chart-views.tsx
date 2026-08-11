@@ -68,7 +68,7 @@ export function SpendChart({ data }: { data: ReportsSummary['spendByMonth'] }) {
     <AreaChart
       data={rows(data)}
       xDataKey="monthStart"
-      aspectRatio="5 / 2"
+      className="chart-h-240"
       margin={PLOT_MARGIN}
     >
       <Grid horizontal />
@@ -89,7 +89,7 @@ export function FillRateTrendChart({ data }: { data: ReportsSummary['fillRateTre
     <AreaChart
       data={rows(data)}
       xDataKey="monthStart"
-      aspectRatio="5 / 2"
+      className="chart-h-240"
       margin={PLOT_MARGIN}
     >
       <Grid horizontal />
@@ -109,7 +109,7 @@ export function CategoryChart({ data }: { data: ReportsSummary['spendByCategory'
       data={rows(data)}
       xDataKey="label"
       orientation="horizontal"
-      aspectRatio="5 / 2"
+      className="chart-h-240"
       margin={HORIZONTAL_MARGIN}
     >
       <Grid vertical />
@@ -135,7 +135,7 @@ export function CategoryBars({ data }: { data: { label: string; value: number }[
     <BarChart
       data={rows(data)}
       xDataKey="label"
-      aspectRatio="3 / 1"
+      className="chart-h-200"
       margin={PLOT_MARGIN}
     >
       <Grid horizontal />

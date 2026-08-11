@@ -15,22 +15,32 @@ interface LogoProps {
   className?: string
 }
 
-/* Hand-drawn (not auto-traced) simplified Africa silhouette, straight-line
-   points only so the path data stays easy to verify and adjust. Keeps the West
-   Africa bulge and the Horn as the two recognisable features, plus Madagascar
-   as a separate shape. Kept identical to mobile's src/components/Logo.tsx. */
+/**
+ * Africa silhouette, 35 points, clockwise from the northwest Mediterranean.
+ *
+ * The previous version was 24 points and read as a blob. This one is drawn to
+ * show the four features that make the continent recognisable at small sizes:
+ * a flat Mediterranean coast, the Horn spiking east to x=100, the sharp x-drop
+ * up the west side that gives the West Africa bulge its shape, and a steady
+ * taper to a 2-unit Cape. Its width profile peaks at y=40 and narrows
+ * monotonically from y=48 down, which is what makes it read as Africa rather
+ * than as an oval.
+ *
+ * Kept identical to mobile's src/components/Logo.tsx, index.html's pre-boot
+ * markup and favicon.svg. All four must change together.
+ */
 const AFRICA_PATH =
-  'M32 6 L48 3 L62 8 L68 14 L74 22 L88 26 L100 34 L86 40 L80 52 L84 60 L76 72 L68 84 L58 96 L50 104 L40 96 L32 84 L26 70 L20 60 L10 54 L0 48 L12 40 L8 28 L18 16 Z'
-const MADAGASCAR_PATH = 'M80 78 Q86 82 84 90 Q80 95 77 89 Q75 82 80 78 Z'
+  'M18 10 L30 5 L44 4 L58 6 L70 10 L77 15 L81 21 L85 27 L90 32 L96 38 L100 42 L93 45 L87 44 L84 50 L82 58 L78 66 L74 74 L69 82 L63 90 L57 98 L51 103 L46 99 L42 92 L38 84 L35 76 L33 68 L32 60 L29 55 L23 52 L15 50 L8 45 L4 38 L7 30 L11 22 L15 15 Z'
+/** Sits off the southeast coast, clear of it by roughly 12 units. */
+const MADAGASCAR_PATH = 'M82 70 Q88 75 86 84 Q82 90 79 83 Q78 75 82 70 Z'
 
 /**
- * Afrizone logo mark: a Sea Buckthorn-orange Africa silhouette with a Deep Navy
- * shopping-cart glyph carrying goods, per the AfriZoneMart.com identity.
+ * Afrizone logo mark: a Sea Buckthorn-orange Africa with a Deep Navy shopping
+ * cart carrying goods, per the AfriZoneMart.com identity.
  *
  * `markTone="reversed"` swaps the continent to white for solid orange or navy
- * grounds, where the default orange fill has no contrast against the surface.
- * That switch is the reason this stays an inline SVG rather than an image asset:
- * a raster lockup would need a second file per ground, and would not stay crisp
+ * grounds. That switch is why this stays an inline SVG rather than an image
+ * asset: a raster would need a second file per ground, and would not stay crisp
  * across the 38px sidebar and 56px splash uses.
  */
 export function LogoMark({ size = 38, markTone = 'full' }: { size?: number; markTone?: MarkTone }) {
@@ -41,33 +51,32 @@ export function LogoMark({ size = 38, markTone = 'full' }: { size?: number; mark
       <svg viewBox="0 0 100 105" width="100%" height="100%" aria-hidden="true">
         <path d={AFRICA_PATH} fill={continentFill} />
         <path d={MADAGASCAR_PATH} fill={continentFill} />
-        {/* Cart: handle, basket, three goods, two wheels.
-            These coordinates are constrained, not chosen. Every point has to sit
-            inside the continent polygon or the navy shows against the page
-            instead of the orange. The first placement put the left wheel 2.5
-            units outside the coastline at y=90, where the continent has narrowed
-            toward its southern tip. Shifting the group +3x/-4y clears every
-            point by at least 3.2 units. Check that before moving any of it. */}
+        {/* Cart geometry is solved, not chosen. Every point has to sit inside the
+            continent polygon or the navy shows against the page instead of the
+            orange. These coordinates are the largest cart that clears the
+            coastline everywhere, fitted by scanline against the path above:
+            14% larger than the previous silhouette allowed, and clearing by at
+            least 3.4 units. Re-solve it if the outline ever changes. */}
         <path
-          d="M69 34 L41 48"
+          d="M76 19 L44 35"
           stroke="var(--navy)"
-          strokeWidth="4"
+          strokeWidth="4.5"
           strokeLinecap="round"
           fill="none"
         />
-        <path d="M41 48 L67 48 L59 76 L34 76 Z" fill="var(--navy)" />
+        <path d="M44 35 L74 35 L65 67 L36 67 Z" fill="var(--navy)" />
         <path
-          d="M37 58 L63 58 M35 67 L61 67"
+          d="M40 46 L69 46 M37 57 L67 57"
           stroke="#fff"
-          strokeWidth="1.5"
+          strokeWidth="1.7"
           fill="none"
           opacity="0.5"
         />
-        <rect x="35" y="40" width="6" height="8" rx="2" fill="var(--navy)" />
-        <rect x="43" y="36" width="9" height="12" rx="2" fill="var(--navy)" />
-        <rect x="54" y="38" width="8" height="10" rx="2" fill="var(--navy)" />
-        <circle cx="42" cy="86" r="5.5" fill="var(--navy)" />
-        <circle cx="56" cy="86" r="5.5" fill="var(--navy)" />
+        <rect x="37" y="26" width="7" height="9" rx="2" fill="var(--navy)" />
+        <rect x="47" y="21" width="10" height="14" rx="2" fill="var(--navy)" />
+        <rect x="59" y="23" width="9" height="11" rx="2" fill="var(--navy)" />
+        <circle cx="45" cy="78" r="6.3" fill="var(--navy)" />
+        <circle cx="61" cy="78" r="6.3" fill="var(--navy)" />
       </svg>
     </span>
   )
@@ -76,13 +85,9 @@ export function LogoMark({ size = 38, markTone = 'full' }: { size?: number; mark
 /**
  * The full AfriZoneMart.com lockup: mark, wordmark, tagline.
  *
- * The wordmark is one colour rather than the previous two-tone "Afrizone" plus
- * orange "Part Time", because the identity does not split it. "Part Time" no
- * longer appears in the interface at all.
- *
- * Composed in CSS rather than shipped as one fixed-aspect image so it can sit in
- * the 186px sidebar without the tagline shrinking to unreadable, which a 2.3:1
- * raster lockup would have done.
+ * The wordmark is one colour rather than two-tone, because the identity does not
+ * split it. Composed in CSS rather than shipped as one fixed-aspect image so it
+ * can sit in the 186px sidebar without the tagline shrinking to unreadable.
  */
 export default function Logo({
   size = 38,

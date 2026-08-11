@@ -128,7 +128,7 @@ export default function Reports() {
             </div>
             <span className="chip">Naira</span>
           </div>
-          <Suspense fallback={<Skeleton className="w-full rounded-[var(--r-sm)]" style={{ height: 220 }} />}>
+          <Suspense fallback={<Skeleton className="w-full rounded-[var(--r-sm)]" style={{ height: 240 }} />}>
             <SpendChart data={data.spendByMonth} />
           </Suspense>
         </Glass>
@@ -190,7 +190,7 @@ export default function Reports() {
             </div>
             <span className="chip">%</span>
           </div>
-          <Suspense fallback={<Skeleton className="w-full rounded-[var(--r-sm)]" style={{ height: 220 }} />}>
+          <Suspense fallback={<Skeleton className="w-full rounded-[var(--r-sm)]" style={{ height: 240 }} />}>
             <FillRateTrendChart data={data.fillRateTrend} />
           </Suspense>
         </Glass>

@@ -19,8 +19,8 @@ interface LogoProps {
 // the Horn of Africa (right) and West Africa bulge (left) as the two key
 // recognizable features, plus a small separate Madagascar blob.
 const AFRICA_PATH =
-  'M32 6 L48 3 L62 8 L68 14 L74 22 L88 26 L100 34 L86 40 L80 52 L84 60 L76 72 L68 84 L58 96 L50 104 L40 96 L32 84 L26 70 L20 60 L10 54 L0 48 L12 40 L8 28 L18 16 Z';
-const MADAGASCAR_PATH = 'M80 78 Q86 82 84 90 Q80 95 77 89 Q75 82 80 78 Z';
+  'M18 10 L30 5 L44 4 L58 6 L70 10 L77 15 L81 21 L85 27 L90 32 L96 38 L100 42 L93 45 L87 44 L84 50 L82 58 L78 66 L74 74 L69 82 L63 90 L57 98 L51 103 L46 99 L42 92 L38 84 L35 76 L33 68 L32 60 L29 55 L23 52 L15 50 L8 45 L4 38 L7 30 L11 22 L15 15 Z';
+const MADAGASCAR_PATH = 'M82 70 Q88 75 86 84 Q82 90 79 83 Q78 75 82 70 Z';
 
 /**
  * Afrizone logo mark: a Sea Buckthorn-orange Africa silhouette with a Deep
@@ -44,14 +44,14 @@ export function LogoMark({
         <Path d={AFRICA_PATH} fill={continentFill} />
         <Path d={MADAGASCAR_PATH} fill={continentFill} />
         {/* cart: handle, basket, three "goods" bumps, two wheels */}
-        <Path d="M69 34 L41 48" stroke={colors.navy} strokeWidth={4} strokeLinecap="round" fill="none" />
-        <Path d="M41 48 L67 48 L59 76 L34 76 Z" fill={colors.navy} />
-        <Path d="M37 58 L63 58 M35 67 L61 67" stroke={colors.white} strokeWidth={1.5} fill="none" opacity={0.5} />
-        <Rect x={35} y={40} width={6} height={8} rx={2} fill={colors.navy} />
-        <Rect x={43} y={36} width={9} height={12} rx={2} fill={colors.navy} />
-        <Rect x={54} y={38} width={8} height={10} rx={2} fill={colors.navy} />
-        <Circle cx={42} cy={86} r={5.5} fill={colors.navy} />
-        <Circle cx={56} cy={86} r={5.5} fill={colors.navy} />
+        <Path d="M76 19 L44 35" stroke={colors.navy} strokeWidth={4.5} strokeLinecap="round" fill="none" />
+        <Path d="M44 35 L74 35 L65 67 L36 67 Z" fill={colors.navy} />
+        <Path d="M40 46 L69 46 M37 57 L67 57" stroke={colors.white} strokeWidth={1.7} fill="none" opacity={0.5} />
+        <Rect x={37} y={26} width={7} height={9} rx={2} fill={colors.navy} />
+        <Rect x={47} y={21} width={10} height={14} rx={2} fill={colors.navy} />
+        <Rect x={59} y={23} width={10} height={11} rx={2} fill={colors.navy} />
+        <Circle cx={45} cy={78} r={6.3} fill={colors.navy} />
+        <Circle cx={61} cy={78} r={6.3} fill={colors.navy} />
       </Svg>
     </View>
   );

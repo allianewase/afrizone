@@ -127,6 +127,24 @@ a {
   background: rgba(200, 69, 58, 0.18);
 }
 
+/* Pins a chart to a fixed height instead of an aspect ratio.
+   The `.dash` grid is 1.65fr/1fr, so two charts sharing a row with the same
+   aspectRatio come out at very different heights: at 5/2 that was 277px beside
+   161px, which made every row look lopsided. Heights make rows line up.
+   `!important` is required, not lazy: bklit sets aspect-ratio as an inline style,
+   and BarChart accepts no style prop to override it through. */
+.chart-h-200,
+.chart-h-240 {
+  aspect-ratio: auto !important;
+  width: 100%;
+}
+.chart-h-200 {
+  height: 200px;
+}
+.chart-h-240 {
+  height: 240px;
+}
+
 /* ===== glass card ===== */
 /* "Sunrise Cut": every glass surface pairs a sharp top-right corner with
    the standard rounded radius elsewhere: a signature asymmetric shape
