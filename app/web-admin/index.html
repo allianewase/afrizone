@@ -18,10 +18,13 @@
       <div style="position: fixed; inset: 0; display: grid; place-items: center; background: #000066; font-family: 'Raleway', sans-serif">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 26px">
           <div style="display: flex; align-items: center; gap: 12px">
-            <!-- Same asset as src/components/Logo.tsx, referenced rather than
+            <!-- Same assets as src/components/Logo.tsx, referenced rather than
                  duplicated: this markup paints before any JS loads, so it
-                 cannot import the component. 40x42 is 40 / (107/113). -->
-            <img src="/logo-mark.png" width="40" height="42" alt="" />
+                 cannot import the component. 40x42 is 40 / (107/113), and the
+                 srcset ladder keeps the browser off an awkward reduction. -->
+            <img src="/logo-mark.png"
+                 srcset="/logo-mark-76.png 76w, /logo-mark-92.png 92w, /logo-mark.png 107w"
+                 sizes="40px" width="40" height="42" alt="" />
             <span style="font-weight: 800; font-size: 22px; letter-spacing: -.02em; color: #fff">AfriZoneMart.com</span>
           </div>
           <div style="width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(255,255,255,.15); border-top-color: #fbac34; animation: azspin .8s linear infinite"></div>

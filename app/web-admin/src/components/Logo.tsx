@@ -22,6 +22,14 @@ interface LogoProps {
 const MARK_ASPECT = 107 / 113
 
 /**
+ * The ladder in `srcSet` exists so the browser never has to reduce the mark by
+ * an awkward ratio. At the 38px sidebar it picks the 76w file and halves it
+ * exactly, or uses it 1:1 on a 2x screen. Scaling 107 to 38 directly is a 2.8x
+ * reduction and it read as muddy. The variants are resampled in linear light
+ * with premultiplied alpha, which the browser does not do.
+ */
+
+/**
  * Afrizone logo mark: the real AfriZoneMart.com artwork, cropped from the
  * brand asset rather than redrawn.
  *
@@ -34,10 +42,13 @@ const MARK_ASPECT = 107 / 113
  */
 export function LogoMark({ size = 38, markTone = 'full' }: { size?: number; markTone?: MarkTone }) {
   const height = Math.round(size / MARK_ASPECT)
+  const stem = markTone === 'reversed' ? 'logo-mark-reversed' : 'logo-mark'
   return (
     <span className="az-mark" style={{ width: size, height }}>
       <img
-        src={markTone === 'reversed' ? '/logo-mark-reversed.png' : '/logo-mark.png'}
+        src={`/${stem}.png`}
+        srcSet={`/${stem}-76.png 76w, /${stem}-92.png 92w, /${stem}.png 107w`}
+        sizes={`${size}px`}
         width={size}
         height={height}
         alt=""
