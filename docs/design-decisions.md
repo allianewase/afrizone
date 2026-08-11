@@ -157,9 +157,18 @@ splash both need it. A fixed 2.3:1 lockup would also shrink the tagline to aroun
 The wordmark is one colour, tone-switched, because `--text` and `--navy` are both
 dark inks and a single value leaves it invisible on the rail.
 
+**The cart coordinates are constrained, not chosen.** Every point of the cart has
+to sit inside the continent polygon, or the navy shows against the page instead of
+against the orange. The first placement put the left wheel 2.5 units outside the
+coastline at y=90, where the continent has narrowed toward its southern tip.
+Shifting the group +3x/-4y clears all 14 points by at least 3.2 units. Verify with
+a scanline check against the polygon before moving any of it.
+
 **Known limitation:** the Africa silhouette is hand-drawn straight-line geometry,
 not traced from the source artwork, so its outline approximates the real mark. If
-the source SVG becomes available, replace the path data and nothing else.
+the source SVG becomes available, replace the path data and nothing else. Note
+that doing so invalidates the cart placement above, since it is fitted to this
+polygon.
 
 ## Things that are deliberate and look like bugs
 

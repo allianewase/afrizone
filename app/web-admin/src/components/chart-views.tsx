@@ -36,6 +36,20 @@ import type { ReportsSummary } from '../api/types'
 const PRIMARY = 'var(--chart-line-primary)'
 
 /**
+ * bklit defaults every chart to `margin: 40` on all four sides, which is far too
+ * much inside a card that already has 22px of padding: on a 693px card at 5/2 it
+ * left a ~197px plot inside a 277px box, with 80px of width gone as well.
+ *
+ * The values below come from how bklit lays the axes out rather than from taste.
+ * Both XAxis and BarXAxis position their labels at `bottom: 12` of the whole
+ * container, so `margin.bottom` is what stops the plot colliding with them.
+ * BarYAxis renders its category labels in a column whose width *is*
+ * `margin.left`, so that one has to be wide enough for real category names.
+ */
+const PLOT_MARGIN = { top: 12, right: 12, bottom: 32, left: 12 }
+const HORIZONTAL_MARGIN = { top: 8, right: 16, bottom: 12, left: 112 }
+
+/**
  * bklit types every chart's `data` as `Record<string, unknown>[]`, and a TS
  * interface has no index signature, so our precise row types are not assignable
  * to it even though the shapes are compatible. This is the one cast, kept at the
@@ -51,7 +65,12 @@ const rows = (d: readonly object[]) => d as unknown as Record<string, unknown>[]
 
 export function SpendChart({ data }: { data: ReportsSummary['spendByMonth'] }) {
   return (
-    <AreaChart data={rows(data)} xDataKey="monthStart" aspectRatio="5 / 2">
+    <AreaChart
+      data={rows(data)}
+      xDataKey="monthStart"
+      aspectRatio="5 / 2"
+      margin={PLOT_MARGIN}
+    >
       <Grid horizontal />
       <Area dataKey="spend" fill={PRIMARY} />
       <XAxis />
@@ -67,7 +86,12 @@ export function SpendChart({ data }: { data: ReportsSummary['spendByMonth'] }) {
  */
 export function FillRateTrendChart({ data }: { data: ReportsSummary['fillRateTrend'] }) {
   return (
-    <AreaChart data={rows(data)} xDataKey="monthStart" aspectRatio="5 / 2">
+    <AreaChart
+      data={rows(data)}
+      xDataKey="monthStart"
+      aspectRatio="5 / 2"
+      margin={PLOT_MARGIN}
+    >
       <Grid horizontal />
       <Area dataKey="rate" fill={PRIMARY} />
       <XAxis />
@@ -81,7 +105,13 @@ export function FillRateTrendChart({ data }: { data: ReportsSummary['fillRateTre
 /** Horizontal, because the category names are long enough to collide on an x-axis. */
 export function CategoryChart({ data }: { data: ReportsSummary['spendByCategory'] }) {
   return (
-    <BarChart data={rows(data)} xDataKey="label" orientation="horizontal" aspectRatio="5 / 3">
+    <BarChart
+      data={rows(data)}
+      xDataKey="label"
+      orientation="horizontal"
+      aspectRatio="5 / 2"
+      margin={HORIZONTAL_MARGIN}
+    >
       <Grid vertical />
       <Bar dataKey="amount" fill={PRIMARY} lineCap="round" />
       <BarYAxis />
@@ -102,7 +132,12 @@ export function CategoryChart({ data }: { data: ReportsSummary['spendByCategory'
  */
 export function CategoryBars({ data }: { data: { label: string; value: number }[] }) {
   return (
-    <BarChart data={rows(data)} xDataKey="label" aspectRatio="5 / 3">
+    <BarChart
+      data={rows(data)}
+      xDataKey="label"
+      aspectRatio="3 / 1"
+      margin={PLOT_MARGIN}
+    >
       <Grid horizontal />
       <Bar dataKey="value" fill={PRIMARY} lineCap="round" />
       <BarXAxis />

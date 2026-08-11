@@ -44,14 +44,14 @@ export function LogoMark({
         <Path d={AFRICA_PATH} fill={continentFill} />
         <Path d={MADAGASCAR_PATH} fill={continentFill} />
         {/* cart: handle, basket, three "goods" bumps, two wheels */}
-        <Path d="M66 38 L38 52" stroke={colors.navy} strokeWidth={4} strokeLinecap="round" fill="none" />
-        <Path d="M38 52 L64 52 L56 80 L31 80 Z" fill={colors.navy} />
-        <Path d="M34 62 L60 62 M32 71 L58 71" stroke={colors.white} strokeWidth={1.5} fill="none" opacity={0.5} />
-        <Rect x={32} y={44} width={6} height={8} rx={2} fill={colors.navy} />
-        <Rect x={40} y={40} width={9} height={12} rx={2} fill={colors.navy} />
-        <Rect x={51} y={42} width={8} height={10} rx={2} fill={colors.navy} />
-        <Circle cx={39} cy={90} r={5.5} fill={colors.navy} />
-        <Circle cx={53} cy={90} r={5.5} fill={colors.navy} />
+        <Path d="M69 34 L41 48" stroke={colors.navy} strokeWidth={4} strokeLinecap="round" fill="none" />
+        <Path d="M41 48 L67 48 L59 76 L34 76 Z" fill={colors.navy} />
+        <Path d="M37 58 L63 58 M35 67 L61 67" stroke={colors.white} strokeWidth={1.5} fill="none" opacity={0.5} />
+        <Rect x={35} y={40} width={6} height={8} rx={2} fill={colors.navy} />
+        <Rect x={43} y={36} width={9} height={12} rx={2} fill={colors.navy} />
+        <Rect x={54} y={38} width={8} height={10} rx={2} fill={colors.navy} />
+        <Circle cx={42} cy={86} r={5.5} fill={colors.navy} />
+        <Circle cx={56} cy={86} r={5.5} fill={colors.navy} />
       </Svg>
     </View>
   );

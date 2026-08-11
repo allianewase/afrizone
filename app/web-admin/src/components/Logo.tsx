@@ -41,27 +41,33 @@ export function LogoMark({ size = 38, markTone = 'full' }: { size?: number; mark
       <svg viewBox="0 0 100 105" width="100%" height="100%" aria-hidden="true">
         <path d={AFRICA_PATH} fill={continentFill} />
         <path d={MADAGASCAR_PATH} fill={continentFill} />
-        {/* cart: handle, basket, three goods, two wheels */}
+        {/* Cart: handle, basket, three goods, two wheels.
+            These coordinates are constrained, not chosen. Every point has to sit
+            inside the continent polygon or the navy shows against the page
+            instead of the orange. The first placement put the left wheel 2.5
+            units outside the coastline at y=90, where the continent has narrowed
+            toward its southern tip. Shifting the group +3x/-4y clears every
+            point by at least 3.2 units. Check that before moving any of it. */}
         <path
-          d="M66 38 L38 52"
+          d="M69 34 L41 48"
           stroke="var(--navy)"
           strokeWidth="4"
           strokeLinecap="round"
           fill="none"
         />
-        <path d="M38 52 L64 52 L56 80 L31 80 Z" fill="var(--navy)" />
+        <path d="M41 48 L67 48 L59 76 L34 76 Z" fill="var(--navy)" />
         <path
-          d="M34 62 L60 62 M32 71 L58 71"
+          d="M37 58 L63 58 M35 67 L61 67"
           stroke="#fff"
           strokeWidth="1.5"
           fill="none"
           opacity="0.5"
         />
-        <rect x="32" y="44" width="6" height="8" rx="2" fill="var(--navy)" />
-        <rect x="40" y="40" width="9" height="12" rx="2" fill="var(--navy)" />
-        <rect x="51" y="42" width="8" height="10" rx="2" fill="var(--navy)" />
-        <circle cx="39" cy="90" r="5.5" fill="var(--navy)" />
-        <circle cx="53" cy="90" r="5.5" fill="var(--navy)" />
+        <rect x="35" y="40" width="6" height="8" rx="2" fill="var(--navy)" />
+        <rect x="43" y="36" width="9" height="12" rx="2" fill="var(--navy)" />
+        <rect x="54" y="38" width="8" height="10" rx="2" fill="var(--navy)" />
+        <circle cx="42" cy="86" r="5.5" fill="var(--navy)" />
+        <circle cx="56" cy="86" r="5.5" fill="var(--navy)" />
       </svg>
     </span>
   )
