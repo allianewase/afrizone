@@ -41,7 +41,7 @@ export default function ResetPassword() {
 
   return (
     <div className="login-screen">
-      <div className="glass glass-accent login-card rv in">
+      <div className="glass login-card rv in">
         <div className="login-brand">
           <Logo size={46} tone="light" tagline />
         </div>

@@ -63,27 +63,6 @@ a {
   border-radius: 10px;
 }
 
-/* The animated gradient-mesh blobs and the grain overlay lived here to give a
-   near-black page some depth. On a sand ground they have nothing to do: blurred
-   colour fields read as stains rather than atmosphere, and white-dot grain is
-   invisible. A light UI gets its depth from whitespace and hairlines instead.
-   Removed along with their keyframes and their markup in Background.tsx. */
-
-/* Faint chevron field across the whole app shell, well under any content —
-   the "Sunrise Cut" motif as an ambient texture rather than a hero-only accent. */
-.app-motif {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  /* 0.06 on light, matching design-system.html's .motif — the dark theme's
-     0.025 is invisible against sand. */
-  opacity: 0.06;
-  background-image: var(--motif);
-  background-repeat: repeat;
-  background-size: 36px 36px;
-}
-
 /* ===== buttons ===== */
 .btn {
   display: inline-flex;
@@ -167,38 +146,6 @@ a {
   border-top-right-radius: var(--cut);
   box-shadow: var(--shadow-sm);
 }
-/* Branded clay->gold edge — opt in with .glass-accent on hero/primary
-   surfaces only (ones known not to host overflowing children). */
-.glass-accent {
-  overflow: hidden;
-}
-.glass-accent::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  background: var(--grad);
-}
-
-/* ===== motif utilities ===== */
-/* Opacities follow the light-theme values the mobile theme already defines
-   (motif.dividerOpacityLight / watermarkOpacityLight). */
-.motif-divider {
-  height: 10px;
-  background-image: var(--motif);
-  background-repeat: repeat-x;
-  background-size: 24px 24px;
-  opacity: 0.5;
-}
-.motif-bg {
-  position: absolute;
-  inset: 0;
-  background-image: var(--motif);
-  background-repeat: repeat;
-  background-size: 32px 32px;
-  opacity: 0.05;
-  pointer-events: none;
-}
 
 /* ===== page header ===== */
 .phead {
@@ -212,24 +159,6 @@ a {
 .phead h1 {
   font-size: 30px;
   font-weight: 800;
-  position: relative;
-  display: inline-block;
-  padding-bottom: 10px;
-}
-/* Signature chevron underline — appears once per page under every title,
-   the one brand touch that reaches every screen without ever sitting near
-   dense data (DESIGN_SPEC §7). */
-.phead h1::after {
-  content: '';
-  position: absolute;
-  left: 1px;
-  bottom: 0;
-  width: 46px;
-  height: 6px;
-  background-image: var(--motif);
-  background-repeat: repeat-x;
-  background-size: 12px 12px;
-  opacity: 0.7;
 }
 .phead .crumb {
   color: var(--muted);
