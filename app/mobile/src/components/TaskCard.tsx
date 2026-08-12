@@ -14,7 +14,8 @@ interface TaskCardProps {
 
 export function TaskCard({ task, onPress }: TaskCardProps) {
   const remote = task.locationType === 'REMOTE';
-  const slotsLeft = Math.max(0, task.slots - (task.filledCount ?? 0));
+  const filled = task.filledCount ?? 0;
+  const fillPct = task.slots > 0 ? Math.min(100, Math.round((filled / task.slots) * 100)) : 0;
 
   return (
     <Pressable
@@ -45,6 +46,10 @@ export function TaskCard({ task, onPress }: TaskCardProps) {
         </View>
       </View>
 
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${fillPct}%` }]} />
+      </View>
+
       <View style={styles.footer}>
         <MoneyText
           amount={task.payModel === 'HOURLY' ? task.rate : task.budget ?? task.rate}
@@ -54,7 +59,7 @@ export function TaskCard({ task, onPress }: TaskCardProps) {
         <Text style={styles.payUnit}>{task.payModel === 'HOURLY' ? '/hr' : ' fixed'}</Text>
         <View style={styles.spacer} />
         <Text style={styles.slots}>
-          {slotsLeft} {slotsLeft === 1 ? 'slot' : 'slots'} left
+          {filled} of {task.slots} filled
         </Text>
       </View>
     </Pressable>
@@ -79,6 +84,13 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', gap: spacing.lg, flexWrap: 'wrap' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 },
   metaText: { color: colors.textMuted, fontSize: type.size.sm },
+  progressTrack: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.surfaceSand,
+    overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: colors.clay },
   footer: { flexDirection: 'row', alignItems: 'baseline', marginTop: 2 },
   payUnit: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
   spacer: { flex: 1 },

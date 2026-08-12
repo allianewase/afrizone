@@ -14,6 +14,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Screen } from '../../src/components/Screen';
 import { Card } from '../../src/components/Card';
 import { ListRow } from '../../src/components/ListRow';
@@ -28,6 +29,7 @@ import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
 import { NIGERIAN_BANKS } from '../../src/lib/banks';
+import { avatarGradient } from '../../src/lib/format';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { User, Contract } from '../../src/api/types';
 
@@ -91,11 +93,16 @@ export default function ProfileScreen() {
     >
       {/* Identity card */}
       <Card style={styles.identity}>
-        <View style={styles.avatar}>
+        <LinearGradient
+          colors={avatarGradient(user?.name ?? user?.email ?? 'A')}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.avatar}
+        >
           <Text style={styles.avatarText}>
             {(user?.name ?? 'A').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
           </Text>
-        </View>
+        </LinearGradient>
         <View style={styles.identityBody}>
           <Text style={styles.name}>{user?.name ?? 'Worker'}</Text>
           <View style={styles.tiers}>
@@ -606,11 +613,10 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 18,
-    backgroundColor: colors.navy,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { color: colors.gold, fontSize: type.size.lg, fontFamily: fontFamily.extrabold },
+  avatarText: { color: colors.white, fontSize: type.size.lg, fontFamily: fontFamily.extrabold },
   identityBody: { flex: 1, gap: spacing.xs },
   identityRight: { alignItems: 'center', gap: spacing.sm },
   name: { color: colors.text, fontSize: type.size.lg, fontFamily: fontFamily.extrabold },

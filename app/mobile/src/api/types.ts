@@ -95,6 +95,8 @@ export interface Application {
     | 'locationType'
     | 'startDate'
     | 'endDate'
+    | 'slots'
+    | 'filledCount'
   >;
 }
 

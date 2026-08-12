@@ -128,6 +128,13 @@ router.get("/applications", requireAuth, async (req: AuthedRequest, res: Respons
     }),
   ]);
   const paymentByTask = Object.fromEntries(payments.map((p) => [p.taskId, p.id]));
+  const uniqueTaskIds = [...new Set(apps.map((a) => a.taskId))];
+  const filledCounts = await Promise.all(
+    uniqueTaskIds.map((taskId) =>
+      prisma.application.count({ where: { taskId, status: "APPROVED" } })
+    )
+  );
+  const filledByTask = Object.fromEntries(uniqueTaskIds.map((id, i) => [id, filledCounts[i]]));
   res.json(
     apps.map((a) => ({
       id: a.id,
@@ -150,6 +157,8 @@ router.get("/applications", requireAuth, async (req: AuthedRequest, res: Respons
         locationType: a.task.locationType,
         startDate: a.task.startDate,
         endDate: a.task.endDate,
+        slots: a.task.slots,
+        filledCount: filledByTask[a.taskId] ?? 0,
       },
     }))
   );
