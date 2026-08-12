@@ -1,21 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Button } from '../../src/components/Button';
-import { Icon } from '../../src/components/Icon';
 import { Banner } from '../../src/components/Feedback';
 import { PasswordField } from '../../src/components/PasswordField';
+import { UnderlineInput } from '../../src/components/UnderlineInput';
 import { SuccessCard } from '../../src/components/SuccessCard';
-import { AuthShell, AuthCard } from '../../src/components/AuthShell';
-import { colors, spacing, type, layout } from '../../src/theme';
+import { AuthScreen, AuthFooterLink } from '../../src/components/AuthShell';
 import { useAuth } from '../../src/auth/AuthContext';
 
 const MIN_PASSWORD = 8;
 
 /**
- * Reset password (AUTH_FLOW §A2/§B). Paste the reset token (prefilled from the
- * dev token when arriving from Forgot) + a new password (≥8) → passwordReset →
- * success → back to the sign-in hub.
+ * Reset password. Paste the reset token (prefilled from the dev token when
+ * arriving from Forgot, or a deep link) + a new password (≥8, confirmed) →
+ * passwordReset → success → back to the sign-in hub.
  */
 export default function ResetScreen() {
   const router = useRouter();
@@ -24,13 +22,15 @@ export default function ResetScreen() {
 
   const [token, setToken] = useState(typeof params.token === 'string' ? params.token : '');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const tokenOk = token.trim().length > 0;
   const passOk = password.length >= MIN_PASSWORD;
-  const canSubmit = tokenOk && passOk;
+  const matchOk = confirm.length > 0 && confirm === password;
+  const canSubmit = tokenOk && passOk && matchOk;
 
   async function onSubmit() {
     if (!canSubmit || busy) return;
@@ -47,80 +47,54 @@ export default function ResetScreen() {
   }
 
   return (
-    <AuthShell watermarkSize={280}>
-      <AuthCard title="Reset password" onBack={() => router.back()}>
-        {done ? (
-          <SuccessCard
-            title="Password changed!"
-            message="No hassle anymore: you can now sign in with your new password."
-            actionLabel="Back to sign in"
-            onAction={() => router.replace('/(auth)/login')}
+    <AuthScreen
+      onBack={() => router.back()}
+      title="Reset Password"
+      subtitle="Enter the reset token from your email and choose a new password."
+      footer={<AuthFooterLink text="Have an account?" linkText="Sign in" onPress={() => router.back()} />}
+    >
+      {done ? (
+        <SuccessCard
+          title="Password changed!"
+          message="No hassle anymore: you can now sign in with your new password."
+          actionLabel="Back to sign in"
+          onAction={() => router.replace('/(auth)/login')}
+        />
+      ) : (
+        <>
+          {error ? <Banner tone="danger" icon="alert" title="Couldn’t reset" message={error} /> : null}
+
+          <UnderlineInput
+            label="Reset token"
+            value={token}
+            onChangeText={setToken}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder="Paste your token"
+            accessibilityLabel="Reset token"
           />
-        ) : (
-          <>
-            <Text style={styles.lead}>
-              Enter the reset token from your email and choose a new password.
-            </Text>
 
-            {error ? (
-              <Banner tone="danger" icon="alert" title="Couldn’t reset" message={error} />
-            ) : null}
+          <PasswordField
+            label="New Password"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="New password"
+            hint={`At least ${MIN_PASSWORD} characters.`}
+          />
 
-            <View style={styles.field}>
-              <Text style={styles.label}>Reset token</Text>
-              <View style={styles.inputRow}>
-                <Icon name="key" size={18} color={colors.textMuted} />
-                <TextInput
-                  value={token}
-                  onChangeText={setToken}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  placeholder="Paste your token"
-                  placeholderTextColor={colors.textFaint}
-                  style={styles.input}
-                  accessibilityLabel="Reset token"
-                />
-              </View>
-            </View>
+          <PasswordField
+            label="Confirm Password"
+            value={confirm}
+            onChangeText={setConfirm}
+            placeholder="Re-enter your new password"
+            error={confirm.length > 0 && !matchOk ? 'Passwords don’t match.' : undefined}
+            onSubmitEditing={onSubmit}
+            returnKeyType="go"
+          />
 
-            <PasswordField
-              label="New password"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="New password"
-              hint={`At least ${MIN_PASSWORD} characters.`}
-              onSubmitEditing={onSubmit}
-              returnKeyType="go"
-            />
-
-            <Button
-              label="Set new password"
-              icon="check"
-              onPress={onSubmit}
-              loading={busy}
-              disabled={!canSubmit || busy}
-            />
-          </>
-        )}
-      </AuthCard>
-    </AuthShell>
+          <Button label="Reset Password" onPress={onSubmit} loading={busy} disabled={!canSubmit || busy} />
+        </>
+      )}
+    </AuthScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  lead: { color: colors.textMuted, fontSize: type.size.md, lineHeight: 22 },
-  field: { gap: 6 },
-  label: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    minHeight: layout.hitTarget,
-    backgroundColor: colors.surface,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: spacing.md,
-  },
-  input: { flex: 1, fontSize: type.size.md, color: colors.text, paddingVertical: spacing.sm },
-});

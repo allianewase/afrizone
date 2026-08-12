@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
-import { Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Button } from '../../src/components/Button';
 import { CodeInput } from '../../src/components/CodeInput';
 import { Banner } from '../../src/components/Feedback';
-import { AuthShell, AuthCard } from '../../src/components/AuthShell';
-import { colors, spacing, type } from '../../src/theme';
+import { AuthScreen, AuthFooterLink } from '../../src/components/AuthShell';
 import { useAuth } from '../../src/auth/AuthContext';
 
 const CODE_LEN = 6;
 
 /**
- * Two-factor challenge (AUTH_FLOW §A2/§B). Reached from the sign-in hub when
- * /api/auth/login returns {requires2fa, challenge}. Enter the 6-digit TOTP →
- * verifyTwoFactor stores the session. Dev bypass `000000` (NODE_ENV !== prod).
- * On success: new/never-completed → KYC, else tabs.
+ * Two-factor challenge, restyled with the "Activate Account" code-entry
+ * pattern from the reference design (the closest real analog - this app has
+ * no separate email-activation step, only this TOTP verification). Reached
+ * from the sign-in hub when /api/auth/login returns {requires2fa, challenge}.
+ * Dev bypass `000000` (NODE_ENV !== prod). On success: new/never-completed →
+ * KYC, else tabs.
  */
 export default function TwoFactorScreen() {
   const router = useRouter();
@@ -43,46 +43,37 @@ export default function TwoFactorScreen() {
   }
 
   return (
-    <AuthShell watermarkSize={280}>
-      <AuthCard title="Two-factor" onBack={() => router.back()}>
-        <Text style={styles.lead}>Enter the 6-digit code from your authenticator app.</Text>
+    <AuthScreen
+      onBack={() => router.back()}
+      title="Two-Factor Authentication"
+      subtitle="Enter the 6-digit code from your authenticator app."
+      footer={<AuthFooterLink text="Not you?" linkText="Use a different account" onPress={() => router.back()} />}
+    >
+      <Banner
+        tone="indigo"
+        icon="shield"
+        title="Dev / sim mode"
+        message="The bypass code 000000 works outside production."
+      />
 
-        <Banner
-          tone="indigo"
-          icon="shield"
-          title="Dev / sim mode"
-          message="The bypass code 000000 works outside production."
-        />
+      {error ? <Banner tone="danger" icon="alert" title="Couldn’t verify" message={error} /> : null}
 
-        {error ? <Banner tone="danger" icon="alert" title="Couldn’t verify" message={error} /> : null}
+      <CodeInput
+        value={code}
+        onChange={setCode}
+        onComplete={(v) => onVerify(v)}
+        disabled={busy}
+        error={!!error}
+        autoFocus
+      />
 
-        <CodeInput
-          value={code}
-          onChange={setCode}
-          onComplete={(v) => onVerify(v)}
-          disabled={busy}
-          error={!!error}
-          autoFocus
-        />
-
-        <Button
-          label="Verify"
-          icon="shield"
-          onPress={() => onVerify()}
-          loading={busy}
-          disabled={code.length !== CODE_LEN || busy}
-        />
-
-        <Pressable onPress={() => router.back()} accessibilityRole="button" style={styles.altRow}>
-          <Text style={styles.altLink}>Use a different account</Text>
-        </Pressable>
-      </AuthCard>
-    </AuthShell>
+      <Button
+        label="Verify"
+        icon="shield"
+        onPress={() => onVerify()}
+        loading={busy}
+        disabled={code.length !== CODE_LEN || busy}
+      />
+    </AuthScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  lead: { color: colors.text, fontSize: type.size.md, lineHeight: 24 },
-  altRow: { alignItems: 'center', paddingVertical: spacing.sm },
-  altLink: { color: colors.goldInk, fontSize: type.size.base, fontWeight: '700' },
-});
