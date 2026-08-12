@@ -11,8 +11,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Logo from './Logo';
 import { Icon } from './Icon';
-import { WaveDivider } from './Motif';
-import { colors, spacing, type, layout, fontFamily } from '../theme';
+import { WaveDivider, PatternDivider } from './Motif';
+import { colors, spacing, type, layout, motif, fontFamily } from '../theme';
 
 interface AuthScreenProps {
   /** 'lg' for the welcome/Get Started screen, 'sm' for every other auth step. */
@@ -67,7 +67,10 @@ export function AuthScreen({ heroSize = 'sm', onBack, title, subtitle, children,
       </ScrollView>
 
       {footer ? (
-        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>{footer}</View>
+        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <PatternDivider color={colors.gold} opacity={motif.dividerOpacityDark} style={styles.footerDivider} />
+          {footer}
+        </View>
       ) : null}
     </KeyboardAvoidingView>
   );
@@ -124,7 +127,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   fields: { gap: spacing.lg, marginTop: spacing.xl },
-  footer: { backgroundColor: colors.navy, alignItems: 'center', paddingTop: spacing.md },
+  footer: { backgroundColor: colors.navy, alignItems: 'center', paddingTop: spacing.lg },
+  footerDivider: { width: 120, marginBottom: spacing.md },
   footerLinkRow: { paddingVertical: spacing.xs },
   footerText: { color: colors.railMuted, fontSize: type.size.base },
   footerLink: { color: colors.gold, fontWeight: '700' },
