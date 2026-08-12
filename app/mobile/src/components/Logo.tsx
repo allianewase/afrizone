@@ -82,7 +82,7 @@ export default function Logo({
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   words: { flexDirection: 'column' },
-  word: { fontFamily: fontFamily.extrabold, fontSize: 19, letterSpacing: -0.4 },
+  word: { fontFamily: fontFamily.extrabold, fontSize: 19, letterSpacing: -0.4, fontStyle: 'italic' },
   wordDark: { color: colors.white },
   wordLight: { color: colors.navy },
   tag: { fontSize: 11, fontStyle: 'italic', marginTop: 3 },
