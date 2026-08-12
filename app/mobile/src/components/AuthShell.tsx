@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PatternWatermark } from './Motif';
 import { Icon } from './Icon';
-import { colors, spacing, radii, type, layout, motif } from '../theme';
+import { colors, spacing, radii, type, layout, motif, fontFamily } from '../theme';
 
 interface AuthShellProps {
   children: React.ReactNode;
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: type.size.md,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.text,
   },
 });

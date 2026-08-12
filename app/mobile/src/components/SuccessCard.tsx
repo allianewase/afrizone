@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing, radii, type } from '../theme';
+import { colors, spacing, radii, type, fontFamily } from '../theme';
 import { Icon } from './Icon';
 import { Button } from './Button';
 
@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.xs,
   },
-  title: { color: colors.text, fontSize: type.size.xl, fontWeight: '800', textAlign: 'center' },
+  title: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold, textAlign: 'center' },
   message: {
     color: colors.textMuted,
     fontSize: type.size.base,

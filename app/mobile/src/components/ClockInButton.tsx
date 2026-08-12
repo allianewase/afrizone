@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { colors, type, spacing, shadow } from '../theme';
+import { colors, type, spacing, shadow, fontFamily } from '../theme';
 import { Icon } from './Icon';
 
 export type GeofenceState = 'in-fence' | 'out-of-fence' | 'syncing';
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   },
   pressed: { transform: [{ scale: 0.97 }] },
   disabled: { opacity: 0.5 },
-  label: { color: colors.white, fontSize: type.size.lg, fontWeight: '800' },
+  label: { color: colors.white, fontSize: type.size.lg, fontFamily: fontFamily.extrabold },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',

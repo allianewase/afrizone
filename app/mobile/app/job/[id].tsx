@@ -8,7 +8,7 @@ import { Button } from '../../src/components/Button';
 import { Icon } from '../../src/components/Icon';
 import { MoneyText } from '../../src/components/MoneyText';
 import { Banner, LoadingState, ErrorState } from '../../src/components/Feedback';
-import { colors, spacing, type, radii, layout } from '../../src/theme';
+import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
@@ -77,13 +77,23 @@ export default function JobDetailScreen() {
               <Text style={styles.salaryLabel}>Monthly salary</Text>
               <View style={styles.salaryRow}>
                 {j.salaryMin ? (
-                  <MoneyText amount={j.salaryMin} size={type.size.displayLg} color={colors.clay} weight="800" />
+                  <MoneyText
+                    amount={j.salaryMin}
+                    size={j.salaryMax ? type.size.xxl : type.size.displayLg}
+                    color={colors.clay}
+                    weight="800"
+                  />
                 ) : null}
                 {j.salaryMin && j.salaryMax ? (
                   <Text style={styles.salarySep}> – </Text>
                 ) : null}
                 {j.salaryMax ? (
-                  <MoneyText amount={j.salaryMax} size={type.size.displayLg} color={colors.clay} weight="800" />
+                  <MoneyText
+                    amount={j.salaryMax}
+                    size={j.salaryMin ? type.size.xxl : type.size.displayLg}
+                    color={colors.clay}
+                    weight="800"
+                  />
                 ) : null}
               </View>
             </Card>
@@ -301,17 +311,17 @@ const styles = StyleSheet.create({
   typeBadge: { borderRadius: radii.pill, paddingVertical: 4, paddingHorizontal: 10 },
   typeText: { fontWeight: '700', fontSize: type.size.sm },
   candidateCount: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
-  title: { color: colors.text, fontSize: type.size.xxl, fontWeight: '800', marginTop: spacing.sm, lineHeight: 30 },
+  title: { color: colors.text, fontSize: type.size.xxl, fontFamily: fontFamily.extrabold, marginTop: spacing.sm, lineHeight: 30 },
   dept: { color: colors.textMuted, fontSize: type.size.base, fontWeight: '600', marginBottom: spacing.md },
   salaryCard: { marginTop: spacing.sm, gap: 4 },
   salaryLabel: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
-  salaryRow: { flexDirection: 'row', alignItems: 'baseline' },
-  salarySep: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.displayLg },
+  salaryRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap' },
+  salarySep: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.xxl },
   metaGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.lg },
   metaItem: { flexDirection: 'row', gap: spacing.sm, width: '50%', paddingVertical: spacing.sm, alignItems: 'flex-start' },
   metaLabel: { color: colors.textMuted, fontSize: type.size.xs },
   metaValue: { color: colors.text, fontSize: type.size.base, fontWeight: '700' },
-  section: { color: colors.text, fontSize: type.size.lg, fontWeight: '800', marginTop: spacing.xl, marginBottom: spacing.sm },
+  section: { color: colors.text, fontSize: type.size.lg, fontFamily: fontFamily.extrabold, marginTop: spacing.xl, marginBottom: spacing.sm },
   reqRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   reqChip: {
     flexDirection: 'row',
@@ -335,7 +345,7 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
   },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 100, backgroundColor: colors.line, marginBottom: spacing.sm },
-  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontWeight: '800' },
+  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold },
   sheetSub: { color: colors.textMuted, fontSize: type.size.base },
   sheetFields: { gap: spacing.md },
   fieldLabel: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },

@@ -9,7 +9,7 @@ import { TierBadge } from '../../src/components/TierBadge';
 import { StatusPill } from '../../src/components/StatusPill';
 import { LoadingState, ErrorState, Banner } from '../../src/components/Feedback';
 import { Icon } from '../../src/components/Icon';
-import { colors, spacing, type, radii, layout } from '../../src/theme';
+import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   taskTitle: {
     color: colors.text,
     fontSize: type.size.lg,
-    fontWeight: '800',
+    fontFamily: fontFamily.extrabold,
     lineHeight: 26,
   },
   signedRow: {
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   sectionHeading: {
     color: colors.text,
     fontSize: type.size.base,
-    fontWeight: '800',
+    fontFamily: fontFamily.extrabold,
     letterSpacing: 0.1,
   },
   sectionBody: {

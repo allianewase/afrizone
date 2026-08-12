@@ -22,7 +22,7 @@ import { TierBadge } from '../../src/components/TierBadge';
 import { Banner } from '../../src/components/Feedback';
 import { GlassCard, GlassBackdrop, GlassBar } from '../../src/components/Glass';
 import { BlurView } from 'expo-blur';
-import { colors, spacing, radii, type, layout } from '../../src/theme';
+import { colors, spacing, radii, type, layout, fontFamily } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAuth } from '../../src/auth/AuthContext';
 import { NIGERIAN_BANKS } from '../../src/lib/banks';
@@ -705,8 +705,8 @@ const styles = StyleSheet.create({
   },
   topTitle: { flex: 1, textAlign: 'center', fontSize: type.size.md, fontWeight: '700', color: colors.text },
   railWrap: { paddingHorizontal: layout.screenPadding, paddingBottom: spacing.md },
-  h1: { fontSize: type.size.xxl, fontWeight: '800', color: colors.text, textAlign: 'center' },
-  h2: { fontSize: type.size.lg, fontWeight: '800', color: colors.text },
+  h1: { fontSize: type.size.xxl, fontFamily: fontFamily.extrabold, color: colors.text, textAlign: 'center' },
+  h2: { fontSize: type.size.lg, fontFamily: fontFamily.extrabold, color: colors.text },
   label: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
   hint: { color: colors.textMuted, fontSize: type.size.sm },
   muted: { color: colors.textMuted, fontSize: type.size.base, lineHeight: 22, textAlign: 'center' },
@@ -808,7 +808,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   pickerGrabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 100, backgroundColor: 'rgba(28,25,23,0.2)', marginBottom: spacing.md },
-  pickerTitle: { fontSize: type.size.lg, fontWeight: '800', color: colors.text, marginBottom: spacing.md },
+  pickerTitle: { fontSize: type.size.lg, fontFamily: fontFamily.extrabold, color: colors.text, marginBottom: spacing.md },
   bankItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md },
   bankItemActive: { backgroundColor: colors.claySoft, marginHorizontal: -layout.screenPadding, paddingHorizontal: layout.screenPadding },
   bankItemText: { fontSize: type.size.base, color: colors.text },

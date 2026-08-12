@@ -558,7 +558,7 @@ const sheetStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  title: { color: colors.text, fontSize: type.size.xl, fontWeight: '800' },
+  title: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold },
   clearLink: { color: colors.goldInk, fontSize: type.size.base, fontWeight: '700' },
   group: { gap: spacing.sm },
   groupLabel: {

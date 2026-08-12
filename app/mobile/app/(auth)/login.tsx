@@ -9,7 +9,7 @@ import { Icon } from '../../src/components/Icon';
 import { PasswordField } from '../../src/components/PasswordField';
 import { PatternDivider } from '../../src/components/Motif';
 import { AuthShell, AuthCard } from '../../src/components/AuthShell';
-import { colors, spacing, radii, type, layout, motif } from '../../src/theme';
+import { colors, spacing, radii, type, layout, motif, fontFamily } from '../../src/theme';
 import { useAuth } from '../../src/auth/AuthContext';
 import { toE164, isValidNgNumber } from '../../src/lib/format';
 
@@ -218,7 +218,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   brand: { alignItems: 'center' },
-  welcome: { color: colors.text, fontSize: type.size.xl, fontWeight: '800', textAlign: 'center' },
+  welcome: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold, textAlign: 'center' },
   welcomeSub: {
     color: colors.textMuted,
     fontSize: type.size.base,

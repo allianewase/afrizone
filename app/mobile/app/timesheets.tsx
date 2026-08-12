@@ -17,7 +17,7 @@ import { Button } from '../src/components/Button';
 import { Icon } from '../src/components/Icon';
 import { StatusPill } from '../src/components/StatusPill';
 import { Banner, LoadingState, ErrorState, EmptyState } from '../src/components/Feedback';
-import { colors, spacing, type, radii, layout } from '../src/theme';
+import { colors, spacing, type, radii, layout, fontFamily } from '../src/theme';
 import { api, ApiError } from '../src/api/client';
 import { useAsync } from '../src/lib/useAsync';
 import { formatDate } from '../src/lib/format';
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  taskTitle: { flex: 1, color: colors.text, fontSize: type.size.md, fontWeight: '700' },
+  taskTitle: { flex: 1, color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.bold },
   meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
   hours: { color: colors.goldInk, fontSize: type.size.sm, fontWeight: '700' },
   dot: { color: colors.textFaint, fontSize: type.size.sm },
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.line,
     marginBottom: spacing.sm,
   },
-  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontWeight: '800' },
+  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold },
   sheetSub: { color: colors.textMuted, fontSize: type.size.base },
   summaryRow: {
     flexDirection: 'row',

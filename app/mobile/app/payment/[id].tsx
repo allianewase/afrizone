@@ -18,7 +18,7 @@ import { MoneyText } from '../../src/components/MoneyText';
 import { Icon } from '../../src/components/Icon';
 import { StatusPill } from '../../src/components/StatusPill';
 import { Banner, LoadingState, ErrorState } from '../../src/components/Feedback';
-import { colors, spacing, type, radii, layout } from '../../src/theme';
+import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { formatDate, formatNaira } from '../../src/lib/format';
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.text,
     fontSize: type.size.xl,
-    fontWeight: '800',
+    fontFamily: fontFamily.extrabold,
     lineHeight: 26,
   },
 
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.line,
     marginBottom: spacing.sm,
   },
-  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontWeight: '800' },
+  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold },
   sheetSub: { color: colors.textMuted, fontSize: type.size.base },
   amountRow: {
     backgroundColor: colors.surfaceSand,

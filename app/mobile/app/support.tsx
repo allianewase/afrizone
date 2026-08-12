@@ -12,7 +12,7 @@ import {
 import { Screen } from '../src/components/Screen';
 import { Card } from '../src/components/Card';
 import { Icon } from '../src/components/Icon';
-import { colors, spacing, type, radii } from '../src/theme';
+import { colors, spacing, type, radii, fontFamily } from '../src/theme';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -166,7 +166,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 
 const styles = StyleSheet.create({
   contactCard: { gap: spacing.md },
-  contactTitle: { color: colors.text, fontSize: type.size.lg, fontWeight: '800' },
+  contactTitle: { color: colors.text, fontSize: type.size.lg, fontFamily: fontFamily.extrabold },
   contactSub: { color: colors.textMuted, fontSize: type.size.base, lineHeight: 20 },
   contactRow: { flexDirection: 'row', gap: spacing.md },
   contactBtn: {
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   faqHeader: {
     color: colors.text,
     fontSize: type.size.lg,
-    fontWeight: '800',
+    fontFamily: fontFamily.extrabold,
     marginTop: spacing.xl,
     marginBottom: spacing.md,
   },

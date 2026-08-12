@@ -6,7 +6,7 @@ import { Card } from '../src/components/Card';
 import { Segmented } from '../src/components/Segmented';
 import { Icon } from '../src/components/Icon';
 import { LoadingState, ErrorState, EmptyState } from '../src/components/Feedback';
-import { colors, spacing, type, radii } from '../src/theme';
+import { colors, spacing, type, radii, fontFamily } from '../src/theme';
 import { api } from '../src/api/client';
 import { useAsync } from '../src/lib/useAsync';
 import { formatDate } from '../src/lib/format';
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   statusText: { fontSize: 11, fontWeight: '600' },
-  title: { color: colors.text, fontSize: type.size.md, fontWeight: '700' },
+  title: { color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.bold },
   reasonBox: {
     backgroundColor: colors.surface,
     borderRadius: radii.card,
