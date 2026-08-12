@@ -71,7 +71,7 @@ export default function ActiveTaskScreen() {
         );
         if (prior) setSubmitted(true);
       } catch (e) {
-        if (e instanceof DOMException && e.name === 'AbortError') return;
+        if ((e as { name?: string } | null)?.name === 'AbortError') return; // not instanceof DOMException: Hermes has none
       }
     })();
     return () => {

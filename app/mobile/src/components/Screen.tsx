@@ -93,8 +93,8 @@ export function Screen({
             <RefreshControl
               refreshing={!!refreshing}
               onRefresh={onRefresh}
-              tintColor={colors.clay}
-              colors={[colors.clay]}
+              tintColor={colors.goldInk}
+              colors={[colors.goldInk]}
             />
           ) : undefined
         }
