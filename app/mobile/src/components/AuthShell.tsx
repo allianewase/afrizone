@@ -53,6 +53,7 @@ export function AuthScreen({ heroSize = 'sm', onBack, title, subtitle, children,
         ) : null}
         <View style={[styles.logoWrap, { paddingTop: insets.top + (lg ? spacing.xxl : spacing.lg) }]}>
           <Logo size={lg ? 44 : 30} tone="dark" />
+          {lg ? <Text style={styles.heroTagline}>Honest, flexible work across Africa</Text> : null}
         </View>
         <WaveDivider color={colors.bg} style={styles.wave} />
       </View>
@@ -122,6 +123,11 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   logoWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  heroTagline: {
+    color: colors.railMuted,
+    fontSize: type.size.sm,
+    marginTop: spacing.sm,
+  },
   wave: { position: 'absolute', left: 0, right: 0, bottom: -1 },
   body: { flex: 1, backgroundColor: colors.bg },
   bodyContent: {

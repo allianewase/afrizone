@@ -17,7 +17,6 @@ export default function WelcomeScreen() {
     <AuthScreen
       heroSize="lg"
       title="Let's get started!"
-      subtitle="Sign in to your account below, or create a new one to start finding work."
       footer={
         <AuthFooterLink
           text="Don't have an account?"
