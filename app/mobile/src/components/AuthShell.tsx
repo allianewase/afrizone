@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LogoMark } from './Logo';
+import Logo from './Logo';
 import { Icon } from './Icon';
 import { WaveDivider } from './Motif';
 import { colors, spacing, type, layout, fontFamily } from '../theme';
@@ -50,7 +50,7 @@ export function AuthScreen({ heroSize = 'sm', onBack, title, subtitle, children,
           </Pressable>
         ) : null}
         <View style={[styles.logoWrap, { paddingTop: insets.top + (lg ? spacing.xxl : spacing.lg) }]}>
-          <LogoMark size={lg ? 60 : 36} markTone="reversed" />
+          <Logo size={lg ? 44 : 30} tone="dark" />
         </View>
         <WaveDivider color={colors.bg} style={styles.wave} />
       </View>
