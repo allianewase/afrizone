@@ -12,12 +12,13 @@ export default function AuthLayout() {
     >
       <Stack.Screen name="welcome" />
       <Stack.Screen name="login" />
-      <Stack.Screen name="otp" />
       <Stack.Screen name="register" />
       <Stack.Screen name="twofactor" />
       <Stack.Screen name="forgot" />
       <Stack.Screen name="reset" />
       <Stack.Screen name="kyc" />
+      <Stack.Screen name="terms" />
+      <Stack.Screen name="privacy" />
     </Stack>
   );
 }

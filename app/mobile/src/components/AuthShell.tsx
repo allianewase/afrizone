@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import Logo from './Logo';
 import { Icon } from './Icon';
 import { WaveDivider, PatternDivider } from './Motif';
@@ -33,6 +34,7 @@ interface AuthScreenProps {
  */
 export function AuthScreen({ heroSize = 'sm', onBack, title, subtitle, children, footer }: AuthScreenProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const lg = heroSize === 'lg';
 
   return (
@@ -70,6 +72,16 @@ export function AuthScreen({ heroSize = 'sm', onBack, title, subtitle, children,
         <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
           <PatternDivider color={colors.gold} opacity={motif.dividerOpacityDark} style={styles.footerDivider} />
           {footer}
+          <Text style={styles.legalText}>
+            By continuing you agree to our{' '}
+            <Text style={styles.legalLink} onPress={() => router.push('/(auth)/terms')}>
+              Terms
+            </Text>{' '}
+            &{' '}
+            <Text style={styles.legalLink} onPress={() => router.push('/(auth)/privacy')}>
+              Privacy Policy
+            </Text>
+          </Text>
         </View>
       ) : null}
     </KeyboardAvoidingView>
@@ -132,4 +144,12 @@ const styles = StyleSheet.create({
   footerLinkRow: { paddingVertical: spacing.xs },
   footerText: { color: colors.railMuted, fontSize: type.size.base },
   footerLink: { color: colors.gold, fontWeight: '700' },
+  legalText: {
+    color: colors.railMuted,
+    fontSize: type.size.xs,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    paddingHorizontal: layout.screenPadding,
+  },
+  legalLink: { color: colors.gold, fontWeight: '600' },
 });
