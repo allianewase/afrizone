@@ -16,8 +16,8 @@ function tabIcon(name: IconName) {
 const iconStyles = StyleSheet.create({
   wrap: {
     width: 40,
-    height: 30,
-    borderRadius: 14,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -40,7 +40,7 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopWidth: 0,
-          height: 64 + insets.bottom,
+          height: 70 + insets.bottom,
           paddingBottom: 10 + insets.bottom,
           paddingTop: 8,
           // Lifted bar instead of a flat hairline-bordered strip: matches the
@@ -51,7 +51,18 @@ export default function TabsLayout() {
           shadowRadius: 16,
           elevation: 12,
         },
-        tabBarLabelStyle: { fontSize: type.size.xs, fontFamily: fontFamily.bold, marginTop: 2 },
+        // This pre-existed the polish pass, not something it introduced: the
+        // icon+label column (tabBarStyle.height minus its padding) landed
+        // exactly at the label's minimum content height with zero slack. RN
+        // Web's numberOfLines={1} implements the clamp via `overflow: hidden`,
+        // and per the flexbox spec `min-height: auto` does NOT protect a flex
+        // item once overflow isn't `visible` - so the moment the column was a
+        // pixel short (font metrics vary slightly by platform/browser),
+        // flexbox shrank the label toward 0 instead of just clipping its tail,
+        // truncating it to a few-pixel sliver. Fix is height budget, not the
+        // label style: `70` (was 64) + a smaller icon wrap gives the column
+        // real slack instead of an exact, fragile fit.
+        tabBarLabelStyle: { fontSize: type.size.xs, lineHeight: 16, fontWeight: '700' },
       }}
     >
       <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: tabIcon('home') }} />
