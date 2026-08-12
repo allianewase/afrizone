@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, View, Text, StyleSheet } from 'react-native';
-import { colors, radii, spacing, type, shadow } from '../theme';
+import { colors, radii, spacing, type, shadow, fontFamily } from '../theme';
 import { Icon } from './Icon';
 import { TierBadge } from './TierBadge';
 import { MoneyText } from './MoneyText';
@@ -69,13 +69,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     padding: spacing.lg,
-    gap: spacing.sm,
+    gap: spacing.md,
     ...shadow.soft,
   },
-  pressed: { opacity: 0.9, transform: [{ scale: 0.995 }] },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   category: { color: colors.textMuted, fontSize: type.size.xs, fontWeight: '600' },
-  title: { color: colors.text, fontSize: type.size.md, fontWeight: '700', lineHeight: 22 },
+  title: { color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.bold, lineHeight: 22 },
   metaRow: { flexDirection: 'row', gap: spacing.lg, flexWrap: 'wrap' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 },
   metaText: { color: colors.textMuted, fontSize: type.size.sm },

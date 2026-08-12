@@ -9,14 +9,15 @@ import {
   Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Screen } from '../../src/components/Screen';
-import { Card } from '../../src/components/Card';
 import { TaskCard } from '../../src/components/TaskCard';
 import { MoneyText } from '../../src/components/MoneyText';
 import { Button } from '../../src/components/Button';
 import { Banner, LoadingState, ErrorState, EmptyState } from '../../src/components/Feedback';
 import { Icon } from '../../src/components/Icon';
-import { colors, spacing, type, radii, layout } from '../../src/theme';
+import { PatternWatermark } from '../../src/components/Motif';
+import { colors, spacing, type, radii, layout, shadow, motif, fontFamily } from '../../src/theme';
 import { api } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
@@ -165,20 +166,36 @@ export default function HomeScreen() {
       onRefresh={() => { tasks.reload(); walletQ.reload(); }}
       refreshing={tasks.loading && !!tasks.data}
     >
-      {/* Earnings snapshot */}
-      <Card style={styles.snapshot} accent>
-        <View style={styles.snapRow}>
-          <View style={styles.snapItem}>
-            <Text style={styles.snapLabel}>Available</Text>
-            <MoneyText amount={wallet.available} size={type.size.xl} color={colors.money} />
-          </View>
-          <View style={styles.vline} />
-          <View style={styles.snapItem}>
-            <Text style={styles.snapLabel}>Pending</Text>
-            <MoneyText amount={wallet.pending} size={type.size.xl} color={colors.pending} />
+      {/* Earnings snapshot: same navy/gold brand surface as the Wallet tab's
+          hero card, so the two screens read as one identity instead of one
+          branded card and one plain white box. */}
+      <View style={styles.snapShadowWrap}>
+        <View style={styles.snapshot}>
+          <LinearGradient
+            colors={[colors.gold, colors.clayDeep]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.snapAccentBar}
+          />
+          <PatternWatermark
+            color={colors.gold}
+            opacity={motif.watermarkOpacityDark}
+            size={160}
+            style={styles.snapWatermark}
+          />
+          <View style={styles.snapRow}>
+            <View style={styles.snapItem}>
+              <Text style={styles.snapLabel}>Available</Text>
+              <MoneyText amount={wallet.available} size={type.size.xl} color={colors.white} weight="800" />
+            </View>
+            <View style={styles.vline} />
+            <View style={styles.snapItem}>
+              <Text style={styles.snapLabel}>Pending</Text>
+              <MoneyText amount={wallet.pending} size={type.size.xl} color={colors.white} weight="800" />
+            </View>
           </View>
         </View>
-      </Card>
+      </View>
 
       {/* Search bar */}
       <View style={styles.searchRow}>
@@ -420,11 +437,25 @@ function FilterChip({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  snapshot: { backgroundColor: colors.surface },
+  snapShadowWrap: {
+    borderRadius: radii.card,
+    borderTopRightRadius: radii.cut,
+    ...shadow.card,
+  },
+  snapshot: {
+    backgroundColor: colors.navy,
+    borderRadius: radii.card,
+    borderTopRightRadius: radii.cut,
+    padding: spacing.lg,
+    paddingTop: spacing.lg + 3,
+    overflow: 'hidden',
+  },
+  snapAccentBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 3 },
+  snapWatermark: { top: -50, right: -50 },
   snapRow: { flexDirection: 'row', alignItems: 'center' },
   snapItem: { flex: 1, gap: 4 },
-  snapLabel: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
-  vline: { width: 1, height: 36, backgroundColor: colors.line, marginHorizontal: spacing.lg },
+  snapLabel: { color: 'rgba(255,255,255,0.65)', fontSize: type.size.sm, fontWeight: '600' },
+  vline: { width: 1, height: 36, backgroundColor: 'rgba(255,255,255,0.14)', marginHorizontal: spacing.lg },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -498,7 +529,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: colors.text,
     fontSize: type.size.lg,
-    fontWeight: '800',
+    fontFamily: fontFamily.extrabold,
     marginTop: spacing.xl,
     marginBottom: spacing.md,
   },

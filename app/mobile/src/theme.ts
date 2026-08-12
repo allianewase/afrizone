@@ -108,19 +108,30 @@ export const motif = {
 } as const;
 
 export const shadow = {
-  // Soft warm shadow, restrained (fintech, not glass) per §1.5
+  // Soft warm shadow, restrained (fintech, not glass) per §1.5. Bumped from
+  // the original 0.1/0.08 opacities: against `bg` (#FAF9F6) sitting this
+  // close to `surface` (#FFFFFF), that value rendered as barely perceptible
+  // on web, so every card read as flat. This is the same shape, just visible.
   card: {
     shadowColor: '#1C1917',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.1,
-    shadowRadius: 30,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.16,
+    shadowRadius: 28,
+    elevation: 6,
   },
   soft: {
     shadowColor: '#1C1917',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 3,
+  },
+  /** Smaller-radius lift for compact surfaces (segmented control thumb, chips). */
+  tight: {
+    shadowColor: '#1C1917',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
     elevation: 2,
   },
 } as const;
@@ -170,6 +181,7 @@ export const layout = {
  */
 export const fontFamily = {
   extrabold: 'Raleway_800ExtraBold',
+  bold: 'Raleway_700Bold',
   medium: 'Raleway_500Medium',
 } as const;
 

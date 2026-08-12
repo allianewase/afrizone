@@ -6,7 +6,7 @@ import { Card } from '../../src/components/Card';
 import { Icon } from '../../src/components/Icon';
 import { MoneyText } from '../../src/components/MoneyText';
 import { LoadingState, EmptyState, Banner } from '../../src/components/Feedback';
-import { colors, spacing, type, radii } from '../../src/theme';
+import { colors, spacing, type, radii, fontFamily } from '../../src/theme';
 import { api } from '../../src/api/client';
 import { mock } from '../../src/api/mock';
 import { useAsync } from '../../src/lib/useAsync';
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   tagText: { color: colors.indigo, fontWeight: '700', fontSize: 11 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { color: colors.textMuted, fontSize: type.size.sm },
-  title: { color: colors.text, fontSize: type.size.lg, fontWeight: '800' },
+  title: { color: colors.text, fontSize: type.size.lg, fontFamily: fontFamily.extrabold },
   dept: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600', marginBottom: spacing.xs },
   desc: { color: colors.text, fontSize: type.size.base, lineHeight: 20, marginBottom: spacing.sm },
   foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

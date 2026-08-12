@@ -23,7 +23,7 @@ import { StatusPill, toCanonical } from '../../src/components/StatusPill';
 import { Icon } from '../../src/components/Icon';
 import { StarRating } from '../../src/components/StarRating';
 import { Banner, LoadingState } from '../../src/components/Feedback';
-import { colors, spacing, type, radii, layout } from '../../src/theme';
+import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
   avatarText: { color: colors.gold, fontSize: type.size.lg, fontWeight: '800' },
   identityBody: { flex: 1, gap: spacing.xs },
   identityRight: { alignItems: 'center', gap: spacing.sm },
-  name: { color: colors.text, fontSize: type.size.lg, fontWeight: '800' },
+  name: { color: colors.text, fontSize: type.size.lg, fontFamily: fontFamily.extrabold },
   tiers: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   ratingBlock: { alignItems: 'center', gap: spacing.xs },
   ratingValue: { color: colors.text, fontSize: type.size.sm, fontWeight: '700', marginTop: 1 },

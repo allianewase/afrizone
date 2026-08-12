@@ -9,7 +9,7 @@ import { TierBadge } from '../../src/components/TierBadge';
 import { MoneyText } from '../../src/components/MoneyText';
 import { Icon } from '../../src/components/Icon';
 import { LoadingState, ErrorState, EmptyState } from '../../src/components/Feedback';
-import { colors, spacing, type } from '../../src/theme';
+import { colors, spacing, type, fontFamily } from '../../src/theme';
 import { api } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import type { Application } from '../../src/api/types';
@@ -159,7 +159,7 @@ function ApplicationCard({ app, onPress }: { app: Application; onPress: () => vo
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  title: { color: colors.text, fontSize: type.size.md, fontWeight: '700', marginBottom: spacing.sm },
+  title: { color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.bold, marginBottom: spacing.sm },
   foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   payRow: { flexDirection: 'row', alignItems: 'baseline' },
   unit: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
