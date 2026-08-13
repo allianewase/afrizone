@@ -1,24 +1,20 @@
 // Afrizone Part Time: Prisma schema
 //
-// DEFAULT: SQLite (zero external services, runs on Windows with no DB install).
+// Production target: Cloudflare D1 (SQLite-based), via the @prisma/adapter-d1
+// driver adapter - see src/prisma.ts. Local dev also runs on SQLite (DATABASE_URL),
+// so this schema needs no changes between the two; only the Prisma Client
+// instantiation differs (adapter-bound vs a plain DATABASE_URL connection).
 //
-// ── SWITCH TO POSTGRESQL FOR PRODUCTION ──────────────────────────────────────
-// 1. Change the datasource block below to:
-//        datasource db {
-//          provider = "postgresql"
-//          url      = env("DATABASE_URL")
-//        }
-// 2. Set DATABASE_URL in .env to a Postgres URL, e.g.
-//        DATABASE_URL="postgresql://user:pass@localhost:5432/afrizone?schema=public"
-// 3. On Postgres you MAY replace the String enum/list fields with real Prisma
-//    enums (Role, Tier, KycStatus, ...) and a `tiers Tier[]` scalar list.
-//    They are modelled as String here ONLY because SQLite supports neither
-//    native enums nor scalar lists. See notes on each field.
-// 4. Re-run: prisma generate && prisma db push (or prisma migrate dev).
-// ─────────────────────────────────────────────────────────────────────────────
+// Prisma Migrate does not support D1 yet, so schema changes are applied via:
+//   npx prisma migrate diff --from-empty --to-schema ./prisma/schema.prisma \
+//     --script --output migrations/000X_name.sql
+//   npx wrangler d1 migrations apply <db-name> --local   (or --remote)
+// rather than `prisma migrate dev`/`db push` for the D1 database itself.
+// Local SQLite dev (DATABASE_URL) keeps using `prisma db push` as before.
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {

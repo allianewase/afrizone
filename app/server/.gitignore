@@ -5,3 +5,5 @@ dist
 *.db-journal
 prisma/dev.db
 prisma/*.db
+.wrangler
+.pgdata

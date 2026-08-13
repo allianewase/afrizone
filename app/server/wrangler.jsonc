@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "afrizone-api",
+  "main": "src/index.ts",
+  // Set this to today's date when bumping.
+  "compatibility_date": "2026-08-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "afrizone-db",
+      "database_id": "a2cf117c-cb5e-4187-8dad-bd16eef49dce"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
