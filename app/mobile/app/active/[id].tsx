@@ -29,7 +29,7 @@ function haversineMetres(lat1: number, lng1: number, lat2: number, lng2: number)
 export default function ActiveTaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  // Task context — fetched once on mount for the header card.
+  // Task context: fetched once on mount for the header card.
   const taskQ = useAsync<Task | null>(
     (signal) => (id ? api.task(id, signal) : Promise.resolve(null)),
     [id]
@@ -71,7 +71,7 @@ export default function ActiveTaskScreen() {
         );
         if (prior) setSubmitted(true);
       } catch (e) {
-        if (e instanceof DOMException && e.name === 'AbortError') return;
+        if ((e as { name?: string } | null)?.name === 'AbortError') return; // not instanceof DOMException: Hermes has none
       }
     })();
     return () => {
@@ -80,7 +80,7 @@ export default function ActiveTaskScreen() {
     };
   }, [id]);
 
-  // GPS geofence check — starts once task data loads.
+  // GPS geofence check: starts once task data loads.
   useEffect(() => {
     if (!t) return;
     if (t.locationType === 'REMOTE' || t.lat == null || t.lng == null) {
@@ -204,7 +204,7 @@ export default function ActiveTaskScreen() {
             {/* Pay */}
             <View style={styles.metaItem}>
               <Icon name="wallet" size={14} color={colors.money} />
-              <Text style={[styles.metaText, { color: colors.money, fontWeight: '700' }]}>
+              <Text style={[styles.metaText, { color: colors.moneyInk, fontWeight: '700' }]}>
                 {pay}
               </Text>
             </View>
@@ -261,7 +261,7 @@ export default function ActiveTaskScreen() {
           tone="money"
           icon="check-circle"
           title="Timesheet submitted"
-          message="Awaiting approval — check status in Profile › Timesheets."
+          message="Awaiting approval: check status in Profile › Timesheets."
         />
       ) : (
         <View style={{ marginTop: spacing.xxl, gap: spacing.md }}>
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
     borderRadius: 99,
     backgroundColor: colors.money,
   },
-  liveText: { color: colors.money, fontSize: type.size.sm, fontWeight: '700' },
+  liveText: { color: colors.moneyInk, fontSize: type.size.sm, fontWeight: '700' },
   clock: { alignItems: 'center', marginTop: spacing.xl },
   hint: { color: colors.textMuted, fontSize: type.size.sm, textAlign: 'center' },
 });

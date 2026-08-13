@@ -6,7 +6,7 @@ import { Card } from '../src/components/Card';
 import { Segmented } from '../src/components/Segmented';
 import { Icon } from '../src/components/Icon';
 import { LoadingState, ErrorState, EmptyState } from '../src/components/Feedback';
-import { colors, spacing, type, radii } from '../src/theme';
+import { colors, spacing, type, radii, fontFamily } from '../src/theme';
 import { api } from '../src/api/client';
 import { useAsync } from '../src/lib/useAsync';
 import { formatDate } from '../src/lib/format';
@@ -18,8 +18,8 @@ const STATUS_CONFIG: Record<
   Dispute['status'],
   { label: string; color: string; bg: string; icon: 'clock' | 'check-circle' | 'close' }
 > = {
-  OPEN:     { label: 'Under review',   color: colors.amber,  bg: colors.amberSoft,  icon: 'clock' },
-  RESOLVED: { label: 'Resolved',       color: colors.money,  bg: colors.moneySoft,  icon: 'check-circle' },
+  OPEN:     { label: 'Under review',   color: colors.indigo, bg: colors.indigoSoft,  icon: 'clock' },
+  RESOLVED: { label: 'Resolved',       color: colors.moneyInk,  bg: colors.moneySoft,  icon: 'check-circle' },
   CLOSED:   { label: 'Closed',         color: colors.textMuted, bg: colors.surface, icon: 'close' },
 };
 
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   statusText: { fontSize: 11, fontWeight: '600' },
-  title: { color: colors.text, fontSize: type.size.md, fontWeight: '700' },
+  title: { color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.bold },
   reasonBox: {
     backgroundColor: colors.surface,
     borderRadius: radii.card,
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   resolutionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  resolutionLabel: { color: colors.money, fontSize: type.size.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  resolutionLabel: { color: colors.moneyInk, fontSize: type.size.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   resolutionText: { color: colors.text, fontSize: type.size.sm, lineHeight: 18 },
   pendingNote: { color: colors.textMuted, fontSize: type.size.xs, fontStyle: 'italic' },
   bottom: {
@@ -184,5 +184,5 @@ const styles = StyleSheet.create({
   },
   date: { color: colors.textMuted, fontSize: type.size.xs },
   entityLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  entityLinkText: { color: colors.clay, fontSize: type.size.xs, fontWeight: '700' },
+  entityLinkText: { color: colors.goldInk, fontSize: type.size.xs, fontWeight: '700' },
 });

@@ -42,7 +42,7 @@ const upload = multer({
 
 const router = Router();
 
-// POST /api/me/kyc/documents — upload a KYC document image.
+// POST /api/me/kyc/documents: upload a KYC document image.
 // multipart/form-data: field `docType` (ID | SELFIE | DOCS) + file field `file`.
 router.post(
   "/",
@@ -62,7 +62,7 @@ router.post(
     const filename = `${req.user!.id}-${Date.now()}${ext}`;
 
     if (isS3Mode) {
-      // Memory storage — upload buffer to S3.
+      // Memory storage: upload buffer to S3.
       await uploadToS3(req.file.buffer, filename, req.file.mimetype);
     }
     // In disk mode, multer already wrote the file; filename comes from req.file.filename.
@@ -90,7 +90,7 @@ router.post(
   }
 );
 
-// GET /api/me/kyc/documents — list the worker's uploaded documents.
+// GET /api/me/kyc/documents: list the worker's uploaded documents.
 router.get("/", requireAuth, async (req: AuthedRequest, res: Response) => {
   const docs = await prisma.kycDocument.findMany({
     where: { userId: req.user!.id },

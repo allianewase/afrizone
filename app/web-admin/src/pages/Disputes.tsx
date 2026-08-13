@@ -10,6 +10,17 @@ import StatusPill from '../components/ui/StatusPill'
 import Modal from '../components/ui/Modal'
 import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
+import Textarea from '../components/ui/Textarea'
+import { Label } from '@/components/shadcn/label'
+import { Avatar, AvatarFallback } from '@/components/shadcn/avatar'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shadcn/table'
 
 type Filter = 'ALL' | DisputeStatus
 
@@ -98,38 +109,40 @@ export default function Disputes() {
         </Glass>
       ) : (
         <Glass reveal delay="d1" className="tablewrap">
-          <table className="dt">
-            <thead>
-              <tr>
-                <th>Worker</th>
-                <th>Type</th>
-                <th>Entity</th>
-                <th>Reason</th>
-                <th>Raised</th>
-                <th>Status</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="dt">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Worker</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Entity</TableHead>
+                <TableHead>Reason</TableHead>
+                <TableHead>Raised</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {disputes.map((d) => {
                 const pill = disputePill(d.status)
                 const name = d.worker?.name ?? 'Worker'
                 return (
-                  <tr key={d.id}>
-                    <td>
+                  <TableRow key={d.id}>
+                    <TableCell>
                       <div className="wname">
-                        <span className="wav" style={{ background: avatarGradient(name) }}>
-                          {initials(name)}
-                        </span>
+                        <Avatar className="wav">
+                          <AvatarFallback style={{ background: avatarGradient(name) }}>
+                            {initials(name)}
+                          </AvatarFallback>
+                        </Avatar>
                         {name}
                       </div>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <span style={{ fontSize: 12, color: 'var(--muted)', textTransform: 'capitalize' }}>
                         {d.entityType.toLowerCase()}
                       </span>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <div style={{ maxWidth: 180 }}>
                         <div style={{ fontWeight: 600, fontSize: 13 }}>{d.entity?.title ?? '—'}</div>
                         {d.entity?.gross != null && (
@@ -138,8 +151,8 @@ export default function Disputes() {
                           </div>
                         )}
                       </div>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <span
                         title={d.reason}
                         style={{
@@ -154,12 +167,12 @@ export default function Disputes() {
                       >
                         {d.reason}
                       </span>
-                    </td>
-                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>{formatDate(d.createdAt)}</td>
-                    <td>
+                    </TableCell>
+                    <TableCell style={{ color: 'var(--muted)', fontSize: 12 }}>{formatDate(d.createdAt)}</TableCell>
+                    <TableCell>
                       <StatusPill variant={pill.variant} label={pill.label} />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       {d.status === 'OPEN' ? (
                         <Button variant="glass" size="sm" icon="eye" onClick={() => openModal(d)}>
                           Review
@@ -172,12 +185,12 @@ export default function Disputes() {
                           {d.resolution ?? '—'}
                         </span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </Glass>
       )}
 
@@ -191,8 +204,8 @@ export default function Disputes() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 8 }}>
             <div
               style={{
-                background: 'rgba(194,80,46,.08)',
-                border: '1px solid rgba(194,80,46,.25)',
+                background: 'rgba(251,172,52,.08)',
+                border: '1px solid rgba(251,172,52,.25)',
                 borderRadius: 10,
                 padding: '12px 14px',
               }}
@@ -216,27 +229,14 @@ export default function Disputes() {
               </div>
             )}
 
-            <div>
-              <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
-                Resolution note (optional)
-              </label>
-              <textarea
+            <div className="field">
+              <Label htmlFor="dispute-note">Resolution note (optional)</Label>
+              <Textarea
+                id="dispute-note"
                 value={resolution}
                 onChange={(e) => setResolution(e.target.value)}
                 placeholder="Explain the decision to the worker…"
                 rows={3}
-                style={{
-                  width: '100%',
-                  background: 'rgba(255,255,255,.05)',
-                  border: '1px solid rgba(255,255,255,.12)',
-                  borderRadius: 8,
-                  color: 'var(--text)',
-                  fontSize: 14,
-                  padding: '10px 12px',
-                  resize: 'vertical',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
               />
             </div>
 

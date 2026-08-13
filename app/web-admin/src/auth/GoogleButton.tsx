@@ -41,7 +41,7 @@ export default function GoogleButton({ onSuccess, disabled }: Props) {
               onSuccess(res)
             } catch (err) {
               if (err instanceof ApiError && err.status === 503) {
-                // Backend has no GOOGLE_CLIENT_ID — degrade gracefully.
+                // Backend has no GOOGLE_CLIENT_ID: degrade gracefully.
                 setNotConfigured(true)
               } else if (err instanceof ApiError) {
                 setError(err.message)

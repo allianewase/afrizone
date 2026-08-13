@@ -4,7 +4,7 @@ import { colors, radii, type } from '../theme';
 import { Icon, IconName } from './Icon';
 
 /**
- * The 6 canonical statuses (DESIGN_SPEC §1.3) — one color + word + icon
+ * The 6 canonical statuses (DESIGN_SPEC §1.3): one color + word + icon
  * everywhere. Never color-alone (§7). `status` accepts the API enum-ish values
  * and maps to a canonical key.
  */
@@ -20,12 +20,16 @@ const MAP: Record<
   CanonicalStatus,
   { word: string; fg: string; bg: string; icon: IconName }
 > = {
-  pending: { word: 'Awaiting approval', fg: colors.amber, bg: colors.amberSoft, icon: 'clock' },
-  active: { word: 'In progress', fg: colors.clay, bg: colors.claySoft, icon: 'play' },
+  pending: { word: 'Awaiting approval', fg: colors.pending, bg: colors.pendingSoft, icon: 'clock' },
+  /* `fg` is the *ink* variant, not the fill, for the three statuses whose brand
+     colour is illegible as 11–13px text on its own tint: Active shipped at
+     1.64:1, Available at 2.86:1, Rejected at 3.65:1. Review and Paid already
+     cleared AA on their own, so they keep their fills. */
+  active: { word: 'In progress', fg: colors.goldInk, bg: colors.claySoft, icon: 'play' },
   review: { word: 'Under review', fg: colors.indigo, bg: colors.indigoSoft, icon: 'shield' },
-  available: { word: 'Ready to withdraw', fg: colors.money, bg: colors.moneySoft, icon: 'check-circle' },
+  available: { word: 'Ready to withdraw', fg: colors.moneyInk, bg: colors.moneySoft, icon: 'check-circle' },
   paid: { word: 'Paid out', fg: colors.forest, bg: colors.forestSoft, icon: 'check' },
-  rejected: { word: 'Needs attention', fg: colors.danger, bg: colors.dangerSoft, icon: 'alert' },
+  rejected: { word: 'Needs attention', fg: colors.dangerInk, bg: colors.dangerSoft, icon: 'alert' },
 };
 
 /** Map raw API enum strings to a canonical status. */

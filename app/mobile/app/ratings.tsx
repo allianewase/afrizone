@@ -4,7 +4,7 @@ import { Screen } from '../src/components/Screen';
 import { Card } from '../src/components/Card';
 import { StarRating } from '../src/components/StarRating';
 import { LoadingState, ErrorState, EmptyState } from '../src/components/Feedback';
-import { colors, spacing, type } from '../src/theme';
+import { colors, spacing, type, fontFamily } from '../src/theme';
 import { api } from '../src/api/client';
 import { useAsync } from '../src/lib/useAsync';
 import { useAuth } from '../src/auth/AuthContext';
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   card: { gap: spacing.xs },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   score: { color: colors.textMuted, fontSize: type.size.sm },
-  taskTitle: { color: colors.text, fontSize: type.size.md, fontWeight: '700' },
+  taskTitle: { color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.bold },
   note: {
     color: colors.text,
     fontSize: type.size.sm,

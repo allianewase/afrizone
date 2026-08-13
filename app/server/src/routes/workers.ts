@@ -115,7 +115,7 @@ router.post(
   }
 );
 
-// GET /api/workers/:id/kyc/documents — admin view of a worker's uploaded KYC docs.
+// GET /api/workers/:id/kyc/documents: admin view of a worker's uploaded KYC docs.
 router.get(
   "/:id/kyc/documents",
   requireAuth,

@@ -35,7 +35,7 @@ export function ListRow({
         </View>
       ) : null}
       <View style={styles.body}>
-        <Text style={[styles.title, danger && { color: colors.danger }]}>{title}</Text>
+        <Text style={[styles.title, danger && { color: colors.dangerInk }]}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       {right}

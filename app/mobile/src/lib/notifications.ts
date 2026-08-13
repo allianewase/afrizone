@@ -22,7 +22,7 @@ export function configureNotificationHandler() {
 
 /**
  * Set up the Android notification channel (required for SDK 26+).
- * Safe to call multiple times — Expo is idempotent on channel creation.
+ * Safe to call multiple times: Expo is idempotent on channel creation.
  */
 export async function ensureAndroidChannel() {
   if (Platform.OS !== 'android') return;
@@ -92,7 +92,7 @@ export async function getExpoPushToken(): Promise<string | null> {
 
 /**
  * Full registration flow: get token and upload it to the server.
- * Fire-and-forget — errors are swallowed (push is non-critical).
+ * Fire-and-forget: errors are swallowed (push is non-critical).
  */
 export async function registerPushToken(): Promise<void> {
   try {

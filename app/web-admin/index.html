@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>Afrizone Part Time — Admin</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>Afrizone Part Time Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -14,22 +14,18 @@
   </head>
   <body style="margin: 0; background: #000066">
     <div id="root">
-      <!-- Static boot splash — replaced by React on mount (no white flash) -->
+      <!-- Static boot splash: replaced by React on mount (no white flash) -->
       <div style="position: fixed; inset: 0; display: grid; place-items: center; background: #000066; font-family: 'Raleway', sans-serif">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 26px">
           <div style="display: flex; align-items: center; gap: 12px">
-            <span style="width: 40px; height: 48px; display: grid; place-items: center">
-              <svg width="40" height="48" viewBox="0 0 100 120">
-                <path d="M38 6 L58 8 L66 16 L86 30 L72 40 L76 58 L68 78 L58 100 L50 116 L42 100 L30 84 L14 66 L6 50 L16 34 L24 18 Z" fill="#fbac34"/>
-                <path d="M66 50 L40 62" stroke="#000066" stroke-width="4" stroke-linecap="round" fill="none"/>
-                <path d="M40 62 L62 62 L56 84 L34 84 Z" fill="#000066"/>
-                <rect x="42" y="52" width="8" height="10" rx="2" fill="#000066"/>
-                <rect x="52" y="54" width="7" height="8" rx="2" fill="#000066"/>
-                <circle cx="40" cy="90" r="5" fill="#000066"/>
-                <circle cx="50" cy="90" r="5" fill="#000066"/>
-              </svg>
-            </span>
-            <span style="font-weight: 800; font-size: 22px; letter-spacing: -.02em"><span style="color:#fff">Afrizone</span><span style="color:#fbac34">&nbsp;Part&nbsp;Time</span></span>
+            <!-- Same assets as src/components/Logo.tsx, referenced rather than
+                 duplicated: this markup paints before any JS loads, so it
+                 cannot import the component. 40x42 is 40 / (107/113), and the
+                 srcset ladder keeps the browser off an awkward reduction. -->
+            <img src="/logo-mark.png"
+                 srcset="/logo-mark-76.png 76w, /logo-mark-92.png 92w, /logo-mark.png 107w"
+                 sizes="40px" width="40" height="42" alt="" />
+            <span style="font-weight: 800; font-size: 22px; letter-spacing: -.02em; color: #fff">AfriZoneMart.com</span>
           </div>
           <div style="width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(255,255,255,.15); border-top-color: #fbac34; animation: azspin .8s linear infinite"></div>
         </div>

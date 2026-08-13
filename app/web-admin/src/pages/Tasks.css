@@ -18,7 +18,7 @@
   transition: opacity 0.35s;
   background: radial-gradient(
     340px circle at var(--mx, 50%) var(--my, 0%),
-    rgba(233, 162, 59, 0.12),
+    rgba(251, 172, 52, 0.12),
     transparent 60%
   );
 }
@@ -73,17 +73,16 @@
   margin-top: 15px;
   height: 6px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--track);
   overflow: hidden;
   position: relative;
 }
-.tcard .fillbar i {
-  display: block;
-  height: 100%;
+/* Radix renders the fill as a data-slot div driven by transform, not a width on
+   an <i>, so the transition moves with it. */
+.tcard .fillbar [data-slot='progress-indicator'] {
   border-radius: 6px;
   background: var(--grad);
-  width: 0;
-  transition: width 1s var(--ease);
+  transition: transform 1s var(--ease);
 }
 .tcard .tc-foot {
   display: flex;

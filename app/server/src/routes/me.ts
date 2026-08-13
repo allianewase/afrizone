@@ -128,6 +128,13 @@ router.get("/applications", requireAuth, async (req: AuthedRequest, res: Respons
     }),
   ]);
   const paymentByTask = Object.fromEntries(payments.map((p) => [p.taskId, p.id]));
+  const uniqueTaskIds = [...new Set(apps.map((a) => a.taskId))];
+  const filledCounts = await Promise.all(
+    uniqueTaskIds.map((taskId) =>
+      prisma.application.count({ where: { taskId, status: "APPROVED" } })
+    )
+  );
+  const filledByTask = Object.fromEntries(uniqueTaskIds.map((id, i) => [id, filledCounts[i]]));
   res.json(
     apps.map((a) => ({
       id: a.id,
@@ -150,6 +157,8 @@ router.get("/applications", requireAuth, async (req: AuthedRequest, res: Respons
         locationType: a.task.locationType,
         startDate: a.task.startDate,
         endDate: a.task.endDate,
+        slots: a.task.slots,
+        filledCount: filledByTask[a.taskId] ?? 0,
       },
     }))
   );
@@ -308,7 +317,7 @@ function buildContractSections(
 
   const location =
     task.locationType === "REMOTE"
-      ? "Remote — no fixed site required"
+      ? "Remote: no fixed site required"
       : task.address
       ? `Physical site: ${task.address}`
       : "Physical site (address to be confirmed)";
@@ -410,7 +419,7 @@ router.patch("/push-token", requireAuth, async (req: AuthedRequest, res: Respons
 // uploaded both an ID and a selfie document, this also runs an automated Document
 // Verification pass: a final REJECTED result short-circuits straight to kycStatus
 // REJECTED (with the real reason in kycNote), a final approval moves to kycStatus
-// VERIFIED — still awaiting an admin's own TIER_APPROVED call. Any failure to reach
+// VERIFIED: still awaiting an admin's own TIER_APPROVED call. Any failure to reach
 // Smile (missing docs, no idType, network error) falls back to the pre-existing
 // manual-review flow (kycStatus stays PENDING for an admin to decide).
 router.post("/kyc/submit", requireAuth, async (req: AuthedRequest, res: Response) => {

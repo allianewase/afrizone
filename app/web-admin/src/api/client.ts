@@ -124,7 +124,7 @@ export const api = {
     request<LoginResponse>('/auth/login', { method: 'POST', body: { email, password } }),
   me: () => request<{ user: User }>('/auth/me'),
 
-  // Auth — 2FA
+  // Auth: 2FA
   twoFactorVerify: (challenge: string, code: string) =>
     request<AuthSuccess>('/auth/2fa/verify', {
       method: 'POST',
@@ -137,11 +137,11 @@ export const api = {
   twoFactorDisable: (code: string) =>
     request<TwoFactorStatus>('/auth/2fa/disable', { method: 'POST', body: { code } }),
 
-  // Auth — Google SSO. May throw ApiError(503) when not configured.
+  // Auth: Google SSO. May throw ApiError(503) when not configured.
   googleSignIn: (idToken: string) =>
     request<AuthSuccess>('/auth/google', { method: 'POST', body: { idToken } }),
 
-  // Auth — password reset
+  // Auth: password reset
   passwordForgot: (email: string) =>
     request<PasswordForgotResponse>('/auth/password/forgot', {
       method: 'POST',

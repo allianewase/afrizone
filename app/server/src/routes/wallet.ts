@@ -103,7 +103,7 @@ router.post("/withdraw", requireAuth, async (req: AuthedRequest, res: Response) 
   return res.status(201).json({ ...withdrawal, simulated: true });
 });
 
-// DEV ONLY — settle the caller's PROCESSING withdrawals to PAID, to demo the
+// DEV ONLY: settle the caller's PROCESSING withdrawals to PAID, to demo the
 // full flow without webhooks. Disabled when Paystack is live (real settlement
 // must come from the verified webhook).
 router.post("/dev/settle", requireAuth, async (req: AuthedRequest, res: Response) => {

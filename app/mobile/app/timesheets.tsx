@@ -17,7 +17,7 @@ import { Button } from '../src/components/Button';
 import { Icon } from '../src/components/Icon';
 import { StatusPill } from '../src/components/StatusPill';
 import { Banner, LoadingState, ErrorState, EmptyState } from '../src/components/Feedback';
-import { colors, spacing, type, radii, layout } from '../src/theme';
+import { colors, spacing, type, radii, layout, fontFamily } from '../src/theme';
 import { api, ApiError } from '../src/api/client';
 import { useAsync } from '../src/lib/useAsync';
 import { formatDate } from '../src/lib/format';
@@ -59,8 +59,8 @@ function TimesheetCard({
 
       {alreadyDisputed ? (
         <View style={styles.disputedNote}>
-          <Icon name="alert" size={13} color={colors.amber} />
-          <Text style={styles.disputedText}>Dispute open — check Disputes for updates</Text>
+          <Icon name="alert" size={13} color={colors.goldInk} />
+          <Text style={styles.disputedText}>Dispute open: check Disputes for updates</Text>
         </View>
       ) : canDispute ? (
         <Pressable
@@ -164,7 +164,7 @@ function DisputeSheet({
                 value={reason}
                 onChangeText={setReason}
                 placeholder="e.g. I clocked 8 hours but only 6 were recorded. GPS dropped during the last shift."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.textFaint}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
@@ -242,10 +242,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  taskTitle: { flex: 1, color: colors.text, fontSize: type.size.md, fontWeight: '700' },
+  taskTitle: { flex: 1, color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.bold },
   meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
-  hours: { color: colors.clay, fontSize: type.size.sm, fontWeight: '700' },
-  dot: { color: colors.line, fontSize: type.size.sm },
+  hours: { color: colors.goldInk, fontSize: type.size.sm, fontWeight: '700' },
+  dot: { color: colors.textFaint, fontSize: type.size.sm },
   period: { color: colors.textMuted, fontSize: type.size.sm, flex: 1 },
   filed: { color: colors.textMuted, fontSize: type.size.xs },
   disputedNote: {
@@ -254,17 +254,17 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: spacing.xs,
   },
-  disputedText: { color: colors.amber, fontSize: type.size.xs, flex: 1 },
+  disputedText: { color: colors.goldInk, fontSize: type.size.xs, flex: 1 },
   disputeBtn: { marginTop: spacing.xs, alignSelf: 'flex-start' },
   disputeBtnText: {
-    color: colors.clay,
+    color: colors.goldInk,
     fontSize: type.size.sm,
     fontWeight: '700',
     textDecorationLine: 'underline',
   },
 
   // Sheet
-  backdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: radii.sheet,
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.line,
     marginBottom: spacing.sm,
   },
-  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontWeight: '800' },
+  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold },
   sheetSub: { color: colors.textMuted, fontSize: type.size.base },
   summaryRow: {
     flexDirection: 'row',
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     minHeight: 96,
   },
   inputHint: { color: colors.textMuted, fontSize: type.size.xs },
-  inputError: { color: colors.danger, fontSize: type.size.sm },
+  inputError: { color: colors.dangerInk, fontSize: type.size.sm },
   doneWrap: { gap: spacing.md, alignItems: 'center' },
   doneIcon: {
     width: 64,

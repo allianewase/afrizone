@@ -3,11 +3,11 @@ import { View, ViewStyle, StyleProp } from 'react-native';
 import Svg, { Path, Defs, Pattern, RadialGradient, Stop, Mask, Rect } from 'react-native-svg';
 
 /**
- * "Sunrise Cut" chevron motif — a repeating geometric pattern echoing the
+ * "Sunrise Cut" chevron motif: a repeating geometric pattern echoing the
  * angular lines of the Africa+cart logo mark. See DESIGN_SPEC §1.5 (Adinkra/
  * kente geometry) and the "Sunrise Cut" visual system. Two usages only:
  * a thin section divider, and a large low-opacity background watermark on
- * brand moments — never behind dense data.
+ * brand moments: never behind dense data.
  *
  * The chevron is drawn as a thin open stroke (not a filled shape) on a
  * generously-spaced tile, so tiled at low opacity it reads as a light
@@ -84,7 +84,7 @@ export function PatternWatermark({ color, opacity = 0.1, size = 260, style }: Pa
 }
 
 const TOPO_UNIT = 64;
-// Three nested wavy contour lines per tile — an organic, map-like texture
+// Three nested wavy contour lines per tile: an organic, map-like texture
 // (distinct from the angular chevron above) for the welcome hero panel only.
 const TOPO_LINES = [
   `M0 18 Q16 4 32 18 T64 18`,
@@ -98,7 +98,7 @@ interface TopoPatternProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/** Repeating topographic contour-line texture — fills its container. */
+/** Repeating topographic contour-line texture: fills its container. */
 export function TopoPattern({ color, opacity = 0.16, style }: TopoPatternProps) {
   const id = `topo-${useId()}`;
   return (

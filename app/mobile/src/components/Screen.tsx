@@ -10,9 +10,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { colors, type, spacing, layout, motif, fontFamily } from '../theme';
+import { colors, type, spacing, layout, fontFamily } from '../theme';
 import { Icon } from './Icon';
-import { PatternDivider } from './Motif';
 
 interface ScreenProps {
   children: React.ReactNode;
@@ -59,17 +58,7 @@ export function Screen({
           </Pressable>
         ) : null}
         <View style={styles.titleWrap}>
-          {title ? (
-            <>
-              <Text style={styles.title}>{title}</Text>
-              <PatternDivider
-                color={colors.gold}
-                opacity={motif.dividerOpacityLight}
-                height={5}
-                style={styles.titleMotif}
-              />
-            </>
-          ) : null}
+          {title ? <Text style={styles.title}>{title}</Text> : null}
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
         {right}
@@ -104,8 +93,8 @@ export function Screen({
             <RefreshControl
               refreshing={!!refreshing}
               onRefresh={onRefresh}
-              tintColor={colors.clay}
-              colors={[colors.clay]}
+              tintColor={colors.goldInk}
+              colors={[colors.goldInk]}
             />
           ) : undefined
         }
@@ -135,6 +124,5 @@ const styles = StyleSheet.create({
   },
   titleWrap: { flex: 1 },
   title: { color: colors.text, fontSize: type.size.xxl, fontFamily: fontFamily.extrabold, letterSpacing: -0.5 },
-  titleMotif: { width: 44, marginTop: 4 },
   subtitle: { color: colors.textMuted, fontSize: type.size.base, marginTop: 2 },
 });

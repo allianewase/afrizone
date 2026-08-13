@@ -1,9 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, radii, spacing, type, shadow, motif } from '../theme';
+import { colors, radii, spacing, type, shadow } from '../theme';
 import { MoneyText } from './MoneyText';
-import { PatternDivider, PatternWatermark } from './Motif';
 import type { Wallet } from '../api/types';
 
 /**
@@ -15,13 +14,11 @@ export function WalletBalanceCard({ wallet }: { wallet: Wallet }) {
     <View style={styles.shadowWrap}>
       <View style={styles.card} accessibilityLabel="Wallet balances">
         <LinearGradient
-          colors={[colors.clay, colors.gold]}
+          colors={[colors.gold, colors.clayDeep]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.accentBar}
         />
-        <PatternWatermark color={colors.gold} opacity={motif.watermarkOpacityDark} size={180} style={styles.watermark} />
-
         <Text style={styles.label}>Available to withdraw</Text>
         <MoneyText
           amount={wallet.available}
@@ -30,7 +27,7 @@ export function WalletBalanceCard({ wallet }: { wallet: Wallet }) {
           weight="800"
         />
 
-        <PatternDivider color={colors.gold} opacity={motif.dividerOpacityDark} style={styles.divider} />
+        <View style={styles.divider} />
 
         <View style={styles.row}>
           <Balance label="Pending" amount={wallet.pending} />
@@ -67,9 +64,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   accentBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 3 },
-  watermark: { top: -60, right: -60 },
   label: { color: colors.gold, fontSize: type.size.sm, fontWeight: '600' },
-  divider: { marginVertical: spacing.md },
+  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.14)', marginVertical: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center' },
   balance: { flex: 1, gap: 2 },
   subLabel: { color: 'rgba(255,255,255,0.6)', fontSize: type.size.xs, fontWeight: '600' },

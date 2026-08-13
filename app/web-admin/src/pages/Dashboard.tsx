@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import { useApi } from '../lib/useApi'
@@ -10,14 +10,18 @@ import Icon, { type IconName } from '../components/Icon'
 import { ErrorState, LoadingState } from '../components/ui/StateView'
 import type { DashboardActivity, DashboardUrgent } from '../api/types'
 import './Dashboard.css'
+import { Skeleton } from '@/components/shadcn/skeleton'
 
-const TONE_COLOR: Record<string, string> = {
-  clay: 'var(--clay)',
-  gold: 'var(--gold)',
-  money: 'var(--money)',
-  indigo: 'var(--indigo)',
-  amber: 'var(--amber)',
-}
+/* Lazy so bklit's visx and Motion dependencies stay out of the initial bundle.
+   The dashboard is the landing route, so this is the one that matters most: the
+   KPIs and the payment release queue paint without waiting on a charting
+   library. Both come from the same module, so they share one chunk. */
+const CategoryBars = lazy(() =>
+  import('../components/chart-views').then((m) => ({ default: m.CategoryBars })),
+)
+const FillRateMeter = lazy(() =>
+  import('../components/chart-views').then((m) => ({ default: m.FillRateMeter })),
+)
 
 const URGENT_ICON: Record<string, { icon: IconName; color: string }> = {
   payments: { icon: 'card', color: 'var(--money)' },
@@ -32,65 +36,6 @@ const ACTIVITY_ICON: Record<string, { icon: IconName; color: string }> = {
   contract: { icon: 'tasks', color: 'var(--gold)' },
   publish: { icon: 'send', color: 'var(--indigo)' },
   payment: { icon: 'card', color: 'var(--money)' },
-}
-
-function Bars({ data }: { data: { label: string; value: number; tone?: string }[] }) {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setMounted(true))
-    return () => cancelAnimationFrame(id)
-  }, [])
-  const max = Math.max(...data.map((d) => d.value), 1)
-  return (
-    <div className="bars">
-      {data.map((d, i) => (
-        <div className="bar-col" key={d.label + i}>
-          <div className="bar-track">
-            <i
-              className="bar"
-              style={{
-                height: mounted ? `${(d.value / max) * 100}%` : 0,
-                transitionDelay: `${i * 70}ms`,
-                background: d.tone ? TONE_COLOR[d.tone] ?? 'var(--grad)' : 'var(--grad)',
-              }}
-            />
-          </div>
-          <span className="bar-lbl">{d.label}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function Donut({ pct, filled, open }: { pct: number; filled: number; open: number }) {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    el.style.setProperty('--p', '0')
-    const id = requestAnimationFrame(() => el.style.setProperty('--p', String(pct)))
-    return () => cancelAnimationFrame(id)
-  }, [pct])
-  return (
-    <div className="donut-wrap">
-      <div className="donut" ref={ref}>
-        <div className="mid">
-          <b className="tnum">{pct}%</b>
-          <span>filled</span>
-        </div>
-      </div>
-      <div className="legend">
-        <div className="li">
-          <span className="sw" style={{ background: 'var(--gold)' }} />
-          Filled · {filled}
-        </div>
-        <div className="li">
-          <span className="sw" style={{ background: 'rgba(255,255,255,.12)' }} />
-          Open · {open}
-        </div>
-      </div>
-    </div>
-  )
 }
 
 function UrgentRow({ item, onGo }: { item: DashboardUrgent; onGo: (t: string) => void }) {
@@ -228,7 +173,9 @@ export default function Dashboard() {
             </div>
             <span className="chip">Monthly</span>
           </div>
-          <Bars data={data.spendByCategory} />
+          <Suspense fallback={<Skeleton className="w-full rounded-[var(--r-sm)]" style={{ height: 200 }} />}>
+            <CategoryBars data={data.spendByCategory} />
+          </Suspense>
         </Glass>
 
         <Glass reveal delay="d2" style={{ padding: 22 }}>
@@ -238,7 +185,9 @@ export default function Dashboard() {
               <div className="sub">This month</div>
             </div>
           </div>
-          <Donut pct={data.fillRate} filled={data.fill.filled} open={data.fill.open} />
+          <Suspense fallback={<Skeleton className="w-full rounded-[var(--r-sm)]" style={{ height: 200 }} />}>
+            <FillRateMeter pct={data.fillRate} filled={data.fill.filled} open={data.fill.open} />
+          </Suspense>
         </Glass>
       </div>
 
@@ -253,7 +202,7 @@ export default function Dashboard() {
           <div className="feed">
             {data.urgent.length === 0 ? (
               <div className="frow" style={{ color: 'var(--muted)' }}>
-                Nothing urgent — you&apos;re all caught up.
+                Nothing urgent: you&apos;re all caught up.
               </div>
             ) : (
               data.urgent.map((u, i) => <UrgentRow key={i} item={u} onGo={navigate} />)

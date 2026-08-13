@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
-import { Icon } from '../../src/components/Icon';
 import { Banner } from '../../src/components/Feedback';
 import { SuccessCard } from '../../src/components/SuccessCard';
-import { AuthShell, AuthCard } from '../../src/components/AuthShell';
-import { colors, spacing, type, layout } from '../../src/theme';
+import { UnderlineInput } from '../../src/components/UnderlineInput';
+import { AuthScreen, AuthFooterLink } from '../../src/components/AuthShell';
 import { useAuth } from '../../src/auth/AuthContext';
 
 const emailValid = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
 
 /**
- * Forgot password (AUTH_FLOW §A2/§B). Enter an email → neutral confirmation
- * (no account enumeration). In sim/dev a `devToken` is returned; we surface it
- * with a link to the reset screen so the flow is testable end-to-end.
+ * Forgot password. Enter an email → neutral confirmation (no account
+ * enumeration). In sim/dev a `devToken` is returned; we surface it with a
+ * link to the reset screen so the flow is testable end-to-end.
  */
 export default function ForgotScreen() {
   const router = useRouter();
@@ -42,88 +40,46 @@ export default function ForgotScreen() {
   }
 
   return (
-    <AuthShell watermarkSize={280}>
-      <AuthCard title="Forgot password" onBack={() => router.back()}>
-        {sent ? (
-          <SuccessCard
-            title="Check your email"
-            message="If an account exists for that email, we’ve sent a password reset link."
-            actionLabel="Enter reset token"
-            onAction={() =>
-              router.replace({ pathname: '/(auth)/reset', params: { token: devToken ?? '' } })
-            }
-          >
-            {devToken ? (
-              <Banner tone="indigo" icon="key" title="Dev / sim mode" message={`Reset token: ${devToken}`} />
-            ) : null}
-          </SuccessCard>
-        ) : (
-          <>
-            <Text style={styles.lead}>
-              Enter the email on your account and we’ll send you a link to reset your password.
-            </Text>
+    <AuthScreen
+      onBack={() => router.back()}
+      title="Forgot Password"
+      subtitle="Enter the email on your account and we'll send you a link to reset your password."
+      footer={<AuthFooterLink text="Have an account?" linkText="Sign in" onPress={() => router.back()} />}
+    >
+      {sent ? (
+        <SuccessCard
+          title="Check your email"
+          message="If an account exists for that email, we’ve sent a password reset link."
+          actionLabel="Enter reset token"
+          onAction={() =>
+            router.replace({ pathname: '/(auth)/reset', params: { token: devToken ?? '' } })
+          }
+        >
+          {devToken ? (
+            <Banner tone="indigo" icon="key" title="Dev / sim mode" message={`Reset token: ${devToken}`} />
+          ) : null}
+        </SuccessCard>
+      ) : (
+        <>
+          {error ? <Banner tone="danger" icon="alert" title="Couldn’t continue" message={error} /> : null}
 
-            {error ? (
-              <Banner tone="danger" icon="alert" title="Couldn’t continue" message={error} />
-            ) : null}
+          <UnderlineInput
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+            placeholder="you@email.com"
+            accessibilityLabel="Email"
+            autoFocus
+            onSubmitEditing={onSubmit}
+            returnKeyType="go"
+          />
 
-            <View style={styles.field}>
-              <Text style={styles.label}>Email</Text>
-              <View style={styles.inputRow}>
-                <Icon name="mail" size={18} color={colors.textMuted} />
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  placeholder="you@email.com"
-                  placeholderTextColor={colors.textMuted}
-                  style={styles.input}
-                  accessibilityLabel="Email"
-                  autoFocus
-                  onSubmitEditing={onSubmit}
-                  returnKeyType="go"
-                />
-              </View>
-            </View>
-
-            <Button
-              label="Send reset link"
-              icon="chevron-right"
-              onPress={onSubmit}
-              loading={busy}
-              disabled={!emailValid(email) || busy}
-            />
-          </>
-        )}
-
-        {!sent && (
-          <Pressable onPress={() => router.back()} accessibilityRole="button" style={styles.altRow}>
-            <Text style={styles.altLink}>Back to sign in</Text>
-          </Pressable>
-        )}
-      </AuthCard>
-    </AuthShell>
+          <Button label="Send" onPress={onSubmit} loading={busy} disabled={!emailValid(email) || busy} />
+        </>
+      )}
+    </AuthScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  lead: { color: colors.textMuted, fontSize: type.size.md, lineHeight: 22 },
-  field: { gap: 6 },
-  label: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    minHeight: layout.hitTarget,
-    backgroundColor: colors.surface,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: spacing.md,
-  },
-  input: { flex: 1, fontSize: type.size.md, color: colors.text, paddingVertical: spacing.sm },
-  altRow: { alignItems: 'center', paddingVertical: spacing.sm },
-  altLink: { color: colors.clay, fontSize: type.size.base, fontWeight: '700' },
-});

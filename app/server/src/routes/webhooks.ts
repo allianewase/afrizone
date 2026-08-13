@@ -9,7 +9,7 @@ const router = Router();
 // POST /api/webhooks/paystack
 // Receives transfer.* events (outbound payouts → Withdrawal) and charge.*
 // events (inbound platform funding → Funding). The raw body is needed for
-// signature verification — index.ts mounts express.raw() on this path BEFORE
+// signature verification: index.ts mounts express.raw() on this path BEFORE
 // the global express.json().
 router.post("/paystack", async (req: Request, res: Response) => {
   const signature = req.header("x-paystack-signature");
@@ -74,7 +74,7 @@ router.post("/paystack", async (req: Request, res: Response) => {
 // POST /api/webhooks/smile
 // Final result for a Document Verification job, including ones that needed human
 // review (which the synchronous return_job_status result in routes/me.ts can't
-// reflect — see services/smileIdentity.ts). Only relevant when SMILE_CALLBACK_URL
+// reflect: see services/smileIdentity.ts). Only relevant when SMILE_CALLBACK_URL
 // points here; without it Smile has nowhere to send this and the sync result stands.
 router.post("/smile", async (req: Request, res: Response) => {
   const body = req.body || {};

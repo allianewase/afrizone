@@ -1,43 +1,75 @@
 /**
- * Afrizone Part Time — design tokens for the worker mobile app.
- * Mirrors DESIGN_SPEC.md §1 (brand) and the web-admin tokens.css so the
- * two apps stay visually identical.
+ * Design tokens for the worker mobile app.
+ *
+ * These mirror web-admin's tokens.css value for value. Reasoning behind the
+ * values lives in docs/design-decisions.md; several look wrong until you read
+ * the measurement, so check there before changing one.
  */
 
 export const colors = {
-  // Brand — per the official Afrizonemart.com logo redesign spec: Deep Navy
-  // Blue #000066 + Sea Buckthorn orange #FBAC34 (Raleway typeface).
-  clay: '#FBAC34', // Sea Buckthorn — primary accent (was clay/terracotta)
+  // Brand, per the Afrizonemart.com identity.
+  clay: '#FBAC34', // Sea Buckthorn, primary accent (was clay/terracotta)
   clayLight: '#FCC066', // lightened tint for hover/pressed states
-  gold: '#FBAC34', // Sea Buckthorn (kept as separate token for existing call sites)
-  goldBright: '#FBAC34', // Sea Buckthorn — logo mark color
-  navy: '#000066', // Deep Navy Blue — logo square / brand navy
+  // The deep end of the brand gradient, the twin of web-admin's --clay-deep.
+  // Every gradient needs it: clay and gold are the same hex, so a two-stop ramp
+  // between them renders as a flat fill. docs/design-decisions.md
+  clayDeep: '#C98518',
+  gold: '#FBAC34', // same hex; kept as a separate name for existing call sites
+  goldBright: '#FBAC34', // logo mark colour
+  navy: '#000066', // logo mark navy
   navyDeep: '#00004D',
-  forest: '#14302B', // --forest-900 ink / dark surfaces
+  forest: '#14302B', // dark surfaces, Paid status
   forest700: '#1E4B41',
 
-  // Functional / semantic (shared status language)
-  money: '#1F9D6B', // --money-600 available / paid / success
-  indigo: '#2D5BA8', // --indigo-600 info / in review
-  amber: '#E08A1E', // --amber-500 pending / awaiting
-  danger: '#C8453A', // --danger-600 errors / rejected
+  // Status language, shared with web-admin and design-system.html.
+  money: '#1F9D6B', // available / paid / success
+  indigo: '#2D5BA8', // info / in review
+  // Warnings only, not a status, and a FILL only: as text or as an icon it is
+  // 2.55:1 on the page. Warning type uses goldInk. There is deliberately no
+  // amberInk, because darkening amber lands on goldInk. docs/design-decisions.md
+  amber: '#E08A1E',
+  danger: '#C8453A', // errors / rejected
+  pending: '#6B3F94', // violet, not amber: docs/design-decisions.md
 
-  // Neutrals (warm-tinted, never pure gray)
-  bg: '#FBF5EC', // --sand-50 app background
-  surfaceSand: '#F4EADB', // --sand-100 surface
+  // Type versions of three fills that are illegible as small text on light.
+  // Active shipped at 1.64:1, Available 2.86:1, Rejected 3.65:1.
+  moneyInk: '#15794F',
+  dangerInk: '#A6362C',
+  goldInk: '#8A5A0F',
+  // Label colour for anything sitting on the gold gradient, the twin of
+  // web-admin's --on-gold. White on gold is 1.90:1; this is 9.20:1 on the light
+  // end of the ramp and 5.71:1 on the deep end.
+  onGold: '#1C1917',
+
+  // Neutrals: "Warm Refined". docs/design-decisions.md
+  bg: '#FAF9F6', // app background, 16.61:1 against `text`
+  surfaceSand: '#F4F2EC', // recessed surface
   surface: '#FFFFFF', // card
-  line: '#E7DCC9', // hairline / border
-  text: '#241C15', // primary text
-  textMuted: '#7A6B58', // muted text
+  line: '#E8E3DA', // hairline / border
+  text: '#1C1917', // primary text
+  textMuted: '#57534E', // secondary text, 7.25:1
+  textFaint: '#706963', // placeholders and hints, 5.13:1
   white: '#FFFFFF',
 
-  // Tints for status pill backgrounds (semi-opaque feel without alpha math)
-  amberSoft: '#FBEBD3',
-  claySoft: '#FDECD1',
-  indigoSoft: '#DDE6F4',
-  moneySoft: '#D6F0E4',
-  forestSoft: '#D6E2DE',
-  dangerSoft: '#F6DAD7',
+  // Secondary ink for navy grounds, the twin of web-admin's --rail-muted.
+  // 7.29:1 on navy, where textMuted is 2.31:1.
+  railMuted: '#A1A5C4',
+
+  // Backdrop behind modals and bottom sheets, derived from `text`. Held here
+  // because seven screens had it inlined as a literal, and two of those
+  // literals were still the pre-rebrand warm black.
+  scrim: 'rgba(28,25,23,0.45)',
+
+  // Pill fills: the exact tints web-admin composes (each status colour at 10 to
+  // 16% over white), so a pill renders identically in both apps rather than
+  // merely similarly, which is what DESIGN_SPEC 0.4 asks for.
+  amberSoft: '#FBF1E4',
+  pendingSoft: '#F0ECF4',
+  claySoft: '#FFF5E7',
+  indigoSoft: '#E6EBF5',
+  moneySoft: '#E4F3ED',
+  forestSoft: '#E3E6E5',
+  dangerSoft: '#F8E9E7',
 } as const;
 
 export const spacing = {
@@ -56,14 +88,14 @@ export const radii = {
   card: 16,
   sheet: 22,
   pill: 100,
-  /** "Sunrise Cut" signature — the sharp corner paired with `card`/`button`
+  /** "Sunrise Cut" signature: the sharp corner paired with `card`/`button`
    * on the opposite corner to give every surface an asymmetric, angular
    * silhouette instead of a uniform rounded rectangle. */
   cut: 4,
 } as const;
 
 /**
- * "Sunrise Cut" motif — a repeating chevron pattern echoing the angular
+ * "Sunrise Cut" motif: a repeating chevron pattern echoing the angular
  * lines of the Africa+cart logo mark. Used sparingly as a thin section
  * divider or a low-opacity background watermark on brand moments only
  * (never behind dense data, per DESIGN_SPEC §7).
@@ -76,19 +108,30 @@ export const motif = {
 } as const;
 
 export const shadow = {
-  // Soft warm shadow — restrained (fintech, not glass) per §1.5
+  // Soft warm shadow, restrained (fintech, not glass) per §1.5. Bumped from
+  // the original 0.1/0.08 opacities: against `bg` (#FAF9F6) sitting this
+  // close to `surface` (#FFFFFF), that value rendered as barely perceptible
+  // on web, so every card read as flat. This is the same shape, just visible.
   card: {
-    shadowColor: '#241C15',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.1,
-    shadowRadius: 30,
-    elevation: 4,
+    shadowColor: '#1C1917',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.16,
+    shadowRadius: 28,
+    elevation: 6,
   },
   soft: {
-    shadowColor: '#241C15',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
+    shadowColor: '#1C1917',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 3,
+  },
+  /** Smaller-radius lift for compact surfaces (segmented control thumb, chips). */
+  tight: {
+    shadowColor: '#1C1917',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
     elevation: 2,
   },
 } as const;
@@ -132,12 +175,13 @@ export const layout = {
  * Raleway (per the brand spec: extrabold headings, medium body), loaded via
  * @expo-google-fonts/raleway in app/_layout.tsx. Applied explicitly on the
  * highest-visibility shared/brand text (screen headers, logo, buttons)
- * rather than every style in the app — React Native registers each static
+ * rather than every style in the app, because React Native registers each static
  * weight as its own font family name, so a blanket global override isn't a
  * simple one-line change the way it is on web.
  */
 export const fontFamily = {
   extrabold: 'Raleway_800ExtraBold',
+  bold: 'Raleway_700Bold',
   medium: 'Raleway_500Medium',
 } as const;
 

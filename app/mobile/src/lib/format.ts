@@ -49,6 +49,25 @@ export function isValidNgNumber(local: string): boolean {
   return nat.length === 10;
 }
 
+/**
+ * Same palette + hash as web-admin's avatarGradient (src/lib/format.ts):
+ * a worker's avatar color is deterministic by id, so it matches across both
+ * apps instead of mobile defaulting every avatar to the same navy/gold.
+ */
+const AVATAR_GRADIENTS: [string, string][] = [
+  ['#C98518', '#FBAC34'],
+  ['#5B8BFF', '#7C5CFF'],
+  ['#27C08A', '#1F8F68'],
+  ['#FBAC34', '#C98518'],
+  ['#FF6B5E', '#C98518'],
+];
+
+export function avatarGradient(seed: string): [string, string] {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_GRADIENTS[h % AVATAR_GRADIENTS.length];
+}
+
 /** mm:ss / h:mm:ss elapsed timer formatting. */
 export function formatElapsed(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));

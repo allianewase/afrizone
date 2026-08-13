@@ -7,7 +7,7 @@ import { CodeInput } from '../src/components/CodeInput';
 import { Icon } from '../src/components/Icon';
 import { StatusPill } from '../src/components/StatusPill';
 import { Banner } from '../src/components/Feedback';
-import { colors, spacing, radii, type } from '../src/theme';
+import { colors, spacing, radii, type, fontFamily } from '../src/theme';
 import { useAuth } from '../src/auth/AuthContext';
 import type { TwoFactorSetup } from '../src/api/types';
 
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { color: colors.text, fontSize: type.size.md, fontWeight: '800' },
+  title: { color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.extrabold },
   subtitle: { color: colors.textMuted, fontSize: type.size.sm, marginTop: 2 },
   block: { marginTop: spacing.xl, gap: spacing.lg },
   body: { color: colors.textMuted, fontSize: type.size.md, lineHeight: 22 },

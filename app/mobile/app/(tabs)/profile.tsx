@@ -14,6 +14,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Screen } from '../../src/components/Screen';
 import { Card } from '../../src/components/Card';
 import { ListRow } from '../../src/components/ListRow';
@@ -23,11 +24,12 @@ import { StatusPill, toCanonical } from '../../src/components/StatusPill';
 import { Icon } from '../../src/components/Icon';
 import { StarRating } from '../../src/components/StarRating';
 import { Banner, LoadingState } from '../../src/components/Feedback';
-import { colors, spacing, type, radii, layout } from '../../src/theme';
+import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
 import { NIGERIAN_BANKS } from '../../src/lib/banks';
+import { avatarGradient } from '../../src/lib/format';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { User, Contract } from '../../src/api/types';
 
@@ -62,7 +64,7 @@ export default function ProfileScreen() {
     try {
       await api.patchMe(patch);
     } catch {
-      setNotifSaveError('Could not save — check your connection.');
+      setNotifSaveError('Could not save: check your connection.');
     }
   }
 
@@ -91,11 +93,16 @@ export default function ProfileScreen() {
     >
       {/* Identity card */}
       <Card style={styles.identity}>
-        <View style={styles.avatar}>
+        <LinearGradient
+          colors={avatarGradient(user?.name ?? user?.email ?? 'A')}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.avatar}
+        >
           <Text style={styles.avatarText}>
             {(user?.name ?? 'A').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
           </Text>
-        </View>
+        </LinearGradient>
         <View style={styles.identityBody}>
           <Text style={styles.name}>{user?.name ?? 'Worker'}</Text>
           <View style={styles.tiers}>
@@ -136,7 +143,7 @@ export default function ProfileScreen() {
             title="KYC status"
             subtitle={
               kyc === 'PENDING' || kyc === 'VERIFIED'
-                ? 'Under review — we\'ll notify you when done'
+                ? 'Under review: we\'ll notify you when done'
                 : kyc === 'TIER_APPROVED'
                   ? 'Verified · tap to add a tier or re-verify'
                   : 'Identity & tier verification'
@@ -325,7 +332,7 @@ function EditProfileSheet({
                 value={name}
                 onChangeText={setName}
                 placeholder="Your full name"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.textFaint}
                 style={styles.input}
                 autoCapitalize="words"
               />
@@ -337,7 +344,7 @@ function EditProfileSheet({
                 keyboardType="email-address"
                 autoCapitalize="none"
                 placeholder="you@email.com"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.textFaint}
                 style={styles.input}
               />
             </SheetField>
@@ -415,20 +422,20 @@ function EditBankSheet({
                 <Icon name="chevron-down" size={18} color={colors.textMuted} />
               </Pressable>
             </SheetField>
-            <SheetField label="Account number (NUBAN)" hint="10-digit number — payouts go here">
+            <SheetField label="Account number (NUBAN)" hint="10-digit number: payouts go here">
               <TextInput
                 value={acct}
                 onChangeText={(t) => setAcct(t.replace(/\D/g, '').slice(0, 10))}
                 keyboardType="number-pad"
                 placeholder="0123456789"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.textFaint}
                 style={styles.input}
                 maxLength={10}
               />
               {acct.length > 0 && acct.length < 10 ? (
                 <Text style={styles.fieldHint}>{10 - acct.length} more digits needed</Text>
               ) : acct.length === 10 ? (
-                <Text style={[styles.fieldHint, { color: colors.money }]}>✓ Valid NUBAN</Text>
+                <Text style={[styles.fieldHint, { color: colors.moneyInk }]}>✓ Valid NUBAN</Text>
               ) : null}
             </SheetField>
           </View>
@@ -451,7 +458,7 @@ function EditBankSheet({
                 onPress={() => { setBankCode(item.code); setPickerOpen(false); }}
                 style={[styles.bankItem, bankCode === item.code && styles.bankItemActive]}
               >
-                <Text style={[styles.bankItemText, bankCode === item.code && { color: colors.clay, fontWeight: '700' }]}>
+                <Text style={[styles.bankItemText, bankCode === item.code && { color: colors.goldInk, fontWeight: '700' }]}>
                   {item.name}
                 </Text>
                 {bankCode === item.code ? <Icon name="check" size={18} color={colors.clay} /> : null}
@@ -513,7 +520,7 @@ function EditTinSheet({
                 value={tin}
                 onChangeText={setTin}
                 placeholder="12345678-0001"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.textFaint}
                 style={styles.input}
                 autoCapitalize="none"
               />
@@ -606,14 +613,13 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 18,
-    backgroundColor: colors.navy,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { color: colors.gold, fontSize: type.size.lg, fontWeight: '800' },
+  avatarText: { color: colors.white, fontSize: type.size.lg, fontFamily: fontFamily.extrabold },
   identityBody: { flex: 1, gap: spacing.xs },
   identityRight: { alignItems: 'center', gap: spacing.sm },
-  name: { color: colors.text, fontSize: type.size.lg, fontWeight: '800' },
+  name: { color: colors.text, fontSize: type.size.lg, fontFamily: fontFamily.extrabold },
   tiers: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   ratingBlock: { alignItems: 'center', gap: spacing.xs },
   ratingValue: { color: colors.text, fontSize: type.size.sm, fontWeight: '700', marginTop: 1 },
@@ -640,9 +646,9 @@ const styles = StyleSheet.create({
   contractTitle: { color: colors.text, fontSize: type.size.base, fontWeight: '700' },
   contractSub: { color: colors.textMuted, fontSize: type.size.xs },
   contractCta: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  contractCtaText: { color: colors.clay, fontWeight: '700', fontSize: type.size.base },
+  contractCtaText: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.base },
   notif: { gap: 0 },
-  notifError: { color: colors.danger, fontSize: type.size.sm, marginTop: spacing.xs },
+  notifError: { color: colors.dangerInk, fontSize: type.size.sm, marginTop: spacing.xs },
   notifRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -654,7 +660,7 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.line },
   version: { color: colors.textMuted, fontSize: type.size.sm, textAlign: 'center', marginTop: spacing.lg },
   // sheets
-  backdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: radii.sheet,
@@ -670,7 +676,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.line,
     marginBottom: spacing.sm,
   },
-  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontWeight: '800' },
+  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold },
   sheetSub: { color: colors.textMuted, fontSize: type.size.base, marginTop: -spacing.xs },
   fields: { gap: spacing.md },
   fieldLabel: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },

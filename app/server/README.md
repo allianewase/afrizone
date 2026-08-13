@@ -1,4 +1,4 @@
-# Afrizone Part Time — Backend
+# Afrizone Part Time: Backend
 
 Node.js + TypeScript + Express + Prisma. Runs on **SQLite** out of the box (zero
 external services), implementing the API in [`../API_CONTRACT.md`](../API_CONTRACT.md).
@@ -34,46 +34,46 @@ Demo workers log in with `<firstname>.<lastname>@afrizone.work` / `worker123`
 
 ## Module system
 CommonJS (`"type": "commonjs"`) + `module: "CommonJS"` in tsconfig. This is the
-cleanest combination with `ts-node-dev` and Prisma — no ESM loader flags needed.
+cleanest combination with `ts-node-dev` and Prisma: no ESM loader flags needed.
 
 ## Auth
 JWT (`Authorization: Bearer <token>`), 7-day TTL. `POST /api/auth/login` returns
 `{ token, user }`. Passwords are bcrypt-hashed.
 
-## Switching to PostgreSQL (production)
-The blueprint targets Postgres. To switch:
-1. In `prisma/schema.prisma`, change the `datasource db` provider to `postgresql`
-   (instructions are in a comment at the top of the file).
-2. Set `DATABASE_URL` in `.env` to your Postgres connection string (see `.env.example`).
-3. Optionally convert the String enum fields to real Prisma `enum`s and `tiers`
-   to a `Tier[]` scalar list (both are Postgres-only — see next section).
-4. Run `npm run setup` again.
+## Production: Cloudflare Workers + D1
+Production runs on Cloudflare Workers with a D1 database (SQLite-based), via the
+`@prisma/adapter-d1` driver adapter - see `src/prisma.ts`. The schema needs no
+changes between local dev and D1: both are SQLite. Prisma Migrate does not
+support D1 yet, so schema changes are applied via `prisma migrate diff` (generate
+SQL) + `wrangler d1 migrations apply`, not `prisma migrate dev`/`db push` (that
+pair stays the local-dev workflow, against `DATABASE_URL`).
 
 ## SQLite caveats (important for the schema)
-SQLite supports **neither native enums nor scalar lists**, so:
+SQLite (and D1, which is SQLite-based) supports **neither native enums nor
+scalar lists**, so:
 - **Enums** (`Role`, `Tier`, `KycStatus`, `TaskStatus`, ...) are stored as `String`
   columns. Allowed values are TS union types in `src/types.ts` and are validated
-  in route handlers. On Postgres these can become real `enum` blocks.
+  in route handlers.
 - **`tiers` (Tier[])** is stored as a **single comma-separated String** (e.g.
   `"PROMO,DISPATCH"`). The API **always exposes `tiers` as a real `string[]`**.
   Conversion helpers: `tiersToArray` / `tiersToString` in `src/types.ts`.
 
 ## Money & tax
 All amounts are **whole-Naira integers**. WHT default 5% (`0.05`).
-`net = round(gross − gross × whtRate)` — see `src/util/tax.ts`.
+`net = round(gross − gross × whtRate)`: see `src/util/tax.ts`.
 Approving a timesheet creates a `Payment` (status `APPROVED`) with computed
 `gross / whtAmount / net`. Releasing a payment writes an `AuditLog`.
 
-## Payments — Paystack payouts
+## Payments: Paystack payouts
 Worker withdrawals (`POST /api/wallet/withdraw`) integrate **Paystack Transfers**,
 driven by env (`src/services/paystack.ts`):
 
-- **Simulated mode** (default — `PAYSTACK_SECRET` blank): no real money moves;
+- **Simulated mode** (default: `PAYSTACK_SECRET` blank): no real money moves;
   withdrawals stay `PROCESSING`. Use `POST /api/wallet/dev/settle` to flip the
   caller's pending withdrawals to `PAID` and demo the full flow without webhooks.
 - **Live mode** (set `PAYSTACK_SECRET=sk_test_…`): creates a transfer recipient
   (worker `bankAccountNumber` + `bankCode`) and initiates a transfer. Settlement
-  is async — point the Paystack dashboard webhook at
+  is async: point the Paystack dashboard webhook at
   `POST /api/webhooks/paystack` (verified via `x-paystack-signature`,
   HMAC-SHA512); `transfer.success` → `PAID`, `transfer.failed/reversed` → `FAILED`.
   In dev, expose the webhook with a tunnel (e.g. ngrok).
@@ -88,7 +88,7 @@ server/
   .env / .env.example / .gitignore
   package.json / tsconfig.json / README.md
   prisma/
-    schema.prisma   # models + SQLite/Postgres notes
+    schema.prisma   # models + SQLite/D1 notes
     seed.ts         # admin + contract seed data
   src/
     index.ts        # Express app, CORS, routers, health, error handler

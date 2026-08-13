@@ -9,7 +9,7 @@ import { Icon } from '../../src/components/Icon';
 import { TierBadge } from '../../src/components/TierBadge';
 import { MoneyText } from '../../src/components/MoneyText';
 import { Banner, LoadingState, ErrorState } from '../../src/components/Feedback';
-import { colors, spacing, type, radii, layout } from '../../src/theme';
+import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
@@ -23,7 +23,7 @@ export default function TaskDetailScreen() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [justApplied, setJustApplied] = useState(false);
 
-  // REAL: GET /api/tasks/:id — includes applications[] for this task.
+  // REAL: GET /api/tasks/:id, which includes applications[] for this task.
   const task = useAsync<Task | null>(
     (signal) => (id ? api.task(id, signal) : Promise.resolve(null)),
     [id]
@@ -137,7 +137,7 @@ export default function TaskDetailScreen() {
         <View style={{ marginTop: spacing.xl }}>
           {applied ? (
             <Button
-              label={myApp?.status === 'APPROVED' ? 'Approved — see My Tasks' : 'Applied — awaiting approval'}
+              label={myApp?.status === 'APPROVED' ? 'Approved: see My Tasks' : 'Applied: awaiting approval'}
               variant="secondary"
               icon={myApp?.status === 'APPROVED' ? 'check-circle' : 'check'}
               disabled
@@ -226,7 +226,7 @@ function ApplySheet({
           onChangeText={setPitch}
           multiline
           placeholder="Why you’re a good fit, and when you’re free…"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={colors.textFaint}
           style={styles.pitch}
           accessibilityLabel="Pitch"
         />
@@ -240,7 +240,7 @@ function ApplySheet({
 const styles = StyleSheet.create({
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   category: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
-  title: { color: colors.text, fontSize: type.size.xxl, fontWeight: '800', marginTop: spacing.sm, lineHeight: 30 },
+  title: { color: colors.text, fontSize: type.size.xxl, fontFamily: fontFamily.extrabold, marginTop: spacing.sm, lineHeight: 30 },
   payCard: { marginTop: spacing.lg, gap: 2 },
   payLabel: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
   payRow: { flexDirection: 'row', alignItems: 'baseline' },
@@ -261,12 +261,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     alignSelf: 'flex-start',
   },
-  directionsText: { color: colors.clay, fontWeight: '700', fontSize: type.size.sm },
+  directionsText: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.sm },
   geofence: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
   geofenceText: { flex: 1, color: colors.text, fontSize: type.size.sm },
-  section: { color: colors.text, fontSize: type.size.lg, fontWeight: '800', marginTop: spacing.xl, marginBottom: spacing.sm },
+  section: { color: colors.text, fontSize: type.size.lg, fontFamily: fontFamily.extrabold, marginTop: spacing.xl, marginBottom: spacing.sm },
   desc: { color: colors.text, fontSize: type.size.md, lineHeight: 24 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: radii.sheet,
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 100, backgroundColor: colors.line, marginBottom: spacing.sm },
-  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontWeight: '800' },
+  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold },
   sheetSub: { color: colors.textMuted, fontSize: type.size.base },
   pitch: {
     minHeight: 110,

@@ -1,4 +1,4 @@
-// Jest globalSetup — runs once before any test file. Provisions a fresh
+// Jest globalSetup: runs once before any test file. Provisions a fresh
 // SQLite test database by pushing the current schema, matching the
 // DATABASE_URL that test/env.ts sets for the actual test workers.
 import { execSync } from "child_process";

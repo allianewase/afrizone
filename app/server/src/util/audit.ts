@@ -1,7 +1,7 @@
 import { prisma } from "../prisma";
 
 // Write an AuditLog entry. `meta` is serialized to a JSON string (SQLite has
-// no native Json type — see schema.prisma).
+// no native Json type: see schema.prisma).
 export async function writeAudit(
   actorId: string,
   action: string,

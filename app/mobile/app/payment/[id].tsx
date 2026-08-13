@@ -18,7 +18,7 @@ import { MoneyText } from '../../src/components/MoneyText';
 import { Icon } from '../../src/components/Icon';
 import { StatusPill } from '../../src/components/StatusPill';
 import { Banner, LoadingState, ErrorState } from '../../src/components/Feedback';
-import { colors, spacing, type, radii, layout } from '../../src/theme';
+import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { formatDate, formatNaira } from '../../src/lib/format';
@@ -240,7 +240,7 @@ function DisputeSheet({
                 value={reason}
                 onChangeText={setReason}
                 placeholder="e.g. I worked 6 hours but was paid for 4."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.textFaint}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.text,
     fontSize: type.size.xl,
-    fontWeight: '800',
+    fontFamily: fontFamily.extrabold,
     lineHeight: 26,
   },
 
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   disputeSection: { gap: spacing.md },
 
   // Sheet
-  backdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: radii.sheet,
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.line,
     marginBottom: spacing.sm,
   },
-  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontWeight: '800' },
+  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold },
   sheetSub: { color: colors.textMuted, fontSize: type.size.base },
   amountRow: {
     backgroundColor: colors.surfaceSand,
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   amountLabel: { color: colors.textMuted, fontSize: type.size.xs, marginBottom: 2 },
-  amountValue: { color: colors.clay, fontSize: type.size.xl, fontWeight: '800' },
+  amountValue: { color: colors.goldInk, fontSize: type.size.xl, fontWeight: '800' },
   inputLabel: { color: colors.text, fontWeight: '600', fontSize: type.size.base },
   input: {
     borderWidth: 1,
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     minHeight: 96,
   },
   inputHint: { color: colors.textMuted, fontSize: type.size.xs },
-  inputError: { color: colors.danger, fontSize: type.size.sm },
+  inputError: { color: colors.dangerInk, fontSize: type.size.sm },
   doneWrap: { gap: spacing.md, alignItems: 'center' },
   doneIcon: {
     width: 64,

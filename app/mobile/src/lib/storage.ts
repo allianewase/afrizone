@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * Secure key/value storage. expo-secure-store is unavailable on web, so we fall
- * back to AsyncStorage there (web is dev-only — never ship secrets to web prod).
+ * back to AsyncStorage there (web is dev-only: never ship secrets to web prod).
  */
 const isWeb = Platform.OS === 'web';
 

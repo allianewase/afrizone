@@ -1,4 +1,4 @@
-// Jest setupFiles — runs before the test framework loads and before any
+// Jest setupFiles: runs before the test framework loads and before any
 // application code is imported, so these must win over `dotenv/config`
 // (which only fills in vars that aren't already set).
 process.env.NODE_ENV = "test";

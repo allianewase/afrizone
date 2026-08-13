@@ -41,8 +41,14 @@ export function useAsync<T>(
       })
       .catch((e: unknown) => {
         if (!active) return;
-        // Ignore intentional aborts.
-        if (e instanceof DOMException && e.name === 'AbortError') return;
+        // Ignore intentional aborts. Checked by name, NOT with
+        // `e instanceof DOMException`: Hermes has no DOMException, so that
+        // reference throws inside this catch block and turns every rejection,
+        // including ordinary aborts, into an unhandled one. The effect on
+        // device was that `loading` never cleared and every screen sat on its
+        // spinner forever. React Native's fetch rejects aborts with a plain
+        // Error whose name is 'AbortError', so the name check is the portable one.
+        if ((e as { name?: string } | null)?.name === 'AbortError') return;
         const msg = e instanceof ApiError || e instanceof Error ? e.message : 'Unexpected error';
         setError(msg);
         setLoading(false);

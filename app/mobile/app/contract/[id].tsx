@@ -9,7 +9,7 @@ import { TierBadge } from '../../src/components/TierBadge';
 import { StatusPill } from '../../src/components/StatusPill';
 import { LoadingState, ErrorState, Banner } from '../../src/components/Feedback';
 import { Icon } from '../../src/components/Icon';
-import { colors, spacing, type, radii, layout } from '../../src/theme';
+import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
@@ -52,7 +52,7 @@ export default function ContractDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Custom header — Screen's built-in scroll prop doesn't let us pin a footer */}
+      {/* Custom header: Screen's built-in scroll prop doesn't let us pin a footer */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Button
           label=""
@@ -103,8 +103,8 @@ export default function ContractDetailScreen() {
                 </View>
               ) : (
                 <View style={styles.signedRow}>
-                  <Icon name="alert" size={14} color={colors.amber} />
-                  <Text style={[styles.signedText, { color: colors.amber }]}>
+                  <Icon name="alert" size={14} color={colors.goldInk} />
+                  <Text style={[styles.signedText, { color: colors.goldInk }]}>
                     Review and sign to confirm your engagement
                   </Text>
                 </View>
@@ -141,7 +141,7 @@ export default function ContractDetailScreen() {
                   value={signerName}
                   onChangeText={setSignerName}
                   placeholder="Full name"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={colors.textFaint}
                   autoCapitalize="words"
                 />
                 <Text style={styles.footerHint}>
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   taskTitle: {
     color: colors.text,
     fontSize: type.size.lg,
-    fontWeight: '800',
+    fontFamily: fontFamily.extrabold,
     lineHeight: 26,
   },
   signedRow: {
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   signedText: {
-    color: colors.money,
+    color: colors.moneyInk,
     fontSize: type.size.sm,
     fontWeight: '600',
   },
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   sectionHeading: {
     color: colors.text,
     fontSize: type.size.base,
-    fontWeight: '800',
+    fontFamily: fontFamily.extrabold,
     letterSpacing: 0.1,
   },
   sectionBody: {
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   signedFooterText: {
-    color: colors.money,
+    color: colors.moneyInk,
     fontWeight: '700',
     fontSize: type.size.base,
   },

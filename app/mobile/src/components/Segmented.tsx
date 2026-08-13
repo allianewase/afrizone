@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { colors, radii, type, layout } from '../theme';
+import { colors, radii, type, layout, shadow } from '../theme';
 
 interface SegmentedProps<T extends string> {
   options: { key: T; label: string; count?: number }[];
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 8,
   },
-  segActive: { backgroundColor: colors.surface },
+  segActive: { backgroundColor: colors.surface, ...shadow.tight },
   label: { color: colors.textMuted, fontWeight: '600', fontSize: type.size.base },
-  labelActive: { color: colors.clay, fontWeight: '700' },
+  labelActive: { color: colors.goldInk, fontWeight: '700' },
 });

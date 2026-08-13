@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  MOCK FALLBACK — only what still has NO worker-facing endpoint.
+ *  MOCK FALLBACK: only what still has NO worker-facing endpoint.
  * ============================================================================
  *
  * All worker actions (applications, clock, timesheets, wallet, withdrawals,

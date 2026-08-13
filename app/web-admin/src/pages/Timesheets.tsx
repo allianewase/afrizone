@@ -9,6 +9,17 @@ import StatusPill from '../components/ui/StatusPill'
 import Modal from '../components/ui/Modal'
 import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
+import Textarea from '../components/ui/Textarea'
+import { Label } from '@/components/shadcn/label'
+import { Avatar, AvatarFallback } from '@/components/shadcn/avatar'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shadcn/table'
 
 function slaPill(hoursLeft?: number) {
   if (hoursLeft == null) return null
@@ -89,29 +100,31 @@ export default function Timesheets() {
         </Glass>
       ) : (
         <Glass reveal delay="d1" className="tablewrap">
-          <table className="dt">
-            <thead>
-              <tr>
-                <th>Worker</th>
-                <th>Task</th>
-                <th>Period</th>
-                <th>Hours</th>
-                <th>SLA</th>
-                <th>Status</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="dt">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Worker</TableHead>
+                <TableHead>Task</TableHead>
+                <TableHead>Period</TableHead>
+                <TableHead>Hours</TableHead>
+                <TableHead>SLA</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {sheets.map((t) => {
                 const name = t.worker?.name ?? 'Worker'
                 const pill = timesheetPill(t.status)
                 return (
-                  <tr key={t.id}>
-                    <td>
+                  <TableRow key={t.id}>
+                    <TableCell>
                       <div className="wname">
-                        <span className="wav" style={{ background: avatarGradient(name) }}>
-                          {initials(name)}
-                        </span>
+                        <Avatar className="wav">
+                          <AvatarFallback style={{ background: avatarGradient(name) }}>
+                            {initials(name)}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
                           {name}
                           {t.gpsNote && (
@@ -119,19 +132,19 @@ export default function Timesheets() {
                           )}
                         </div>
                       </div>
-                    </td>
-                    <td>{t.task?.title ?? '—'}</td>
-                    <td style={{ color: 'var(--muted)' }}>
+                    </TableCell>
+                    <TableCell>{t.task?.title ?? '—'}</TableCell>
+                    <TableCell style={{ color: 'var(--muted)' }}>
                       {formatDate(t.periodStart)} → {formatDate(t.periodEnd)}
-                    </td>
-                    <td className="tnum" style={{ fontWeight: 700 }}>
+                    </TableCell>
+                    <TableCell className="tnum" style={{ fontWeight: 700 }}>
                       {t.hours}h
-                    </td>
-                    <td>{slaPill(t.slaHoursLeft) ?? '—'}</td>
-                    <td>
+                    </TableCell>
+                    <TableCell>{slaPill(t.slaHoursLeft) ?? '—'}</TableCell>
+                    <TableCell>
                       <StatusPill variant={pill.variant} label={pill.label} />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       {t.status === 'SUBMITTED' ? (
                         <div style={{ display: 'flex', gap: 8 }}>
                           <Button
@@ -156,12 +169,12 @@ export default function Timesheets() {
                       ) : (
                         <span style={{ fontSize: 12, color: 'var(--muted)' }}>Resolved</span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </Glass>
       )}
 
@@ -172,10 +185,9 @@ export default function Timesheets() {
         onClose={() => setDisputeId(null)}
       >
         <div className="field" style={{ marginBottom: 18 }}>
-          <label htmlFor="dispute-reason">Reason</label>
-          <textarea
+          <Label htmlFor="dispute-reason">Reason</Label>
+          <Textarea
             id="dispute-reason"
-            className="textarea"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="e.g. Clock-out outside geofence"

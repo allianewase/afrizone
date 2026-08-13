@@ -4,9 +4,9 @@ type Tone = 'dark' | 'light'
 type MarkTone = 'full' | 'reversed'
 
 interface LogoProps {
-  /** pixel size of the square mark */
+  /** pixel width of the mark */
   size?: number
-  /** show the "Afrizone Part Time" wordmark */
+  /** show the "AfriZoneMart.com" wordmark */
   wordmark?: boolean
   /** show the "Made in Africa, delivered worldwide" tagline */
   tagline?: boolean
@@ -15,36 +15,58 @@ interface LogoProps {
   className?: string
 }
 
-// Hand-drawn (not auto-traced) simplified Africa silhouette — straight-line
-// points only, matching mobile's src/components/Logo.tsx exactly.
-const AFRICA_PATH =
-  'M38 6 L58 8 L66 16 L86 30 L72 40 L76 58 L68 78 L58 100 L50 116 L42 100 L30 84 L14 66 L6 50 L16 34 L24 18 Z'
+/**
+ * Intrinsic aspect of the artwork, 107x113. Used to derive height from `size`
+ * so the mark never distorts. See docs/design-decisions.md.
+ */
+const MARK_ASPECT = 107 / 113
 
 /**
- * Afrizone logo mark — a Sea Buckthorn-orange Africa silhouette with a Deep
- * Navy Blue shopping-cart glyph, per the official Afrizonemart.com logo
- * redesign spec. `markTone="reversed"` swaps the continent to white for use
- * on solid orange/navy backgrounds where the default orange fill would
- * otherwise have no contrast.
+ * The ladder in `srcSet` exists so the browser never has to reduce the mark by
+ * an awkward ratio. At the 38px sidebar it picks the 76w file and halves it
+ * exactly, or uses it 1:1 on a 2x screen. Scaling 107 to 38 directly is a 2.8x
+ * reduction and it read as muddy. The variants are resampled in linear light
+ * with premultiplied alpha, which the browser does not do.
+ */
+
+/**
+ * Afrizone logo mark: the real AfriZoneMart.com artwork, cropped from the
+ * brand asset rather than redrawn.
+ *
+ * `markTone="reversed"` swaps to the variant whose continent is white, for
+ * grounds that clash with the orange. The cart sits inside the continent, so
+ * the default works on light, sand and navy alike.
+ *
+ * The same two files back mobile, index.html and the favicon. All must change
+ * together.
  */
 export function LogoMark({ size = 38, markTone = 'full' }: { size?: number; markTone?: MarkTone }) {
-  const height = size * 1.2
-  const continentFill = markTone === 'reversed' ? '#fff' : 'var(--gold-bright)'
+  const height = Math.round(size / MARK_ASPECT)
+  const stem = markTone === 'reversed' ? 'logo-mark-reversed' : 'logo-mark'
   return (
     <span className="az-mark" style={{ width: size, height }}>
-      <svg viewBox="0 0 100 120" width="100%" height="100%" aria-hidden="true">
-        <path d={AFRICA_PATH} fill={continentFill} />
-        <path d="M66 50 L40 62" stroke="var(--navy)" strokeWidth="4" strokeLinecap="round" fill="none" />
-        <path d="M40 62 L62 62 L56 84 L34 84 Z" fill="var(--navy)" />
-        <rect x="42" y="52" width="8" height="10" rx="2" fill="var(--navy)" />
-        <rect x="52" y="54" width="7" height="8" rx="2" fill="var(--navy)" />
-        <circle cx="40" cy="90" r="5" fill="var(--navy)" />
-        <circle cx="50" cy="90" r="5" fill="var(--navy)" />
-      </svg>
+      <img
+        src={`/${stem}.png`}
+        srcSet={`/${stem}-76.png 76w, /${stem}-92.png 92w, /${stem}.png 107w`}
+        sizes={`${size}px`}
+        width={size}
+        height={height}
+        alt=""
+        aria-hidden="true"
+        decoding="async"
+      />
     </span>
   )
 }
 
+/**
+ * The full AfriZoneMart.com lockup: mark, wordmark, tagline.
+ *
+ * Composed rather than shipped as one lockup image. The brand asset carries no
+ * tagline, and a fixed 2.4:1 lockup would shrink the wordmark inside the 186px
+ * sidebar. Composing also keeps the wordmark as live text, which the source
+ * renders single-colour navy exactly as this does.
+ */
 export default function Logo({
   size = 38,
   wordmark = true,
@@ -53,15 +75,18 @@ export default function Logo({
   className = '',
 }: LogoProps) {
   return (
-    <span className={`az-logo ${className}`} aria-label="Afrizone Part Time">
+    <span className={`az-logo ${className}`} aria-label="AfriZoneMart.com">
       <LogoMark size={size} />
       {wordmark && (
         <span className="az-words">
-          <span className="az-word">
-            <span className={tone === 'dark' ? 'az-afri-dark' : 'az-afri-light'}>Afrizone</span>
-            <span className="az-part">Part&nbsp;Time</span>
+          <span className={`az-word ${tone === 'dark' ? 'az-word-dark' : 'az-word-light'}`}>
+            AfriZoneMart.com
           </span>
-          {tagline && <span className="az-tag">Made in Africa, delivered worldwide</span>}
+          {tagline && (
+            <span className={`az-tag ${tone === 'dark' ? 'az-tag-dark' : 'az-tag-light'}`}>
+              Made in Africa, delivered worldwide
+            </span>
+          )}
         </span>
       )}
     </span>

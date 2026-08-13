@@ -15,7 +15,7 @@ import { MoneyText } from '../../src/components/MoneyText';
 import { Icon } from '../../src/components/Icon';
 import { StatusPill } from '../../src/components/StatusPill';
 import { LoadingState, ErrorState, EmptyState, Banner } from '../../src/components/Feedback';
-import { colors, spacing, type, radii, layout } from '../../src/theme';
+import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
@@ -241,7 +241,7 @@ function WithdrawSheet({
             </View>
             <Text style={styles.sheetTitle}>Withdrawal queued</Text>
             <Text style={styles.sheetSub}>
-              {formatNaira(value)} to {bankMasked ?? 'your bank'} — arrives T+1 (next business day).
+              {formatNaira(value)} to {bankMasked ?? 'your bank'}: arrives T+1 (next business day).
             </Text>
             <Button label="Done" onPress={close} />
           </View>
@@ -256,7 +256,7 @@ function WithdrawSheet({
                 onChangeText={(t) => setAmount(t.replace(/\D/g, ''))}
                 keyboardType="number-pad"
                 placeholder="0"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.textFaint}
                 style={styles.amountInput}
                 autoFocus
               />
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   mathTitle: { color: colors.text, fontWeight: '700', fontSize: type.size.base },
   mathLine: { color: colors.text, fontWeight: '700', fontSize: type.size.md, marginTop: 2 },
   mathSub: { color: colors.textMuted, fontSize: type.size.sm, lineHeight: 18 },
-  section: { color: colors.text, fontSize: type.size.lg, fontWeight: '800', marginTop: spacing.xl, marginBottom: spacing.md },
+  section: { color: colors.text, fontSize: type.size.lg, fontFamily: fontFamily.extrabold, marginTop: spacing.xl, marginBottom: spacing.md },
   txCard: { paddingHorizontal: spacing.lg },
   txRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   txIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
@@ -350,9 +350,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   statementText: { flex: 1, color: colors.text, fontWeight: '600', fontSize: type.size.base },
-  dlError: { color: colors.danger, fontSize: type.size.sm, marginTop: spacing.xs },
+  dlError: { color: colors.dangerInk, fontSize: type.size.sm, marginTop: spacing.xs },
   // sheet
-  backdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: radii.sheet,
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 100, backgroundColor: colors.line, marginBottom: spacing.sm },
-  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontWeight: '800' },
+  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold },
   sheetSub: { color: colors.textMuted, fontSize: type.size.base },
   amountWrap: {
     flexDirection: 'row',

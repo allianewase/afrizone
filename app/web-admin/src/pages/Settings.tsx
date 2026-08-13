@@ -22,35 +22,24 @@ import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
 import StatusPill from '../components/ui/StatusPill'
 import './Settings.css'
+import Input from '../components/ui/Input'
+import Textarea from '../components/ui/Textarea'
+import Select from '../components/ui/Select'
+import Switch from '../components/ui/Switch'
+import { Label } from '@/components/shadcn/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shadcn/table'
 
 const TIERS: Tier[] = ['STUDENT', 'DISPATCH', 'REMOTE', 'PROMO', 'TRADE']
 type Tab = 'tax' | 'categories' | 'templates' | 'billing' | 'security'
 
-function Toggle({
-  checked,
-  onChange,
-  disabled,
-  label,
-}: {
-  checked: boolean
-  onChange: (v: boolean) => void
-  disabled?: boolean
-  label: string
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      disabled={disabled}
-      className={`toggle ${checked ? 'on' : ''}`}
-      onClick={() => onChange(!checked)}
-    >
-      <span className="knob" />
-    </button>
-  )
-}
 
 /* ===================== Tax Rates ===================== */
 
@@ -102,10 +91,9 @@ function AddRateModal({
       <form onSubmit={submit}>
         <div className="formgrid">
           <div className="field">
-            <label htmlFor="r-jur">Jurisdiction</label>
-            <input
+            <Label htmlFor="r-jur">Jurisdiction</Label>
+            <Input
               id="r-jur"
-              className="input"
               value={form.jurisdiction}
               onChange={(e) => setForm((f) => ({ ...f, jurisdiction: e.target.value }))}
               placeholder="Federal"
@@ -113,20 +101,19 @@ function AddRateModal({
             />
           </div>
           <div className="field">
-            <label htmlFor="r-cat">Category</label>
-            <input
+            <Label htmlFor="r-cat">Category</Label>
+            <Input
               id="r-cat"
-              className="input"
               value={form.category}
               onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
               placeholder="Services"
             />
           </div>
           <div className="field">
-            <label htmlFor="r-wht">WHT %</label>
-            <input
+            <Label htmlFor="r-wht">WHT %</Label>
+            <Input
               id="r-wht"
-              className="input tnum"
+              className="tnum"
               type="number"
               min="0"
               step="0.1"
@@ -136,10 +123,10 @@ function AddRateModal({
             />
           </div>
           <div className="field">
-            <label htmlFor="r-vat">VAT %</label>
-            <input
+            <Label htmlFor="r-vat">VAT %</Label>
+            <Input
               id="r-vat"
-              className="input tnum"
+              className="tnum"
               type="number"
               min="0"
               step="0.1"
@@ -217,24 +204,24 @@ function TaxRatesTab({ canEdit }: { canEdit: boolean }) {
         </Glass>
       ) : (
         <Glass className="tablewrap">
-          <table className="dt">
-            <thead>
-              <tr>
-                <th>Jurisdiction</th>
-                <th>Category</th>
-                <th>WHT %</th>
-                <th>VAT %</th>
-                <th>Active</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="dt">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Jurisdiction</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>WHT %</TableHead>
+                <TableHead>VAT %</TableHead>
+                <TableHead>Active</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rates.map((r) => (
-                <tr key={r.id}>
-                  <td style={{ fontWeight: 600 }}>{r.jurisdiction}</td>
-                  <td>{r.category}</td>
-                  <td>
-                    <input
-                      className="input tnum cell"
+                <TableRow key={r.id}>
+                  <TableCell style={{ fontWeight: 600 }}>{r.jurisdiction}</TableCell>
+                  <TableCell>{r.category}</TableCell>
+                  <TableCell>
+                    <Input
+                      className="tnum cell"
                       type="number"
                       min="0"
                       step="0.1"
@@ -245,10 +232,10 @@ function TaxRatesTab({ canEdit }: { canEdit: boolean }) {
                         if (v !== r.whtRate) patch(r.id, { whtRate: v })
                       }}
                     />
-                  </td>
-                  <td>
-                    <input
-                      className="input tnum cell"
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      className="tnum cell"
                       type="number"
                       min="0"
                       step="0.1"
@@ -259,19 +246,19 @@ function TaxRatesTab({ canEdit }: { canEdit: boolean }) {
                         if (v !== r.vatRate) patch(r.id, { vatRate: v })
                       }}
                     />
-                  </td>
-                  <td>
-                    <Toggle
+                  </TableCell>
+                  <TableCell>
+                    <Switch
                       checked={r.active}
                       disabled={!canEdit || busy === r.id}
                       label={`Toggle ${r.jurisdiction} ${r.category} active`}
                       onChange={(v) => patch(r.id, { active: v })}
                     />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </Glass>
       )}
 
@@ -332,10 +319,9 @@ function AddCategoryModal({
       <form onSubmit={submit}>
         <div className="formgrid">
           <div className="field span2">
-            <label htmlFor="c-name">Name</label>
-            <input
+            <Label htmlFor="c-name">Name</Label>
+            <Input
               id="c-name"
-              className="input"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="Dispatch"
@@ -343,33 +329,25 @@ function AddCategoryModal({
             />
           </div>
           <div className="field">
-            <label htmlFor="c-tier">Tier</label>
-            <select
+            <Label htmlFor="c-tier">Tier</Label>
+            <Select
               id="c-tier"
-              className="select"
               value={form.tier}
-              onChange={(e) => setForm((f) => ({ ...f, tier: e.target.value as Tier }))}
-            >
-              {TIERS.map((t) => (
-                <option key={t} value={t}>
-                  {TIER_LABELS[t]}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setForm((f) => ({ ...f, tier: v as Tier }))}
+              options={TIERS.map((t) => ({ value: t, label: TIER_LABELS[t] }))}
+            />
           </div>
           <div className="field">
-            <label htmlFor="c-pm">Default pay model</label>
-            <select
+            <Label htmlFor="c-pm">Default pay model</Label>
+            <Select
               id="c-pm"
-              className="select"
               value={form.defaultPayModel}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, defaultPayModel: e.target.value as PayModel }))
-              }
-            >
-              <option value="HOURLY">Hourly</option>
-              <option value="FIXED">Fixed</option>
-            </select>
+              onChange={(v) => setForm((f) => ({ ...f, defaultPayModel: v as PayModel }))}
+              options={[
+                { value: 'HOURLY', label: 'Hourly' },
+                { value: 'FIXED', label: 'Fixed' },
+              ]}
+            />
           </div>
         </div>
         {error && (
@@ -438,33 +416,33 @@ function CategoriesTab({ canEdit }: { canEdit: boolean }) {
         </Glass>
       ) : (
         <Glass className="tablewrap">
-          <table className="dt">
-            <thead>
-              <tr>
-                <th>Category</th>
-                <th>Tier</th>
-                <th>Default pay model</th>
-                <th>Active</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="dt">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Category</TableHead>
+                <TableHead>Tier</TableHead>
+                <TableHead>Default pay model</TableHead>
+                <TableHead>Active</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {cats.map((c) => (
-                <tr key={c.id}>
-                  <td style={{ fontWeight: 600 }}>{c.name}</td>
-                  <td>{TIER_LABELS[c.tier] ?? c.tier}</td>
-                  <td>{c.defaultPayModel === 'HOURLY' ? 'Hourly' : 'Fixed'}</td>
-                  <td>
-                    <Toggle
+                <TableRow key={c.id}>
+                  <TableCell style={{ fontWeight: 600 }}>{c.name}</TableCell>
+                  <TableCell>{TIER_LABELS[c.tier] ?? c.tier}</TableCell>
+                  <TableCell>{c.defaultPayModel === 'HOURLY' ? 'Hourly' : 'Fixed'}</TableCell>
+                  <TableCell>
+                    <Switch
                       checked={c.active}
                       disabled={!canEdit || busy === c.id}
                       label={`Toggle ${c.name} active`}
                       onChange={(v) => toggleActive(c, v)}
                     />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </Glass>
       )}
 
@@ -528,8 +506,7 @@ function TemplateCard({
           </Button>
         )}
       </div>
-      <textarea
-        className="textarea"
+      <Textarea
         value={value}
         disabled={!canEdit}
         onChange={(e) => setValue(e.target.value)}
@@ -850,10 +827,9 @@ function FundingModal({
       <form onSubmit={submit}>
         <div className="formgrid">
           <div className="field">
-            <label htmlFor="fund-amt">Amount (₦)</label>
-            <input
+            <Label htmlFor="fund-amt">Amount (₦)</Label>
+            <Input
               id="fund-amt"
-              className="input"
               type="number"
               min="1"
               step="1"
@@ -949,7 +925,7 @@ function BillingTab({ canEdit }: { canEdit: boolean }) {
               {simulated && (
                 <span className="twofa-status">
                   <span className="dot" />
-                  Simulated mode — set PAYSTACK_SECRET for live charges
+                  Simulated mode: set PAYSTACK_SECRET for live charges
                 </span>
               )}
             </div>
@@ -968,31 +944,31 @@ function BillingTab({ canEdit }: { canEdit: boolean }) {
         </Glass>
       ) : (
         <Glass className="tablewrap">
-          <table className="dt">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Initiated by</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="dt">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Initiated by</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {history.map((f) => {
                 const pill = fundingPill(f.status)
                 return (
-                  <tr key={f.id}>
-                    <td>{formatDate(f.createdAt)}</td>
-                    <td style={{ fontWeight: 600 }}>{formatNaira(f.amount)}</td>
-                    <td>
+                  <TableRow key={f.id}>
+                    <TableCell>{formatDate(f.createdAt)}</TableCell>
+                    <TableCell style={{ fontWeight: 600 }}>{formatNaira(f.amount)}</TableCell>
+                    <TableCell>
                       <StatusPill variant={pill.variant} label={pill.label} />
-                    </td>
-                    <td>{f.admin?.name ?? '—'}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell>{f.admin?.name ?? '—'}</TableCell>
+                  </TableRow>
                 )
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </Glass>
       )}
 
@@ -1107,26 +1083,37 @@ export default function Settings() {
         </div>
       )}
 
-      <div className="tabs" role="tablist" aria-label="Settings sections">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            className={`tab ${tab === t.id ? 'on' : ''}`}
-            onClick={() => setTab(t.id)}
-          >
-            <Icon name={t.icon} />
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Radix supplies what the hand-rolled version claimed but did not do: the
+          bar had role="tab" and aria-selected, yet no arrow-key navigation, no
+          aria-controls linking a trigger to its panel, and the panels were not
+          tabpanels at all. Panels stay unmounted until selected, so each tab
+          still fetches only when opened. */}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+        <TabsList className="tabs" aria-label="Settings sections">
+          {TABS.map((t) => (
+            <TabsTrigger key={t.id} value={t.id} className="tab">
+              <Icon name={t.icon} />
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {tab === 'tax' && <TaxRatesTab canEdit={canEdit} />}
-      {tab === 'categories' && <CategoriesTab canEdit={canEdit} />}
-      {tab === 'templates' && <TemplatesTab canEdit={canEdit} />}
-      {tab === 'billing' && <BillingTab canEdit={canEdit} />}
-      {tab === 'security' && <SecurityTab />}
+        <TabsContent value="tax">
+          <TaxRatesTab canEdit={canEdit} />
+        </TabsContent>
+        <TabsContent value="categories">
+          <CategoriesTab canEdit={canEdit} />
+        </TabsContent>
+        <TabsContent value="templates">
+          <TemplatesTab canEdit={canEdit} />
+        </TabsContent>
+        <TabsContent value="billing">
+          <BillingTab canEdit={canEdit} />
+        </TabsContent>
+        <TabsContent value="security">
+          <SecurityTab />
+        </TabsContent>
+      </Tabs>
     </>
   )
 }

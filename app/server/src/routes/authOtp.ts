@@ -1,4 +1,4 @@
-// Worker passwordless auth — phone + OTP. Mounted under /api/auth.
+// Worker passwordless auth: phone + OTP. Mounted under /api/auth.
 //
 //   POST /api/auth/otp/request  { phone }        -> { sent: true, devCode? }
 //   POST /api/auth/otp/verify   { phone, code }  -> { token, user, isNewUser }
@@ -34,7 +34,7 @@ function normalisePhone(raw: string): string {
   return String(raw).trim().replace(/[\s-]/g, "");
 }
 
-// POST /api/auth/register — email/password self-serve signup. Creates a WORKER
+// POST /api/auth/register: email/password self-serve signup. Creates a WORKER
 // (kycStatus PENDING) and returns a normal token. 409 if the email is taken.
 router.post("/register", async (req, res) => {
   const { name, email, password } = req.body || {};
@@ -123,7 +123,7 @@ router.post("/otp/verify", async (req, res) => {
   const phone = normalisePhone(phoneRaw);
   const code = String(codeRaw).trim();
 
-  // Master code shortcut in dev — bypasses the stored-code checks entirely.
+  // Master code shortcut in dev: bypasses the stored-code checks entirely.
   const masterOk = isDev() && code === MASTER_CODE;
 
   if (!masterOk) {
@@ -147,7 +147,7 @@ router.post("/otp/verify", async (req, res) => {
       }
       return res.status(400).json({ error: "Invalid or expired code" });
     }
-    // Correct — consume it.
+    // Correct: consume it.
     await prisma.otpCode.update({ where: { id: otp.id }, data: { consumedAt: new Date() } });
   }
 

@@ -13,43 +13,43 @@ afrizone/
 └── app/
     ├── API_CONTRACT.md     # shared source of truth (entities, endpoints, shapes)
     ├── AUTH_FLOW.md         # auth/onboarding spec (phone+OTP, email/password, Google SSO, 2FA)
-    ├── server/              # Backend — Node + TypeScript + Express + Prisma
-    ├── web-admin/           # Admin console — Vite + React + TS, premium dark-glass UI
-    └── mobile/              # Worker app — Expo + expo-router + TS
+    ├── server/              # Backend: Node + TypeScript + Express + Prisma
+    ├── web-admin/           # Admin console: Vite + React + TS, premium dark-glass UI
+    └── mobile/              # Worker app: Expo + expo-router + TS
 ```
 
 ## Stack
 
 | Layer | Tech | Notes |
 |---|---|---|
-| **Database** | Prisma ORM — **SQLite** for zero-install local dev, **PostgreSQL** for production | One env-var + a Prisma datasource switch; see `server/README.md`. |
+| **Database** | Prisma ORM: **SQLite** for zero-install local dev, **PostgreSQL** for production | One env-var + a Prisma datasource switch; see `server/README.md`. |
 | **Backend** | Express + TypeScript + JWT + bcrypt | REST API on `:4000` under `/api`. Dockerfile + docker-compose included for a Postgres-backed prod image. |
 | **Admin web** | Vite + React + TypeScript + React Router | SPA on `:5173`, dark glassmorphism UI (clay/gold/forest brand, Bricolage Grotesque + Inter). |
 | **Mobile** | Expo (expo-router) + TypeScript | Worker-facing app: onboarding/KYC, task feed, clock-in/geofence, wallet, contracts. |
 
 ## What's built
 
-- **Auth & onboarding** — workers: passwordless phone+OTP; admins: email/password +
+- **Auth & onboarding**: workers: passwordless phone+OTP; admins: email/password +
   mandatory TOTP 2FA + Google SSO; forgot/reset password. All external providers
   (SMS, Google, SMTP) are env-gated and run in a simulated dev mode when unconfigured.
-- **Task lifecycle** — post → apply → approve/reject → e-signed contract → clock
+- **Task lifecycle**: post → apply → approve/reject → e-signed contract → clock
   in/out (geofenced) or fixed-fee completion → timesheet approval → wallet payout.
-- **KYC** — tiered document upload + admin review, with optional Smile ID document
+- **KYC**: tiered document upload + admin review, with optional Smile ID document
   verification (falls back to manual review when unconfigured).
-- **Payments** — Paystack payouts on withdrawal + inbound platform funding, both
+- **Payments**: Paystack payouts on withdrawal + inbound platform funding, both
   env-gated to a simulated mode by default (no real transfers without a live key).
   WHT (5%) computed at source.
-- **Hiring pipeline** — full-time job postings, candidate pipeline
+- **Hiring pipeline**: full-time job postings, candidate pipeline
   (screening → interview → offer → hired/rejected).
 - **Disputes**, **push notifications** (FCM), **reports/analytics**, **admin
   settings** (tax rates, categories, templates), audit log on every state transition.
-- **Ops** — GitHub Actions CI (server/web-admin/mobile), automated integration
+- **Ops**: GitHub Actions CI (server/web-admin/mobile), automated integration
   tests (`server/test/`), production Dockerfile + docker-compose, security
   hardening pass, verified Postgres production path.
 
 ## Run it locally (three terminals)
 
-**1 — Backend**
+**1: Backend**
 ```bash
 cd app/server
 npm install
@@ -57,14 +57,14 @@ npm run setup     # prisma generate + db push + seed demo data
 npm run dev        # → http://localhost:4000
 ```
 
-**2 — Admin web**
+**2: Admin web**
 ```bash
 cd app/web-admin
 npm install
 npm run dev         # → http://localhost:5173
 ```
 
-**3 — Mobile (worker app)**
+**3: Mobile (worker app)**
 ```bash
 cd app/mobile
 npm install

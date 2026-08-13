@@ -21,7 +21,7 @@ export const isS3Mode = !!S3_BUCKET;
 
 const LOCAL_UPLOAD_DIR = path.join(__dirname, "../../uploads/kyc");
 
-// Lazily-initialised S3 client — only imported when S3 is actually configured
+// Lazily-initialised S3 client: only imported when S3 is actually configured
 // so the AWS SDK has zero overhead in local-disk mode.
 let _s3: import("@aws-sdk/client-s3").S3Client | null = null;
 

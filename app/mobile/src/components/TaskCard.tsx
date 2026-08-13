@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, View, Text, StyleSheet } from 'react-native';
-import { colors, radii, spacing, type, shadow } from '../theme';
+import { colors, radii, spacing, type, shadow, fontFamily } from '../theme';
 import { Icon } from './Icon';
 import { TierBadge } from './TierBadge';
 import { MoneyText } from './MoneyText';
@@ -14,7 +14,8 @@ interface TaskCardProps {
 
 export function TaskCard({ task, onPress }: TaskCardProps) {
   const remote = task.locationType === 'REMOTE';
-  const slotsLeft = Math.max(0, task.slots - (task.filledCount ?? 0));
+  const filled = task.filledCount ?? 0;
+  const fillPct = task.slots > 0 ? Math.min(100, Math.round((filled / task.slots) * 100)) : 0;
 
   return (
     <Pressable
@@ -45,6 +46,10 @@ export function TaskCard({ task, onPress }: TaskCardProps) {
         </View>
       </View>
 
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${fillPct}%` }]} />
+      </View>
+
       <View style={styles.footer}>
         <MoneyText
           amount={task.payModel === 'HOURLY' ? task.rate : task.budget ?? task.rate}
@@ -54,7 +59,7 @@ export function TaskCard({ task, onPress }: TaskCardProps) {
         <Text style={styles.payUnit}>{task.payModel === 'HOURLY' ? '/hr' : ' fixed'}</Text>
         <View style={styles.spacer} />
         <Text style={styles.slots}>
-          {slotsLeft} {slotsLeft === 1 ? 'slot' : 'slots'} left
+          {filled} of {task.slots} filled
         </Text>
       </View>
     </Pressable>
@@ -69,16 +74,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     padding: spacing.lg,
-    gap: spacing.sm,
+    gap: spacing.md,
     ...shadow.soft,
   },
-  pressed: { opacity: 0.9, transform: [{ scale: 0.995 }] },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   category: { color: colors.textMuted, fontSize: type.size.xs, fontWeight: '600' },
-  title: { color: colors.text, fontSize: type.size.md, fontWeight: '700', lineHeight: 22 },
+  title: { color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.bold, lineHeight: 22 },
   metaRow: { flexDirection: 'row', gap: spacing.lg, flexWrap: 'wrap' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 },
   metaText: { color: colors.textMuted, fontSize: type.size.sm },
+  progressTrack: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.surfaceSand,
+    overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: colors.clay },
   footer: { flexDirection: 'row', alignItems: 'baseline', marginTop: 2 },
   payUnit: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
   spacer: { flex: 1 },

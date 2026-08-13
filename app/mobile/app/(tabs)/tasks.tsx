@@ -9,7 +9,7 @@ import { TierBadge } from '../../src/components/TierBadge';
 import { MoneyText } from '../../src/components/MoneyText';
 import { Icon } from '../../src/components/Icon';
 import { LoadingState, ErrorState, EmptyState } from '../../src/components/Feedback';
-import { colors, spacing, type } from '../../src/theme';
+import { colors, spacing, type, fontFamily } from '../../src/theme';
 import { api } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import type { Application } from '../../src/api/types';
@@ -81,7 +81,7 @@ export default function MyTasksScreen() {
             seg === 'Applied'
               ? 'Browse Home to find and apply to tasks.'
               : seg === 'Active'
-                ? 'Approved tasks will show here — clock in from the task.'
+                ? 'Approved tasks will show here: clock in from the task.'
                 : 'Completed and closed tasks land here.'
           }
         />
@@ -121,6 +121,21 @@ function ApplicationCard({ app, onPress }: { app: Application; onPress: () => vo
         {app.status === 'REJECTED' && app.reason ? (
           <Text style={styles.rejection} numberOfLines={2}>{app.reason}</Text>
         ) : null}
+        {t && t.slots > 0 ? (
+          <View style={styles.progressRow}>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${Math.min(100, Math.round(((t.filledCount ?? 0) / t.slots) * 100))}%` },
+                ]}
+              />
+            </View>
+            <Text style={styles.progressLabel}>
+              {t.filledCount ?? 0} of {t.slots} filled
+            </Text>
+          </View>
+        ) : null}
         <View style={styles.foot}>
           {t ? (
             <View style={styles.payRow}>
@@ -159,12 +174,16 @@ function ApplicationCard({ app, onPress }: { app: Application; onPress: () => vo
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  title: { color: colors.text, fontSize: type.size.md, fontWeight: '700', marginBottom: spacing.sm },
+  title: { color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.bold, marginBottom: spacing.sm },
+  progressRow: { gap: 4, marginBottom: spacing.sm },
+  progressTrack: { height: 5, borderRadius: 3, backgroundColor: colors.surfaceSand, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: colors.clay },
+  progressLabel: { color: colors.textMuted, fontSize: type.size.xs, fontWeight: '600' },
   foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   payRow: { flexDirection: 'row', alignItems: 'baseline' },
   unit: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
   cta: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  ctaText: { color: colors.clay, fontWeight: '700', fontSize: type.size.base },
+  ctaText: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.base },
   rejection: {
     color: colors.textMuted,
     fontSize: type.size.sm,
@@ -182,7 +201,7 @@ const styles = StyleSheet.create({
   },
   paymentLinkText: {
     flex: 1,
-    color: colors.money,
+    color: colors.moneyInk,
     fontSize: type.size.sm,
     fontWeight: '700',
   },

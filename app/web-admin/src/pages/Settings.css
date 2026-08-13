@@ -26,8 +26,9 @@
   color: var(--text);
   transform: translateY(-1px);
 }
-.tab.on {
-  color: #fff;
+/* Radix marks the selected trigger with data-state rather than a class. */
+.tab[data-state='active'] {
+  color: var(--on-gold);
   background: var(--grad);
   border-color: transparent;
   box-shadow: var(--grad-glow);
@@ -57,45 +58,18 @@
 }
 
 /* ===== inline editable table cells ===== */
-.input.cell {
-  min-height: 36px;
+/* Compact inline editor inside a table row. The `.input` half of the old
+   `.input.cell` selector went away with the shadcn migration, so this now keys
+   off `.cell` alone. Without it these fall back to the adapter's 44px full
+   width and break the row rhythm. */
+.cell {
+  min-height: 36px !important;
+  height: 36px;
   width: 88px;
   padding: 6px 10px;
 }
 
-/* ===== toggle switch ===== */
-.toggle {
-  width: 44px;
-  height: 25px;
-  border-radius: 100px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid var(--line);
-  position: relative;
-  transition: background 0.22s var(--ease);
-  flex: none;
-}
-.toggle .knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 19px;
-  height: 19px;
-  border-radius: 50%;
-  background: #fff;
-  transition: transform 0.22s var(--ease);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
-}
-.toggle.on {
-  background: var(--money);
-  border-color: transparent;
-}
-.toggle.on .knob {
-  transform: translateX(19px);
-}
-.toggle:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+/* The hand-rolled .toggle switch is gone; ui/Switch.tsx wraps the Radix one. */
 
 /* ===== templates grid ===== */
 .tpl-grid {
@@ -145,13 +119,13 @@
   background: var(--faint);
 }
 .twofa-status.on {
-  color: #8ee0b9;
-  border-color: rgba(39, 192, 138, 0.32);
-  background: rgba(39, 192, 138, 0.1);
+  color: var(--money-ink);
+  border-color: rgba(31, 157, 107, 0.3);
+  background: rgba(31, 157, 107, 0.1);
 }
 .twofa-status.on .dot {
   background: var(--money);
-  box-shadow: 0 0 0 3px rgba(39, 192, 138, 0.18);
+  box-shadow: 0 0 0 3px rgba(31, 157, 107, 0.2);
 }
 
 .twofa-setup {

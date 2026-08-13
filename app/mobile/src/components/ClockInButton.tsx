@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { colors, type, spacing, shadow } from '../theme';
+import { colors, type, spacing, shadow, fontFamily } from '../theme';
 import { Icon } from './Icon';
 
 export type GeofenceState = 'in-fence' | 'out-of-fence' | 'syncing';
@@ -27,7 +27,10 @@ export function ClockInButton({
 }: ClockInButtonProps) {
   const blocked = blockOutOfFence && geofence === 'out-of-fence';
   const disabled = busy || blocked;
-  const color = clockedIn ? colors.danger : colors.money;
+  // The fill has to carry a white label. `money` gave 3.45:1, and at 18px bold
+  // the label is just under the 18.66px large-text threshold, so the 4.5 floor
+  // applies. moneyInk gives 5.41:1. Clock-out keeps `danger`, already 4.81:1.
+  const color = clockedIn ? colors.danger : colors.moneyInk;
 
   return (
     <View style={styles.wrap}>
@@ -62,12 +65,12 @@ export function ClockInButton({
 function GeofencePill({ state, blocked }: { state: GeofenceState; blocked: boolean }) {
   const meta =
     state === 'in-fence'
-      ? { word: 'Inside work zone', fg: colors.money, bg: colors.moneySoft, icon: 'map-pin' as const }
+      ? { word: 'Inside work zone', fg: colors.moneyInk, bg: colors.moneySoft, icon: 'map-pin' as const }
       : state === 'syncing'
         ? { word: 'Checking location…', fg: colors.indigo, bg: colors.indigoSoft, icon: 'globe' as const }
         : {
-            word: blocked ? 'Outside zone — blocked' : 'Outside work zone',
-            fg: colors.amber,
+            word: blocked ? 'Outside zone: blocked' : 'Outside work zone',
+            fg: colors.goldInk,
             bg: colors.amberSoft,
             icon: 'alert' as const,
           };
@@ -92,7 +95,7 @@ const styles = StyleSheet.create({
   },
   pressed: { transform: [{ scale: 0.97 }] },
   disabled: { opacity: 0.5 },
-  label: { color: colors.white, fontSize: type.size.lg, fontWeight: '800' },
+  label: { color: colors.white, fontSize: type.size.lg, fontFamily: fontFamily.extrabold },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',

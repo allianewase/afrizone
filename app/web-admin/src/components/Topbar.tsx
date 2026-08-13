@@ -48,7 +48,7 @@ export default function Topbar({ onMenu }: { onMenu: () => void }) {
         setResults(r)
         setOpen(true)
       })
-      .catch(() => { /* aborted or network error — stay quiet */ })
+      .catch(() => { /* aborted or network error: stay quiet */ })
       .finally(() => {
         if (!ctrl.signal.aborted) setSearching(false)
       })

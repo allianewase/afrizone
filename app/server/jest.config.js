@@ -8,6 +8,6 @@ module.exports = {
   setupFiles: ["<rootDir>/test/env.ts"],
   testTimeout: 15000,
   // All test files share one SQLite file (test.db) through a single Prisma
-  // connection pattern — running them in parallel workers risks SQLITE_BUSY.
+  // connection pattern: running them in parallel workers risks SQLITE_BUSY.
   maxWorkers: 1,
 };

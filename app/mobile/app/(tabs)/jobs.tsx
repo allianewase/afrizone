@@ -6,7 +6,7 @@ import { Card } from '../../src/components/Card';
 import { Icon } from '../../src/components/Icon';
 import { MoneyText } from '../../src/components/MoneyText';
 import { LoadingState, EmptyState, Banner } from '../../src/components/Feedback';
-import { colors, spacing, type, radii } from '../../src/theme';
+import { colors, spacing, type, radii, fontFamily } from '../../src/theme';
 import { api } from '../../src/api/client';
 import { mock } from '../../src/api/mock';
 import { useAsync } from '../../src/lib/useAsync';
@@ -44,7 +44,7 @@ export default function JobsScreen() {
       {jobs.loading && !jobs.data ? (
         <LoadingState label="Loading openings…" />
       ) : open.length === 0 ? (
-        <EmptyState icon="briefcase" title="No openings right now" message="Check back soon — new roles are posted weekly." />
+        <EmptyState icon="briefcase" title="No openings right now" message="Check back soon: new roles are posted weekly." />
       ) : (
         <View style={{ gap: spacing.md }}>
           {open.map((j) => (
@@ -102,13 +102,13 @@ const styles = StyleSheet.create({
   tagText: { color: colors.indigo, fontWeight: '700', fontSize: 11 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { color: colors.textMuted, fontSize: type.size.sm },
-  title: { color: colors.text, fontSize: type.size.lg, fontWeight: '800' },
+  title: { color: colors.text, fontSize: type.size.lg, fontFamily: fontFamily.extrabold },
   dept: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600', marginBottom: spacing.xs },
   desc: { color: colors.text, fontSize: type.size.base, lineHeight: 20, marginBottom: spacing.sm },
   foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   salary: { flexDirection: 'row', alignItems: 'baseline' },
-  salarySep: { color: colors.clay, fontWeight: '700' },
+  salarySep: { color: colors.goldInk, fontWeight: '700' },
   perMonth: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
   apply: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  applyText: { color: colors.clay, fontWeight: '700', fontSize: type.size.base },
+  applyText: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.base },
 });

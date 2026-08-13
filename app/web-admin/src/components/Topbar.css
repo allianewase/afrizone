@@ -6,9 +6,7 @@
   align-items: center;
   gap: 16px;
   padding: 14px 28px;
-  background: rgba(8, 15, 13, 0.5);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  background: var(--surface-1);
   border-bottom: 1px solid var(--line);
 }
 .search {
@@ -73,12 +71,10 @@
   top: calc(100% + 8px);
   left: 0;
   right: 0;
-  background: rgba(12, 23, 20, 0.97);
-  backdrop-filter: blur(24px) saturate(140%);
-  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  background: var(--surface-3);
   border: 1px solid var(--line-2);
   border-radius: 14px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow);
   overflow: hidden;
   z-index: 200;
   max-height: 380px;

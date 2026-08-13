@@ -1,4 +1,4 @@
-// Paystack integration — outbound Transfers (payouts to worker bank accounts)
+// Paystack integration: outbound Transfers (payouts to worker bank accounts)
 // and inbound hosted-checkout (Afrizone Mart funding the platform balance).
 //
 // Env-driven: set PAYSTACK_SECRET in .env to go live. With no key, `enabled` is
@@ -19,7 +19,7 @@ const SECRET = process.env.PAYSTACK_SECRET || "";
 const BASE = process.env.PAYSTACK_BASE || "https://api.paystack.co";
 
 export const paystack = {
-  /** True when a secret key is configured — gates all real network calls. */
+  /** True when a secret key is configured: gates all real network calls. */
   get enabled(): boolean {
     return SECRET.length > 0;
   },

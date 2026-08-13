@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable, TextInputProps } from 'react-native';
-import { colors, spacing, radii, type, layout } from '../theme';
+import { colors, spacing, type } from '../theme';
 import { Icon } from './Icon';
+
+// See UnderlineInput.tsx for why this is a typed-any escape hatch rather
+// than part of the StyleSheet.create object below.
+const noWebOutline: any = { outlineStyle: 'none' };
 
 interface PasswordFieldProps {
   label: string;
@@ -48,8 +52,8 @@ export function PasswordField({
           autoComplete={autoComplete}
           textContentType={textContentType}
           placeholder={placeholder}
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
+          placeholderTextColor={colors.textFaint}
+          style={[styles.input, noWebOutline]}
           accessibilityLabel={accessibilityLabel ?? label}
           autoFocus={autoFocus}
           onSubmitEditing={onSubmitEditing}
@@ -77,17 +81,14 @@ const styles = StyleSheet.create({
   field: { gap: 6 },
   label: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
   hint: { color: colors.textMuted, fontSize: type.size.sm },
-  errorHint: { color: colors.danger, fontSize: type.size.sm },
+  errorHint: { color: colors.dangerInk, fontSize: type.size.sm },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    minHeight: layout.hitTarget,
-    backgroundColor: colors.surface,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: radii.input,
-    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1.5,
+    borderBottomColor: colors.line,
+    paddingVertical: spacing.sm,
   },
-  input: { flex: 1, fontSize: type.size.md, color: colors.text, paddingVertical: spacing.sm },
+  input: { flex: 1, fontSize: type.size.md, color: colors.text },
 });

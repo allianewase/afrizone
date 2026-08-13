@@ -1,4 +1,4 @@
-// Admin auth extras — TOTP 2FA, Google SSO, password forgot/reset.
+// Admin auth extras: TOTP 2FA, Google SSO, password forgot/reset.
 // Mounted under /api/auth.
 //
 //   POST /api/auth/2fa/verify    { challenge, code }     -> { token, user }
@@ -36,7 +36,7 @@ function sha256(s: string): string {
   return crypto.createHash("sha256").update(s).digest("hex");
 }
 
-// POST /api/auth/2fa/verify — exchange a 2FA challenge + TOTP code for a token.
+// POST /api/auth/2fa/verify: exchange a 2FA challenge + TOTP code for a token.
 router.post("/2fa/verify", async (req, res) => {
   const { challenge, code } = req.body || {};
   if (!challenge || !code) {
@@ -59,7 +59,7 @@ router.post("/2fa/verify", async (req, res) => {
   return res.json({ token, user: publicUser(user) });
 });
 
-// POST /api/auth/2fa/setup (auth) — generate + store a PENDING secret, return QR.
+// POST /api/auth/2fa/setup (auth): generate + store a PENDING secret, return QR.
 router.post("/2fa/setup", requireAuth, async (req: AuthedRequest, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
   if (!user) return res.status(404).json({ error: "User not found" });
@@ -72,7 +72,7 @@ router.post("/2fa/setup", requireAuth, async (req: AuthedRequest, res) => {
   return res.json({ otpauthUrl, qrDataUrl, secret });
 });
 
-// POST /api/auth/2fa/enable (auth) — verify the pending secret, flip enabled on.
+// POST /api/auth/2fa/enable (auth): verify the pending secret, flip enabled on.
 router.post("/2fa/enable", requireAuth, async (req: AuthedRequest, res) => {
   const { code } = req.body || {};
   if (!code) return res.status(400).json({ error: "code is required" });
@@ -88,7 +88,7 @@ router.post("/2fa/enable", requireAuth, async (req: AuthedRequest, res) => {
   return res.json({ enabled: true });
 });
 
-// POST /api/auth/2fa/disable (auth) — requires a current code.
+// POST /api/auth/2fa/disable (auth): requires a current code.
 router.post("/2fa/disable", requireAuth, async (req: AuthedRequest, res) => {
   const { code } = req.body || {};
   if (!code) return res.status(400).json({ error: "code is required" });
@@ -107,7 +107,7 @@ router.post("/2fa/disable", requireAuth, async (req: AuthedRequest, res) => {
   return res.json({ enabled: false });
 });
 
-// POST /api/auth/google — verify Google ID token.
+// POST /api/auth/google: verify Google ID token.
 //   context "admin" (default): invite-only, match an existing admin else 400.
 //   context "worker": match by googleId/email, else auto-create a WORKER.
 router.post("/google", async (req, res) => {
@@ -163,7 +163,7 @@ router.post("/google", async (req, res) => {
   return res.json({ token, user: publicUser(user), isNewUser });
 });
 
-// POST /api/auth/password/forgot — no account enumeration.
+// POST /api/auth/password/forgot: no account enumeration.
 router.post("/password/forgot", async (req, res) => {
   const { email } = req.body || {};
   if (!email) return res.status(400).json({ error: "email is required" });
@@ -183,11 +183,11 @@ router.post("/password/forgot", async (req, res) => {
     console.log(`[auth] password reset link for ${user.email}: token=${rawToken}`);
     if (isDev()) payload.devToken = rawToken;
   }
-  // Always the same response shape — never reveal whether the email exists.
+  // Always the same response shape: never reveal whether the email exists.
   return res.json(payload);
 });
 
-// POST /api/auth/password/reset — validate token, set new password, single-use.
+// POST /api/auth/password/reset: validate token, set new password, single-use.
 router.post("/password/reset", async (req, res) => {
   const { token, password } = req.body || {};
   if (!token || !password) {

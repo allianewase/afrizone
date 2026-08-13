@@ -16,6 +16,19 @@ import StatusPill from '../components/ui/StatusPill'
 import Modal from '../components/ui/Modal'
 import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
+import Select from '../components/ui/Select'
+import Textarea from '../components/ui/Textarea'
+import { Label } from '@/components/shadcn/label'
+import { Avatar, AvatarFallback } from '@/components/shadcn/avatar'
+import { Badge } from '@/components/shadcn/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shadcn/table'
 
 const DOC_TYPE_LABEL: Record<string, string> = {
   ID: 'Government ID',
@@ -90,19 +103,19 @@ function KycDocsModal({
                           key={doc.id}
                           onClick={() => setLightbox(doc)}
                           style={{
-                            border: '2px solid rgba(255,255,255,.12)',
+                            border: '2px solid var(--line-2)',
                             borderRadius: 10,
                             overflow: 'hidden',
                             cursor: 'pointer',
                             padding: 0,
-                            background: 'rgba(255,255,255,.04)',
+                            background: 'var(--bg2)',
                             transition: 'border-color .15s',
                             width: 110,
                             height: 110,
                             flexShrink: 0,
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--gold)')}
-                          onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,.12)')}
+                          onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--clay-deep)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--line-2)')}
                           title={doc.originalName}
                         >
                           <img
@@ -120,7 +133,7 @@ function KycDocsModal({
           )}
 
           {isPending && (
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 24, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,.08)' }}>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--line)' }}>
               <Button
                 variant="danger"
                 size="sm"
@@ -287,23 +300,16 @@ function RateModal({
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <label style={{ fontSize: 13, fontWeight: 600 }}>
-              Task
-              <select
+            <div className="field">
+              <Label htmlFor="rate-task">Task</Label>
+              <Select
+                id="rate-task"
                 value={taskId}
-                onChange={(e) => setTaskId(e.target.value)}
-                style={{
-                  display: 'block', width: '100%', marginTop: 6, padding: '8px 10px',
-                  borderRadius: 8, border: '1px solid var(--line)', background: 'var(--sand)',
-                  fontSize: 13, color: 'var(--text)',
-                }}
-              >
-                <option value="">Select a task…</option>
-                {approvedTasks.map((a) => (
-                  <option key={a.taskId} value={a.taskId}>{a.task!.title}</option>
-                ))}
-              </select>
-            </label>
+                onChange={setTaskId}
+                placeholder="Select a task…"
+                options={approvedTasks.map((a) => ({ value: a.taskId, label: a.task!.title }))}
+              />
+            </div>
 
             <label style={{ fontSize: 13, fontWeight: 600 }}>
               Score
@@ -317,20 +323,18 @@ function RateModal({
               </div>
             </label>
 
-            <label style={{ fontSize: 13, fontWeight: 600 }}>
-              Note <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(optional)</span>
-              <textarea
+            <div className="field">
+              <Label htmlFor="rate-note">
+                Note <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(optional)</span>
+              </Label>
+              <Textarea
+                id="rate-note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={3}
                 placeholder="Any feedback for the worker…"
-                style={{
-                  display: 'block', width: '100%', marginTop: 6, padding: '8px 10px',
-                  borderRadius: 8, border: '1px solid var(--line)', background: 'var(--sand)',
-                  fontSize: 13, color: 'var(--text)', resize: 'vertical', boxSizing: 'border-box',
-                }}
               />
-            </label>
+            </div>
 
             {submitErr && (
               <p style={{ color: 'var(--danger)', fontSize: 13, margin: 0 }}>{submitErr}</p>
@@ -417,48 +421,50 @@ export default function Workers() {
         </Glass>
       ) : (
         <Glass reveal delay="d1" className="tablewrap">
-          <table className="dt">
-            <thead>
-              <tr>
-                <th>Worker</th>
-                <th>Tiers</th>
-                <th>KYC</th>
-                <th>Completed</th>
-                <th>Rating</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="dt">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Worker</TableHead>
+                <TableHead>Tiers</TableHead>
+                <TableHead>KYC</TableHead>
+                <TableHead>Completed</TableHead>
+                <TableHead>Rating</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {workers.map((w) => {
                 const pill = kycPill(w.kycStatus)
                 return (
-                  <tr key={w.id}>
-                    <td>
+                  <TableRow key={w.id}>
+                    <TableCell>
                       <div className="wname">
-                        <span className="wav" style={{ background: avatarGradient(w.name) }}>
-                          {initials(w.name)}
-                        </span>
+                        <Avatar className="wav">
+                          <AvatarFallback style={{ background: avatarGradient(w.name) }}>
+                            {initials(w.name)}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
                           {w.name}
                           <div style={{ fontSize: 12, color: 'var(--muted)' }}>{w.email}</div>
                         </div>
                       </div>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {(w.tiers ?? []).map((t) => (
-                          <span className="tier" key={t}>
+                          <Badge variant="outline" className="tier" key={t}>
                             <span className="d" style={{ background: TIER_COLORS[t] }} />
                             {TIER_LABELS[t]}
-                          </span>
+                          </Badge>
                         ))}
                       </div>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <StatusPill variant={pill.variant} label={pill.label} />
-                    </td>
-                    <td className="tnum">{w.completedCount}</td>
-                    <td className="tnum">
+                    </TableCell>
+                    <TableCell className="tnum">{w.completedCount}</TableCell>
+                    <TableCell className="tnum">
                       {w.rating != null ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                           {w.rating.toFixed(1)}
@@ -469,8 +475,8 @@ export default function Workers() {
                       ) : (
                         '—'
                       )}
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <div style={{ display: 'flex', gap: 8 }}>
                         {w.kycStatus === 'PENDING' && (
                           <Button
@@ -497,12 +503,12 @@ export default function Workers() {
                           </Button>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </Glass>
       )}
 

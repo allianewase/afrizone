@@ -10,13 +10,12 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
-import { Card } from '../../src/components/Card';
 import { TaskCard } from '../../src/components/TaskCard';
-import { MoneyText } from '../../src/components/MoneyText';
+import { KpiCard } from '../../src/components/KpiCard';
 import { Button } from '../../src/components/Button';
 import { Banner, LoadingState, ErrorState, EmptyState } from '../../src/components/Feedback';
 import { Icon } from '../../src/components/Icon';
-import { colors, spacing, type, radii, layout } from '../../src/theme';
+import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
 import { api } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
@@ -165,20 +164,50 @@ export default function HomeScreen() {
       onRefresh={() => { tasks.reload(); walletQ.reload(); }}
       refreshing={tasks.loading && !!tasks.data}
     >
-      {/* Earnings snapshot */}
-      <Card style={styles.snapshot} accent>
-        <View style={styles.snapRow}>
-          <View style={styles.snapItem}>
-            <Text style={styles.snapLabel}>Available</Text>
-            <MoneyText amount={wallet.available} size={type.size.xl} color={colors.money} />
-          </View>
-          <View style={styles.vline} />
-          <View style={styles.snapItem}>
-            <Text style={styles.snapLabel}>Pending</Text>
-            <MoneyText amount={wallet.pending} size={type.size.xl} color={colors.amber} />
-          </View>
-        </View>
-      </Card>
+      {/* Dashboard-style KPI grid, echoing web-admin's dashboard: a worker's
+          own equivalent of "active tasks / fill rate / spend" is what's
+          already fetched here (wallet) plus identity stats (rating,
+          completed count) — no new data, just surfaced as scannable cards
+          instead of one two-number band. */}
+      <View style={styles.kpiRow}>
+        <KpiCard
+          icon="wallet"
+          iconColor={colors.moneyInk}
+          iconBg={colors.moneySoft}
+          glowColor={colors.money}
+          label="Available"
+          value={wallet.available}
+          money
+        />
+        <KpiCard
+          icon="clock"
+          iconColor={colors.pending}
+          iconBg={colors.pendingSoft}
+          glowColor={colors.pending}
+          label="Pending"
+          value={wallet.pending}
+          money
+        />
+      </View>
+      <View style={styles.kpiRow}>
+        <KpiCard
+          icon="star"
+          iconColor={colors.goldInk}
+          iconBg={colors.claySoft}
+          glowColor={colors.gold}
+          label="Your rating"
+          value={user?.rating ?? 0}
+          decimals={1}
+        />
+        <KpiCard
+          icon="check-circle"
+          iconColor={colors.indigo}
+          iconBg={colors.indigoSoft}
+          glowColor={colors.indigo}
+          label="Tasks completed"
+          value={user?.completedCount ?? 0}
+        />
+      </View>
 
       {/* Search bar */}
       <View style={styles.searchRow}>
@@ -189,7 +218,7 @@ export default function HomeScreen() {
             value={q}
             onChangeText={setQ}
             placeholder="Search tasks…"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={colors.textFaint}
             returnKeyType="search"
             clearButtonMode="while-editing"
             autoCapitalize="none"
@@ -205,7 +234,7 @@ export default function HomeScreen() {
           style={[styles.filterBtn, filtersActive && styles.filterBtnActive]}
           accessibilityLabel="Open filters"
         >
-          <Icon name="filter" size={18} color={filtersActive ? colors.white : colors.clay} />
+          <Icon name="filter" size={18} color={filtersActive ? colors.onGold : colors.goldInk} />
           {filtersActive ? (
             <View style={styles.filterBadge}>
               <Text style={styles.filterBadgeText}>
@@ -411,7 +440,7 @@ function FilterChip({
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
     >
-      {active && multi ? <Icon name="check" size={13} color={colors.white} /> : null}
+      {active && multi ? <Icon name="check" size={13} color={colors.onGold} /> : null}
       <Text style={[sheetStyles.fchipText, active && sheetStyles.fchipTextActive]}>{label}</Text>
     </Pressable>
   );
@@ -420,16 +449,12 @@ function FilterChip({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  snapshot: { backgroundColor: colors.surface },
-  snapRow: { flexDirection: 'row', alignItems: 'center' },
-  snapItem: { flex: 1, gap: 4 },
-  snapLabel: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
-  vline: { width: 1, height: 36, backgroundColor: colors.line, marginHorizontal: spacing.lg },
+  kpiRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginTop: spacing.lg,
+    marginTop: spacing.xs,
   },
   searchBox: {
     flex: 1,
@@ -486,7 +511,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
   },
-  chipText: { color: colors.clay, fontSize: type.size.sm, fontWeight: '700' },
+  chipText: { color: colors.goldInk, fontSize: type.size.sm, fontWeight: '700' },
   clearChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
@@ -498,7 +523,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: colors.text,
     fontSize: type.size.lg,
-    fontWeight: '800',
+    fontFamily: fontFamily.extrabold,
     marginTop: spacing.xl,
     marginBottom: spacing.md,
   },
@@ -506,7 +531,7 @@ const styles = StyleSheet.create({
 });
 
 const sheetStyles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(20,15,11,0.45)' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: radii.sheet,
@@ -527,8 +552,8 @@ const sheetStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  title: { color: colors.text, fontSize: type.size.xl, fontWeight: '800' },
-  clearLink: { color: colors.clay, fontSize: type.size.base, fontWeight: '700' },
+  title: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold },
+  clearLink: { color: colors.goldInk, fontSize: type.size.base, fontWeight: '700' },
   group: { gap: spacing.sm },
   groupLabel: {
     color: colors.textMuted,
@@ -554,5 +579,5 @@ const sheetStyles = StyleSheet.create({
     borderColor: colors.clay,
   },
   fchipText: { color: colors.text, fontSize: type.size.sm, fontWeight: '600' },
-  fchipTextActive: { color: colors.white, fontWeight: '700' },
+  fchipTextActive: { color: colors.onGold, fontWeight: '700' },
 });

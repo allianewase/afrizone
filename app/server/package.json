@@ -1,7 +1,7 @@
 {
   "name": "afrizone-server",
   "version": "1.0.0",
-  "description": "Afrizone Part Time — gig platform backend (Express + Prisma + SQLite)",
+  "description": "Afrizone Part Time: gig platform backend (Express + Prisma + SQLite)",
   "private": true,
   "type": "commonjs",
   "scripts": {
@@ -12,18 +12,18 @@
     "prisma:push": "prisma db push",
     "prisma:generate": "prisma generate",
     "setup": "prisma generate && prisma db push && npm run seed",
-    "db:use-postgres": "node prisma/use-postgres.js",
-    "db:use-sqlite": "node prisma/use-sqlite.js",
-    "db:start": "node scripts/dev-db.js",
-    "setup:prod": "node prisma/use-postgres.js && prisma generate && prisma migrate deploy",
     "test": "jest"
   },
   "prisma": {
     "seed": "ts-node-dev --transpile-only prisma/seed.ts"
   },
+  "overrides": {
+    "iconv-lite": "^0.7.3"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1077.0",
     "@aws-sdk/s3-request-presigner": "^3.1077.0",
+    "@prisma/adapter-d1": "^5.22.0",
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -48,7 +48,6 @@
     "@types/node": "^20.17.9",
     "@types/qrcode": "^1.5.5",
     "@types/supertest": "^7.2.1",
-    "embedded-postgres": "^18.4.0-beta.17",
     "jest": "^30.4.2",
     "prisma": "^5.22.0",
     "supertest": "^7.2.2",
