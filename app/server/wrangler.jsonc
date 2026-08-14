@@ -5,6 +5,15 @@
   // Set this to today's date when bumping.
   "compatibility_date": "2026-08-14",
   "compatibility_flags": ["nodejs_compat"],
+  // Plain (non-secret) config, checked in so it survives every deploy - the
+  // dashboard-only "Variables and Secrets" UI doesn't reliably persist across
+  // Workers Builds deploys (see JWT_SECRET's deploy history). Real secrets
+  // (JWT_SECRET, PAYSTACK_SECRET, etc.) still go through `wrangler secret put`
+  // or the dashboard's Secret type, never here.
+  "vars": {
+    "CORS_ORIGIN": "https://afrizone.pages.dev",
+    "WEB_ADMIN_URL": "https://afrizone.pages.dev"
+  },
   "d1_databases": [
     {
       "binding": "DB",

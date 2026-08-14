@@ -22,8 +22,8 @@ afrizone/
 
 | Layer | Tech | Notes |
 |---|---|---|
-| **Database** | Prisma ORM: **SQLite** for zero-install local dev, **PostgreSQL** for production | One env-var + a Prisma datasource switch; see `server/README.md`. |
-| **Backend** | Express + TypeScript + JWT + bcrypt | REST API on `:4000` under `/api`. Dockerfile + docker-compose included for a Postgres-backed prod image. |
+| **Database** | Prisma ORM over **D1** (Cloudflare's SQLite-based database), locally and in production | Same SQLite schema everywhere, via `@prisma/adapter-d1`; see `server/README.md`. |
+| **Backend** | Express + TypeScript + JWT + bcrypt, on **Cloudflare Workers** | REST API under `/api`, deployed via Workers Builds on push to `main`. |
 | **Admin web** | Vite + React + TypeScript + React Router | SPA on `:5173`, dark glassmorphism UI (clay/gold/forest brand, Bricolage Grotesque + Inter). |
 | **Mobile** | Expo (expo-router) + TypeScript | Worker-facing app: onboarding/KYC, task feed, clock-in/geofence, wallet, contracts. |
 
@@ -44,8 +44,9 @@ afrizone/
 - **Disputes**, **push notifications** (FCM), **reports/analytics**, **admin
   settings** (tax rates, categories, templates), audit log on every state transition.
 - **Ops**: GitHub Actions CI (server/web-admin/mobile), automated integration
-  tests (`server/test/`), production Dockerfile + docker-compose, security
-  hardening pass, verified Postgres production path.
+  tests (`server/test/`, `@cloudflare/vitest-pool-workers`), security hardening
+  pass, deployed to Cloudflare (Workers + D1 + R2 for the API, Pages for
+  web-admin).
 
 ## Run it locally (three terminals)
 
@@ -53,8 +54,9 @@ afrizone/
 ```bash
 cd app/server
 npm install
-npm run setup     # prisma generate + db push + seed demo data
-npm run dev        # → http://localhost:4000
+npx prisma generate
+npx wrangler d1 migrations apply afrizone-db --local
+npm run dev        # wrangler dev - see its output for the local URL
 ```
 
 **2: Admin web**
@@ -79,12 +81,31 @@ npx expo start       # press i / a / w, or scan the QR with Expo Go
 
 2FA is off by default for admins; the dev bypass code is `000000` when enabled.
 
+> **Note:** `npm run seed` (`server/prisma/seed.ts`) still writes through a plain
+> Prisma client against `DATABASE_URL`, not D1 - it does not currently populate
+> `wrangler dev`'s local D1 emulation, so the demo logins above won't exist
+> there yet. Register a fresh account through the app instead for local
+> Workers-based testing (`admin@afrizone.work` can be promoted to `SUPER_ADMIN`
+> via `wrangler d1 execute afrizone-db --local`). Porting the seed script to D1
+> is a known follow-up, not done as part of the Cloudflare migration.
+
 See each app's own README for details: [`server/README.md`](app/server/README.md),
 [`web-admin/README.md`](app/web-admin/README.md), [`mobile/README.md`](app/mobile/README.md).
 
 ## Production deployment
 
-The server ships a production `Dockerfile` targeting PostgreSQL
-(`app/server/Dockerfile`, `docker-compose.yml`). Env var checklists for a
-split deploy (API + static admin frontend on separate hosts/domains) live in
-`app/server/.env.production.example` and `app/web-admin/.env.production.example`.
+Both the API and web-admin run on Cloudflare, auto-deploying on push to `main`:
+
+- **API**: Cloudflare Workers (`app/server`), via Workers Builds - runs
+  `wrangler deploy`, which reads `app/server/wrangler.jsonc` (D1 + R2 bindings,
+  non-secret config). Secrets (`JWT_SECRET`, `PAYSTACK_SECRET`, etc.) are set
+  via `wrangler secret put` or the dashboard's Settings → Variables and
+  Secrets, listed in `app/server/.env.production.example`. Live at
+  `https://api.afrizonemart.com`.
+- **web-admin**: Cloudflare Pages (`app/web-admin`), via the dashboard's Git
+  integration - runs `npm run build`. Env vars (`VITE_API_URL`, etc.) are set
+  per-environment in the Pages project settings, listed in
+  `app/web-admin/.env.production.example`. Live at `https://afrizone.pages.dev`.
+- **mobile**: not hosted - `EXPO_PUBLIC_API_URL` is injected at build time via
+  `app/mobile/eas.json`'s `preview`/`production` profiles for EAS builds; local
+  dev still points at your LAN IP via `app/mobile/.env` (gitignored).

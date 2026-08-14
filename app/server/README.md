@@ -1,18 +1,21 @@
 # Afrizone Part Time: Backend
 
-Node.js + TypeScript + Express + Prisma. Runs on **SQLite** out of the box (zero
-external services), implementing the API in [`../API_CONTRACT.md`](../API_CONTRACT.md).
+TypeScript + Express + Prisma, running on **Cloudflare Workers** with a **D1**
+(SQLite-based) database and **R2** file storage, implementing the API in
+[`../API_CONTRACT.md`](../API_CONTRACT.md). Local dev runs the same way via
+`wrangler dev`, with D1/R2 emulated locally - no external services needed.
 
 ## Quick start (Windows / macOS / Linux)
 
 ```bash
 cd app/server
 npm install
-npm run setup    # prisma generate + db push + seed
-npm run dev      # starts http://localhost:4000
+npx prisma generate
+npx wrangler d1 migrations apply afrizone-db --local
+npm run dev      # wrangler dev - starts a local Worker (see its output for the port)
 ```
 
-Health check: `GET http://localhost:4000/api/health`
+Health check: `GET http://localhost:<port>/api/health`
 
 ### Admin login (seeded)
 - **Email:** `admin@afrizone.work`
@@ -25,16 +28,17 @@ Demo workers log in with `<firstname>.<lastname>@afrizone.work` / `worker123`
 ## Scripts
 | Script | What it does |
 |---|---|
-| `npm run dev` | Run `src/index.ts` with live reload (ts-node-dev) |
-| `npm run build` | Compile TypeScript to `dist/` |
-| `npm start` | Run compiled `dist/index.js` |
+| `npm run dev` | `wrangler dev` - local Worker with emulated D1/R2 |
+| `npm run deploy` | `wrangler deploy` - what Workers Builds also runs on push to `main` |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm test` | `vitest run` via `@cloudflare/vitest-pool-workers` - runs inside real `workerd`, real D1/R2 |
 | `npm run seed` | Seed admin + workers + tasks + applications + payments |
-| `npm run prisma:push` | `prisma db push` (sync schema → DB) |
-| `npm run setup` | `prisma generate` + `db push` + seed (one-shot) |
+| `npm run prisma:push` | `prisma db push` - local-dev-only convenience, not used against D1 (see below) |
 
 ## Module system
-CommonJS (`"type": "commonjs"`) + `module: "CommonJS"` in tsconfig. This is the
-cleanest combination with `ts-node-dev` and Prisma: no ESM loader flags needed.
+CommonJS (`"type": "commonjs"`) + `module: "CommonJS"` in tsconfig - unrelated to
+the Workers runtime (which handles its own bundling via `wrangler`/esbuild);
+kept for Prisma codegen and tooling compatibility.
 
 ## Auth
 JWT (`Authorization: Bearer <token>`), 7-day TTL. `POST /api/auth/login` returns
@@ -85,20 +89,25 @@ worker detail). No card data is ever stored (PCI handled by Paystack).
 ## Project layout
 ```
 server/
-  .env / .env.example / .gitignore
-  package.json / tsconfig.json / README.md
+  wrangler.jsonc              # Worker config: D1/R2 bindings, checked-in non-secret vars
+  .env.example                # local wrangler-dev secret overrides (dev defaults, not sensitive)
+  .env.production.example     # which secrets to `wrangler secret put` for production
+  package.json / tsconfig.json / vitest.config.mts / README.md
+  migrations/                 # D1 schema migrations (prisma migrate diff + wrangler d1 migrations apply)
   prisma/
     schema.prisma   # models + SQLite/D1 notes
     seed.ts         # admin + contract seed data
   src/
-    index.ts        # Express app, CORS, routers, health, error handler
-    prisma.ts       # PrismaClient singleton
+    index.ts        # Express app + Workers fetch handler, CORS, routers, health, error handler
+    prisma.ts       # lazy PrismaClient Proxy (env.DB only exists inside a request)
     auth.ts         # login, JWT, requireAuth, requireRole
     types.ts        # enum unions + tiers <-> string helpers
+    services/        # paystack, sms, google, smileIdentity, storage (R2), push, totp
     util/
       tax.ts        # computeWht
       audit.ts      # writeAudit
     routes/
       auth.ts dashboard.ts tasks.ts applications.ts
-      timesheets.ts payments.ts workers.ts
+      timesheets.ts payments.ts workers.ts ...
+  test/              # @cloudflare/vitest-pool-workers suite (runs inside real workerd)
 ```
