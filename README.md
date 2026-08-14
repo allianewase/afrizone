@@ -103,7 +103,8 @@ Both the API and web-admin run on Cloudflare, auto-deploying on push to `main`:
 - **web-admin**: Cloudflare Pages (`app/web-admin`), via the dashboard's Git
   integration - runs `npm run build`. Env vars (`VITE_API_URL`, etc.) are set
   per-environment in the Pages project settings, listed in
-  `app/web-admin/.env.production.example`. Live at `https://afrizone.pages.dev`.
+  `app/web-admin/.env.production.example`. Live at
+  `https://admin.afrizonemart.com` (`https://afrizone.pages.dev` still works).
 - **mobile**: not hosted - `EXPO_PUBLIC_API_URL` is injected at build time via
   `app/mobile/eas.json`'s `preview`/`production` profiles for EAS builds; local
   dev still points at your LAN IP via `app/mobile/.env` (gitignored).
