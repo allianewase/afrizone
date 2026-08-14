@@ -12,6 +12,12 @@
       "database_id": "a2cf117c-cb5e-4187-8dad-bd16eef49dce"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "afrizone-kyc-docs"
+    }
+  ],
   "observability": {
     "enabled": true
   }

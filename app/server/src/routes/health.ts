@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { isS3Mode } from "../services/storage";
+import { env } from "cloudflare:workers";
 import { isSmileConfigured } from "../services/smileIdentity";
 
 const router = Router();
@@ -13,19 +13,12 @@ router.get("/", (_req: Request, res: Response) => {
 // Useful during initial setup to know exactly what still needs to be configured.
 router.get("/config", (_req: Request, res: Response) => {
   const jwt = process.env.JWT_SECRET ?? "";
-  const dbUrl = process.env.DATABASE_URL ?? "";
 
   const services = {
     database: {
-      ok: !!dbUrl,
-      provider: dbUrl.startsWith("postgresql") || dbUrl.startsWith("postgres")
-        ? "postgresql"
-        : "sqlite",
-      note: dbUrl.startsWith("file:")
-        ? "SQLite: single-writer, dev only. Switch to Postgres for production."
-        : dbUrl
-        ? "Postgres configured."
-        : "DATABASE_URL not set.",
+      ok: !!env.DB,
+      provider: "d1",
+      note: env.DB ? "Cloudflare D1 bound." : "D1 binding (env.DB) missing.",
     },
     jwt: {
       ok: jwt.length >= 32,
@@ -70,18 +63,16 @@ router.get("/config", (_req: Request, res: Response) => {
         : "Simulated: devToken returned in reset response, link logged to console. Set SMTP_URL to enable email.",
     },
     storage: {
-      ok: true,
-      provider: isS3Mode ? "s3" : "local",
-      note: isS3Mode
-        ? `S3 enabled (bucket: ${process.env.S3_BUCKET}).`
-        : "Local disk: uploads stored in server/uploads/. Set S3_BUCKET + AWS credentials for production.",
+      ok: !!env.BUCKET,
+      provider: "r2",
+      note: env.BUCKET ? "Cloudflare R2 bound." : "R2 binding (env.BUCKET) missing.",
     },
   };
 
   const criticalIssues = [
     !services.jwt.ok && "JWT_SECRET insecure or missing",
-    services.database.provider === "sqlite" && "SQLite: not suitable for production",
-    !services.storage.ok && "Storage misconfigured",
+    !services.database.ok && "D1 binding missing",
+    !services.storage.ok && "R2 binding missing",
   ].filter(Boolean);
 
   res.json({

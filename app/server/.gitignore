@@ -7,3 +7,4 @@ prisma/dev.db
 prisma/*.db
 .wrangler
 .pgdata
+*.log

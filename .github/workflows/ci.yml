@@ -15,8 +15,6 @@ jobs:
     defaults:
       run:
         working-directory: app/server
-    env:
-      DATABASE_URL: "file:./dev.db"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
