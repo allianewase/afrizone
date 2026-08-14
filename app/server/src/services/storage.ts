@@ -1,99 +1,52 @@
 /**
- * Dual-mode file storage.
+ * File storage: Cloudflare R2, via the native binding (env.BUCKET), not the
+ * S3-compatible API - no AWS SDK, no signing. Replaces the old dual-mode
+ * local-disk/S3 setup entirely: Workers have no persistent filesystem, so
+ * local-disk mode literally cannot exist here, and R2's own binding is
+ * simpler than routing through S3-compatible signing for an in-Worker
+ * consumer.
  *
- * LOCAL mode (default / dev):  files written to server/uploads/kyc/ on disk,
- *                              served via express.static on /uploads.
- * S3 mode (production):       files uploaded to S3; access via presigned URLs.
- *
- * To enable S3, set in .env:
- *   S3_BUCKET=afrizone-kyc-docs
- *   S3_REGION=us-east-1          (default: us-east-1)
- *   AWS_ACCESS_KEY_ID=...
- *   AWS_SECRET_ACCESS_KEY=...
- *   S3_SIGNED_URL_EXPIRES=3600   (default: 3600 seconds = 1 hour)
+ * There is no "presigned URL" concept with the native binding. Instead,
+ * `resolveUrl` points at an authenticated Worker route
+ * (GET /api/me/kyc/documents/file/:filename, see routes/kycDocuments.ts)
+ * that streams the object from R2 after checking the requester owns it -
+ * stricter than the old setup, where local-disk files were served by
+ * `express.static` with no auth at all.
  */
 
-import fs from "fs";
-import path from "path";
+import { env } from "cloudflare:workers";
 
-export const S3_BUCKET = process.env.S3_BUCKET?.trim() || "";
-export const isS3Mode = !!S3_BUCKET;
+const KEY_PREFIX = "kyc/";
 
-const LOCAL_UPLOAD_DIR = path.join(__dirname, "../../uploads/kyc");
-
-// Lazily-initialised S3 client: only imported when S3 is actually configured
-// so the AWS SDK has zero overhead in local-disk mode.
-let _s3: import("@aws-sdk/client-s3").S3Client | null = null;
-
-async function getS3(): Promise<import("@aws-sdk/client-s3").S3Client> {
-  if (!_s3) {
-    const { S3Client } = await import("@aws-sdk/client-s3");
-    _s3 = new S3Client({ region: process.env.S3_REGION || "us-east-1" });
-  }
-  return _s3;
-}
-
-/** Upload a buffer to S3. Key format: kyc/<filename>. */
-export async function uploadToS3(
-  buffer: Buffer,
+/** Upload a buffer to R2. Key format: kyc/<filename>. */
+export async function uploadToR2(
+  buffer: Buffer | ArrayBuffer,
   filename: string,
   contentType: string
 ): Promise<void> {
-  const { PutObjectCommand } = await import("@aws-sdk/client-s3");
-  const s3 = await getS3();
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: `kyc/${filename}`,
-      Body: buffer,
-      ContentType: contentType,
-    })
-  );
-}
-
-/**
- * Return a presigned GET URL for an S3 object, valid for S3_SIGNED_URL_EXPIRES
- * seconds (default 3600 = 1 hour).
- */
-export async function getSignedUrl(filename: string): Promise<string> {
-  const { GetObjectCommand } = await import("@aws-sdk/client-s3");
-  const { getSignedUrl: sign } = await import("@aws-sdk/s3-request-presigner");
-  const s3 = await getS3();
-  const expiresIn = Number(process.env.S3_SIGNED_URL_EXPIRES) || 3600;
-  return sign(s3, new GetObjectCommand({ Bucket: S3_BUCKET, Key: `kyc/${filename}` }), {
-    expiresIn,
+  await env.BUCKET.put(`${KEY_PREFIX}${filename}`, buffer, {
+    httpMetadata: { contentType },
   });
 }
 
-/** Return the local /uploads/kyc/<filename> path. */
-export function getLocalUrl(filename: string): string {
-  return `/uploads/kyc/${filename}`;
-}
-
-/**
- * Ensure the local upload directory exists (no-op in S3 mode).
- * Call once at startup.
- */
-export function ensureLocalUploadDir(): void {
-  if (!isS3Mode) {
-    fs.mkdirSync(LOCAL_UPLOAD_DIR, { recursive: true });
-  }
-}
-
-/** Resolve the URL for a stored document (S3 presigned or local path). */
-export async function resolveUrl(filename: string): Promise<string> {
-  return isS3Mode ? getSignedUrl(filename) : getLocalUrl(filename);
-}
-
-/** Read a stored document's bytes back out (local disk or S3), for server-side processing. */
+/** Read a stored document's bytes back out of R2, for server-side processing
+ * (e.g. base64-encoding for the Smile ID document verification call). */
 export async function getFileBuffer(filename: string): Promise<Buffer> {
-  if (!isS3Mode) {
-    return fs.readFileSync(path.join(LOCAL_UPLOAD_DIR, filename));
-  }
-  const { GetObjectCommand } = await import("@aws-sdk/client-s3");
-  const s3 = await getS3();
-  const obj = await s3.send(new GetObjectCommand({ Bucket: S3_BUCKET, Key: `kyc/${filename}` }));
-  const chunks: Buffer[] = [];
-  for await (const chunk of obj.Body as AsyncIterable<Buffer>) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  return Buffer.concat(chunks);
+  const obj = await env.BUCKET.get(`${KEY_PREFIX}${filename}`);
+  if (!obj) throw new Error(`File not found in storage: ${filename}`);
+  return Buffer.from(await obj.arrayBuffer());
+}
+
+/** Stream a stored document straight through, for the authenticated file route. */
+export async function getFileStream(
+  filename: string
+): Promise<{ body: ReadableStream; contentType: string | undefined } | null> {
+  const obj = await env.BUCKET.get(`${KEY_PREFIX}${filename}`);
+  if (!obj) return null;
+  return { body: obj.body, contentType: obj.httpMetadata?.contentType };
+}
+
+/** Relative URL the API's own authenticated route serves this file at. */
+export function resolveUrl(filename: string): string {
+  return `/api/me/kyc/documents/file/${filename}`;
 }

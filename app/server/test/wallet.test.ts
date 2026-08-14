@@ -1,14 +1,10 @@
-import request from "supertest";
-import app from "../src/index";
-import { prisma, createUserWithToken } from "./helpers";
-
-afterAll(async () => {
-  await prisma.$disconnect();
-});
+import { describe, it, expect } from "vitest";
+import { apiPost } from "./http";
+import { createUserWithToken, testPrisma } from "./helpers";
 
 async function createTask() {
   const { user: admin } = await createUserWithToken("SUPER_ADMIN");
-  return prisma.task.create({
+  return testPrisma().task.create({
     data: {
       title: "Wallet test task",
       description: "desc",
@@ -29,10 +25,7 @@ async function createTask() {
 describe("wallet withdrawals", () => {
   it("rejects a withdrawal with no bank account on file", async () => {
     const { token } = await createUserWithToken("WORKER");
-    const res = await request(app)
-      .post("/api/wallet/withdraw")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ amount: 6000 });
+    const res = await apiPost("/api/wallet/withdraw", { amount: 6000 }, token);
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/KYC/i);
   });
@@ -40,25 +33,16 @@ describe("wallet withdrawals", () => {
   it("rejects a non-integer amount and an amount below the minimum", async () => {
     const { token } = await createUserWithToken("WORKER", { bankMasked: "****1234" });
 
-    const notInt = await request(app)
-      .post("/api/wallet/withdraw")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ amount: 100.5 });
+    const notInt = await apiPost("/api/wallet/withdraw", { amount: 100.5 }, token);
     expect(notInt.status).toBe(400);
 
-    const tooLow = await request(app)
-      .post("/api/wallet/withdraw")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ amount: 1000 });
+    const tooLow = await apiPost("/api/wallet/withdraw", { amount: 1000 }, token);
     expect(tooLow.status).toBe(400);
   });
 
   it("rejects a withdrawal above the available balance", async () => {
     const { token } = await createUserWithToken("WORKER", { bankMasked: "****1234" });
-    const res = await request(app)
-      .post("/api/wallet/withdraw")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ amount: 6000 });
+    const res = await apiPost("/api/wallet/withdraw", { amount: 6000 }, token);
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/exceeds/i);
   });
@@ -66,7 +50,7 @@ describe("wallet withdrawals", () => {
   it("withdraws successfully against a released payment, then dev-settles it", async () => {
     const { token, user } = await createUserWithToken("WORKER", { bankMasked: "****1234" });
     const task = await createTask();
-    await prisma.payment.create({
+    await testPrisma().payment.create({
       data: {
         workerId: user.id,
         taskId: task.id,
@@ -77,28 +61,20 @@ describe("wallet withdrawals", () => {
       },
     });
 
-    const withdraw = await request(app)
-      .post("/api/wallet/withdraw")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ amount: 9500 });
+    const withdraw = await apiPost("/api/wallet/withdraw", { amount: 9500 }, token);
     expect(withdraw.status).toBe(201);
     expect(withdraw.body.status).toBe("PROCESSING");
     expect(withdraw.body.simulated).toBe(true);
 
     // Available balance is now fully committed: a second withdrawal should fail.
-    const again = await request(app)
-      .post("/api/wallet/withdraw")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ amount: 5000 });
+    const again = await apiPost("/api/wallet/withdraw", { amount: 5000 }, token);
     expect(again.status).toBe(400);
 
-    const settle = await request(app)
-      .post("/api/wallet/dev/settle")
-      .set("Authorization", `Bearer ${token}`);
+    const settle = await apiPost("/api/wallet/dev/settle", undefined, token);
     expect(settle.status).toBe(200);
     expect(settle.body.settled).toBe(1);
 
-    const stored = await prisma.withdrawal.findFirst({ where: { workerId: user.id } });
+    const stored = await testPrisma().withdrawal.findFirst({ where: { workerId: user.id } });
     expect(stored?.status).toBe("PAID");
   });
 });

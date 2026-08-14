@@ -12,7 +12,7 @@
 // Docs: https://docs.usesmileid.com/products/for-individuals-kyc/document-verification
 // SDK:  https://github.com/smileidentity/smile-identity-core-js
 
-import { Signature, WebApi } from "smile-identity-core";
+import type { Signature, WebApi } from "smile-identity-core";
 
 const PARTNER_ID = process.env.SMILE_PARTNER_ID || "";
 const API_KEY = process.env.SMILE_API_KEY || "";
@@ -42,8 +42,15 @@ export interface DocVerificationResult {
 }
 
 let _webApi: WebApi | null = null;
-function getWebApi(): WebApi {
-  if (!_webApi) _webApi = new WebApi(PARTNER_ID, CALLBACK_URL || null, API_KEY, SID_SERVER);
+// Dynamically imported (not a static top-level import): smile-identity-core's
+// axios/https-proxy-agent dependency chain only supports being loaded when
+// actually used, not eagerly at module-eval time - keeps it out of every cold
+// start that never touches Smile ID document verification.
+async function getWebApi(): Promise<WebApi> {
+  if (!_webApi) {
+    const { WebApi } = await import("smile-identity-core");
+    _webApi = new WebApi(PARTNER_ID, CALLBACK_URL || null, API_KEY, SID_SERVER);
+  }
   return _webApi;
 }
 
@@ -80,7 +87,7 @@ export async function submitDocumentVerification(input: {
     images.push({ image_type_id: 7, image: input.idBackBase64 }); // ID_CARD_BACK_IMAGE_BASE64
   }
 
-  const api = getWebApi();
+  const api = await getWebApi();
   const response: any = await api.submit_job(
     { job_id: input.jobId, user_id: input.userId, job_type: JOB_TYPE_DOCUMENT_VERIFICATION },
     images,
@@ -99,7 +106,8 @@ export async function submitDocumentVerification(input: {
 }
 
 /** Verify the `timestamp`/`signature` pair Smile ID sends on every webhook callback. */
-export function verifyWebhookSignature(timestamp: string, signature: string): boolean {
+export async function verifyWebhookSignature(timestamp: string, signature: string): Promise<boolean> {
   if (!isSmileConfigured) return false;
+  const { Signature } = await import("smile-identity-core");
   return new Signature(PARTNER_ID, API_KEY).confirm_signature(timestamp, signature);
 }

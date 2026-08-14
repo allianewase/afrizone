@@ -172,7 +172,10 @@ router.post("/password/forgot", async (req, res) => {
   const payload: { sent: true; devToken?: string } = { sent: true };
 
   if (user) {
-    const rawToken = crypto.randomBytes(32).toString("hex");
+    // See webhooks.ts for why this cast: worker-configuration.d.ts's global
+    // `Buffer: any` shadows @types/node's real Buffer type, hiding the
+    // encoding-aware toString() overload at compile time only.
+    const rawToken = (crypto.randomBytes(32) as any).toString("hex");
     await prisma.passwordReset.create({
       data: {
         userId: user.id,

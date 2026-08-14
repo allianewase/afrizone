@@ -17,7 +17,7 @@
 // 503. Invite-only (admin): a verified Google email must already match a known
 // admin user; workers self-serve (see routes/authAdmin.ts).
 
-import { OAuth2Client } from "google-auth-library";
+import type { OAuth2Client } from "google-auth-library";
 
 /** Collect every configured Google client id (deduped, non-empty). */
 function collectClientIds(): string[] {
@@ -38,10 +38,17 @@ function collectClientIds(): string[] {
 const CLIENT_IDS: string[] = collectClientIds();
 
 let client: OAuth2Client | null = null;
-function getClient(): OAuth2Client {
-  // The OAuth2Client constructor arg is only used as a default audience; we pass
-  // the full audience array explicitly to verifyIdToken, so any id works here.
-  if (!client) client = new OAuth2Client(CLIENT_IDS[0]);
+// Dynamically imported (not a static top-level import): google-auth-library
+// pulls in a gaxios/gcp-metadata/google-logging-utils dependency chain that
+// only supports being loaded when actually used, not eagerly at module-eval
+// time - keeps it out of every cold start that never touches Google SSO.
+async function getClient(): Promise<OAuth2Client> {
+  if (!client) {
+    const { OAuth2Client } = await import("google-auth-library");
+    // The OAuth2Client constructor arg is only used as a default audience; we
+    // pass the full audience array explicitly to verifyIdToken, so any id works here.
+    client = new OAuth2Client(CLIENT_IDS[0]);
+  }
   return client;
 }
 
@@ -58,7 +65,8 @@ export const google = {
 
   /** Verify a Google ID token; returns the verified email + subject (sub) + name. */
   async verifyIdToken(idToken: string): Promise<{ email: string; sub: string; name?: string }> {
-    const ticket = await getClient().verifyIdToken({
+    const client = await getClient();
+    const ticket = await client.verifyIdToken({
       idToken,
       // google-auth-library accepts a string[]: the token's aud must match one.
       audience: CLIENT_IDS,

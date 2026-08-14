@@ -450,12 +450,15 @@ router.post("/kyc/submit", requireAuth, async (req: AuthedRequest, res: Response
           getFileBuffer(idDoc.filename),
           getFileBuffer(selfieDoc.filename),
         ]);
+        // See webhooks.ts for why these casts: worker-configuration.d.ts's
+        // global `Buffer: any` shadows @types/node's real Buffer type,
+        // hiding the encoding-aware toString() overload at compile time only.
         const result = await submitDocumentVerification({
           jobId,
           userId: user.id,
           idType: idType as NgIdType,
-          idFrontBase64: idBuf.toString("base64"),
-          selfieBase64: selfieBuf.toString("base64"),
+          idFrontBase64: (idBuf as any).toString("base64"),
+          selfieBase64: (selfieBuf as any).toString("base64"),
         });
 
         await prisma.kycVerification.create({

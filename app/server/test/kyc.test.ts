@@ -1,33 +1,30 @@
-import request from "supertest";
-import app from "../src/index";
-import { prisma, createUserWithToken } from "./helpers";
-
-afterAll(async () => {
-  await prisma.$disconnect();
-});
+import { describe, it, expect } from "vitest";
+import { apiPost } from "./http";
+import { createUserWithToken, testPrisma } from "./helpers";
 
 describe("worker KYC submission", () => {
   it("submits KYC details and lands in PENDING (no Smile ID configured)", async () => {
     const { token, user } = await createUserWithToken("WORKER");
 
-    const res = await request(app)
-      .post("/api/me/kyc/submit")
-      .set("Authorization", `Bearer ${token}`)
-      .send({
+    const res = await apiPost(
+      "/api/me/kyc/submit",
+      {
         tin: "12345678",
         bankMasked: "****1234",
         bankCode: "058",
         bankAccountNumber: "0123456789",
         bankName: "GTBank",
         tier: "DISPATCH_RIDER",
-      });
+      },
+      token
+    );
 
     expect(res.status).toBe(200);
     expect(res.body.kycStatus).toBe("PENDING");
     expect(res.body.tiers).toContain("DISPATCH_RIDER");
     expect(res.body.bankMasked).toBe("****1234");
 
-    const stored = await prisma.user.findUnique({ where: { id: user.id } });
+    const stored = await testPrisma().user.findUnique({ where: { id: user.id } });
     expect(stored?.tin).toBe("12345678");
   });
 });
@@ -37,20 +34,14 @@ describe("admin KYC decisions", () => {
     const { token: workerToken, user: worker } = await createUserWithToken("WORKER", {
       kycStatus: "PENDING",
     });
-    const res = await request(app)
-      .post(`/api/workers/${worker.id}/kyc`)
-      .set("Authorization", `Bearer ${workerToken}`)
-      .send({ decision: "TIER_APPROVED" });
+    const res = await apiPost(`/api/workers/${worker.id}/kyc`, { decision: "TIER_APPROVED" }, workerToken);
     expect(res.status).toBe(403);
   });
 
   it("rejects an invalid decision value", async () => {
     const { token: adminToken } = await createUserWithToken("SUPER_ADMIN");
     const { user: worker } = await createUserWithToken("WORKER", { kycStatus: "PENDING" });
-    const res = await request(app)
-      .post(`/api/workers/${worker.id}/kyc`)
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send({ decision: "MAYBE" });
+    const res = await apiPost(`/api/workers/${worker.id}/kyc`, { decision: "MAYBE" }, adminToken);
     expect(res.status).toBe(400);
   });
 
@@ -58,35 +49,15 @@ describe("admin KYC decisions", () => {
     const { token: adminToken } = await createUserWithToken("SUPER_ADMIN");
     const { user: worker } = await createUserWithToken("WORKER", { kycStatus: "PENDING" });
 
-    const res = await request(app)
-      .post(`/api/workers/${worker.id}/kyc`)
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send({ decision: "TIER_APPROVED" });
+    const res = await apiPost(`/api/workers/${worker.id}/kyc`, { decision: "TIER_APPROVED" }, adminToken);
     expect(res.status).toBe(200);
     expect(res.body.kycStatus).toBe("TIER_APPROVED");
 
-    const stored = await prisma.user.findUnique({ where: { id: worker.id } });
+    const stored = await testPrisma().user.findUnique({ where: { id: worker.id } });
     expect(stored?.kycStatus).toBe("TIER_APPROVED");
   });
-
-  it("rejects a worker's KYC as HR_ADMIN", async () => {
-    const { token: hrToken } = await createUserWithToken("HR_ADMIN");
-    const { user: worker } = await createUserWithToken("WORKER", { kycStatus: "PENDING" });
-
-    const res = await request(app)
-      .post(`/api/workers/${worker.id}/kyc`)
-      .set("Authorization", `Bearer ${hrToken}`)
-      .send({ decision: "REJECTED" });
-    expect(res.status).toBe(200);
-    expect(res.body.kycStatus).toBe("REJECTED");
-  });
-
-  it("404s for a worker id that doesn't exist", async () => {
-    const { token: adminToken } = await createUserWithToken("SUPER_ADMIN");
-    const res = await request(app)
-      .post("/api/workers/does-not-exist/kyc")
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send({ decision: "TIER_APPROVED" });
-    expect(res.status).toBe(404);
-  });
 });
+
+// "rejects a worker's KYC as HR_ADMIN" and "404s for a worker id that
+// doesn't exist" live in test/kycDecisionHrAdmin.test.ts and
+// test/kycDecisionNotFound.test.ts, not here - see the note in either for why.
