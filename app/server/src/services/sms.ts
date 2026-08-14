@@ -6,20 +6,29 @@
 // request handler returns it as `devCode` (dev only). Master code 123456 also
 // works in dev: see routes/authOtp.ts.
 
-const PROVIDER = (process.env.SMS_PROVIDER || "").trim().toLowerCase();
-const TERMII_API_KEY = process.env.TERMII_API_KEY || "";
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || "";
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || "";
-const TWILIO_FROM = process.env.TWILIO_FROM || "";
-
-const TERMII_BASE = process.env.TERMII_BASE || "https://api.ng.termii.com";
+// Read lazily, not at module load: Workers only populate process.env from
+// bindings once request handling begins, not at pure module-evaluation time -
+// reading these eagerly always saw them as unset, permanently forcing
+// simulated mode regardless of what's actually configured. See
+// src/services/paystack.ts for the same pattern.
+function config() {
+  return {
+    provider: (process.env.SMS_PROVIDER || "").trim().toLowerCase(),
+    termiiApiKey: process.env.TERMII_API_KEY || "",
+    termiiBase: process.env.TERMII_BASE || "https://api.ng.termii.com",
+    twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
+    twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
+    twilioFrom: process.env.TWILIO_FROM || "",
+  };
+}
 
 export const sms = {
   /** True when a real SMS provider is configured. False = simulated (devCode). */
   get enabled(): boolean {
-    if (PROVIDER === "termii") return TERMII_API_KEY.length > 0;
-    if (PROVIDER === "twilio") {
-      return TWILIO_ACCOUNT_SID.length > 0 && TWILIO_AUTH_TOKEN.length > 0 && TWILIO_FROM.length > 0;
+    const c = config();
+    if (c.provider === "termii") return c.termiiApiKey.length > 0;
+    if (c.provider === "twilio") {
+      return c.twilioAccountSid.length > 0 && c.twilioAuthToken.length > 0 && c.twilioFrom.length > 0;
     }
     return false;
   },
@@ -31,18 +40,20 @@ export const sms = {
       console.log(`[sms:sim] OTP for ${phone}: ${code}`);
       return;
     }
-    if (PROVIDER === "termii") {
+    const { provider } = config();
+    if (provider === "termii") {
       await this.sendTermii(phone, text);
       return;
     }
-    if (PROVIDER === "twilio") {
+    if (provider === "twilio") {
       await this.sendTwilio(phone, text);
       return;
     }
   },
 
   async sendTermii(phone: string, text: string): Promise<void> {
-    const res = await fetch(`${TERMII_BASE}/api/sms/send`, {
+    const { termiiBase, termiiApiKey } = config();
+    const res = await fetch(`${termiiBase}/api/sms/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -51,7 +62,7 @@ export const sms = {
         sms: text,
         type: "plain",
         channel: "generic",
-        api_key: TERMII_API_KEY,
+        api_key: termiiApiKey,
       }),
     });
     const json = (await res.json().catch(() => ({}))) as any;
@@ -61,9 +72,10 @@ export const sms = {
   },
 
   async sendTwilio(phone: string, text: string): Promise<void> {
-    const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
-    const body = new URLSearchParams({ To: phone, From: TWILIO_FROM, Body: text });
-    const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString("base64");
+    const { twilioAccountSid, twilioAuthToken, twilioFrom } = config();
+    const url = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`;
+    const body = new URLSearchParams({ To: phone, From: twilioFrom, Body: text });
+    const auth = Buffer.from(`${twilioAccountSid}:${twilioAuthToken}`).toString("base64");
     const res = await fetch(url, {
       method: "POST",
       headers: {

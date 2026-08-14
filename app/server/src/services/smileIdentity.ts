@@ -14,15 +14,28 @@
 
 import type { Signature, WebApi } from "smile-identity-core";
 
-const PARTNER_ID = process.env.SMILE_PARTNER_ID || "";
-const API_KEY = process.env.SMILE_API_KEY || "";
-// '0' = sandbox, '1' = production (see https://docs.usesmileid.com/further-reading/faqs)
-const SID_SERVER = process.env.SMILE_SID_SERVER || "0";
-// Optional: required for async human-review updates to reach POST /api/webhooks/smile.
-// Without it, results still come back synchronously via return_job_status (see below).
-const CALLBACK_URL = process.env.SMILE_CALLBACK_URL || "";
+// Read lazily, not at module load: Workers only populate process.env from
+// bindings once request handling begins, not at pure module-evaluation time -
+// reading these eagerly always saw them as unset, permanently forcing manual
+// KYC review regardless of what's actually configured. See
+// src/services/paystack.ts for the same pattern.
+function config() {
+  return {
+    partnerId: process.env.SMILE_PARTNER_ID || "",
+    apiKey: process.env.SMILE_API_KEY || "",
+    // '0' = sandbox, '1' = production (see https://docs.usesmileid.com/further-reading/faqs)
+    sidServer: process.env.SMILE_SID_SERVER || "0",
+    // Optional: required for async human-review updates to reach
+    // POST /api/webhooks/smile. Without it, results still come back
+    // synchronously via return_job_status (see below).
+    callbackUrl: process.env.SMILE_CALLBACK_URL || "",
+  };
+}
 
-export const isSmileConfigured = !!(PARTNER_ID && API_KEY);
+export function isSmileConfigured(): boolean {
+  const { partnerId, apiKey } = config();
+  return !!(partnerId && apiKey);
+}
 
 export const JOB_TYPE_DOCUMENT_VERIFICATION = 6;
 
@@ -49,7 +62,8 @@ let _webApi: WebApi | null = null;
 async function getWebApi(): Promise<WebApi> {
   if (!_webApi) {
     const { WebApi } = await import("smile-identity-core");
-    _webApi = new WebApi(PARTNER_ID, CALLBACK_URL || null, API_KEY, SID_SERVER);
+    const { partnerId, callbackUrl, apiKey, sidServer } = config();
+    _webApi = new WebApi(partnerId, callbackUrl || null, apiKey, sidServer);
   }
   return _webApi;
 }
@@ -77,7 +91,7 @@ export async function submitDocumentVerification(input: {
   selfieBase64: string;
   idBackBase64?: string;
 }): Promise<DocVerificationResult> {
-  if (!isSmileConfigured) throw new Error("Smile ID is not configured");
+  if (!isSmileConfigured()) throw new Error("Smile ID is not configured");
 
   const images: Array<{ image_type_id: number; image: string }> = [
     { image_type_id: 2, image: input.selfieBase64 }, // SELFIE_IMAGE_BASE64
@@ -107,7 +121,8 @@ export async function submitDocumentVerification(input: {
 
 /** Verify the `timestamp`/`signature` pair Smile ID sends on every webhook callback. */
 export async function verifyWebhookSignature(timestamp: string, signature: string): Promise<boolean> {
-  if (!isSmileConfigured) return false;
+  if (!isSmileConfigured()) return false;
   const { Signature } = await import("smile-identity-core");
-  return new Signature(PARTNER_ID, API_KEY).confirm_signature(timestamp, signature);
+  const { partnerId, apiKey } = config();
+  return new Signature(partnerId, apiKey).confirm_signature(timestamp, signature);
 }

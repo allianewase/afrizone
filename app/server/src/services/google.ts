@@ -19,6 +19,11 @@
 
 import type { OAuth2Client } from "google-auth-library";
 
+// Read lazily, not at module load: Workers only populate process.env from
+// bindings once request handling begins, not at pure module-evaluation time -
+// reading these eagerly always saw them as unset, permanently disabling
+// Google SSO regardless of what's actually configured. See
+// src/services/paystack.ts for the same pattern.
 /** Collect every configured Google client id (deduped, non-empty). */
 function collectClientIds(): string[] {
   const single = [
@@ -35,19 +40,17 @@ function collectClientIds(): string[] {
   return Array.from(new Set(all));
 }
 
-const CLIENT_IDS: string[] = collectClientIds();
-
 let client: OAuth2Client | null = null;
 // Dynamically imported (not a static top-level import): google-auth-library
 // pulls in a gaxios/gcp-metadata/google-logging-utils dependency chain that
 // only supports being loaded when actually used, not eagerly at module-eval
 // time - keeps it out of every cold start that never touches Google SSO.
-async function getClient(): Promise<OAuth2Client> {
+async function getClient(clientIds: string[]): Promise<OAuth2Client> {
   if (!client) {
     const { OAuth2Client } = await import("google-auth-library");
     // The OAuth2Client constructor arg is only used as a default audience; we
     // pass the full audience array explicitly to verifyIdToken, so any id works here.
-    client = new OAuth2Client(CLIENT_IDS[0]);
+    client = new OAuth2Client(clientIds[0]);
   }
   return client;
 }
@@ -55,21 +58,22 @@ async function getClient(): Promise<OAuth2Client> {
 export const google = {
   /** True when at least one Google client id is configured. */
   get enabled(): boolean {
-    return CLIENT_IDS.length > 0;
+    return collectClientIds().length > 0;
   },
 
   /** The allowed audiences (every configured client id). Exposed for diagnostics. */
   get clientIds(): string[] {
-    return CLIENT_IDS;
+    return collectClientIds();
   },
 
   /** Verify a Google ID token; returns the verified email + subject (sub) + name. */
   async verifyIdToken(idToken: string): Promise<{ email: string; sub: string; name?: string }> {
-    const client = await getClient();
-    const ticket = await client.verifyIdToken({
+    const clientIds = collectClientIds();
+    const oauthClient = await getClient(clientIds);
+    const ticket = await oauthClient.verifyIdToken({
       idToken,
       // google-auth-library accepts a string[]: the token's aud must match one.
-      audience: CLIENT_IDS,
+      audience: clientIds,
     });
     const payload = ticket.getPayload();
     if (!payload || !payload.email || !payload.email_verified) {

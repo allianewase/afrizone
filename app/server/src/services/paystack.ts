@@ -15,19 +15,31 @@
 
 import crypto from "crypto";
 
-const SECRET = process.env.PAYSTACK_SECRET || "";
-const BASE = process.env.PAYSTACK_BASE || "https://api.paystack.co";
+// Read lazily, not at module load: Workers only populate process.env from
+// bindings once request handling begins, not at pure module-evaluation time -
+// reading these eagerly always saw them as unset, permanently forcing
+// simulated mode regardless of what's actually configured. See src/auth.ts's
+// jwtSecret() for the same pattern (there it also crashes the deploy, since
+// JWT_SECRET is checked at import time; here it just fails silently, which is
+// worse).
+function secret(): string {
+  return process.env.PAYSTACK_SECRET || "";
+}
+function base(): string {
+  return process.env.PAYSTACK_BASE || "https://api.paystack.co";
+}
 
 export const paystack = {
   /** True when a secret key is configured: gates all real network calls. */
   get enabled(): boolean {
-    return SECRET.length > 0;
+    return secret().length > 0;
   },
 
   /** Low-level authenticated call to the Paystack API. */
   async call(path: string, method: "GET" | "POST", body?: unknown): Promise<any> {
+    const SECRET = secret();
     if (!SECRET) throw new Error("PAYSTACK_SECRET is not set");
-    const res = await fetch(`${BASE}${path}`, {
+    const res = await fetch(`${base()}${path}`, {
       method,
       headers: {
         Authorization: `Bearer ${SECRET}`,
@@ -89,6 +101,7 @@ export const paystack = {
 
   /** Verify the X-Paystack-Signature header (HMAC-SHA512 of the raw body). */
   verifyWebhook(rawBody: Buffer, signature: string | undefined): boolean {
+    const SECRET = secret();
     if (!SECRET || !signature) return false;
     const hash = crypto.createHmac("sha512", SECRET).update(rawBody).digest("hex");
     // timing-safe compare

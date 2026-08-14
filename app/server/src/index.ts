@@ -36,14 +36,31 @@ app.set("trust proxy", 1);
 // helmet's default "same-origin" policy would silently block those image loads.
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
-// CORS: Vite admin dev server, Expo web preview (8081/19006), + same-origin.
-const corsOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173,http://localhost:4000,http://localhost:8081,http://localhost:19006")
-  .split(",")
-  .map((o) => o.trim())
-  .filter(Boolean);
+// CORS: Vite admin dev server, Expo web preview (8081/19006), + same-origin,
+// plus whatever CORS_ORIGIN adds (e.g. the deployed web-admin/mobile origins).
+//
+// Resolved lazily inside the origin callback, not at module scope: Workers
+// only populate process.env from bindings once request handling begins, not
+// at pure module-evaluation time - reading CORS_ORIGIN eagerly here always
+// saw it as unset, permanently locking CORS to the localhost-only fallback
+// regardless of what's actually configured for production. See
+// src/services/paystack.ts for the same pattern in a service file.
 app.use(
   cors({
-    origin: corsOrigins,
+    origin: (origin, callback) => {
+      const corsOrigins = (
+        process.env.CORS_ORIGIN ||
+        "http://localhost:5173,http://localhost:4000,http://localhost:8081,http://localhost:19006"
+      )
+        .split(",")
+        .map((o) => o.trim())
+        .filter(Boolean);
+      if (!origin || corsOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
@@ -55,6 +72,14 @@ app.use(express.json());
 // Rate limiting is disabled under the automated test suite (NODE_ENV=test):
 // tests legitimately fire many requests at /api/auth in a short window, and
 // the limiter's own behaviour is covered separately, not via the app tests.
+//
+// The NODE_ENV check is made INSIDE each request handler below, not by
+// conditionally registering the middleware at module scope: Workers only
+// populate process.env from bindings once request handling begins, not at
+// pure module-evaluation time, so a module-scope `if (NODE_ENV !== "test")`
+// always sees NODE_ENV as unset and would always register the limiters
+// regardless of the real value. See src/services/paystack.ts for the same
+// pattern in a service file.
 //
 // NOTE: express-rate-limit's default in-memory store is per-isolate. Workers
 // can run many concurrent isolates, so this is a best-effort per-isolate
@@ -80,32 +105,32 @@ app.use(express.json());
 const rateLimitKey = (req: ExpressRequest) =>
   req.headers["cf-connecting-ip"]?.toString() || "local-dev";
 
-if (process.env.NODE_ENV !== "test") {
-  let apiLimiter: ReturnType<typeof rateLimit> | undefined;
-  app.use("/api", (req, res, next) => {
-    apiLimiter ??= rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 300,
-      standardHeaders: true,
-      legacyHeaders: false,
-      keyGenerator: rateLimitKey,
-    });
-    return apiLimiter(req, res, next);
+let apiLimiter: ReturnType<typeof rateLimit> | undefined;
+app.use("/api", (req, res, next) => {
+  if (process.env.NODE_ENV === "test") return next();
+  apiLimiter ??= rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: rateLimitKey,
   });
+  return apiLimiter(req, res, next);
+});
 
-  let authLimiter: ReturnType<typeof rateLimit> | undefined;
-  app.use("/api/auth", (req, res, next) => {
-    authLimiter ??= rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 20,
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: { error: "Too many auth requests. Try again later." },
-      keyGenerator: rateLimitKey,
-    });
-    return authLimiter(req, res, next);
+let authLimiter: ReturnType<typeof rateLimit> | undefined;
+app.use("/api/auth", (req, res, next) => {
+  if (process.env.NODE_ENV === "test") return next();
+  authLimiter ??= rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many auth requests. Try again later." },
+    keyGenerator: rateLimitKey,
   });
-}
+  return authLimiter(req, res, next);
+});
 
 // Health + config
 app.use("/api/health", healthRouter);

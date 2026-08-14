@@ -5,12 +5,27 @@ import { prisma } from "./prisma";
 import { Role, tiersToArray } from "./types";
 
 const DEFAULT_DEV_SECRET = "dev-secret-change-me";
-if (process.env.NODE_ENV === "production" && (!process.env.JWT_SECRET || process.env.JWT_SECRET === DEFAULT_DEV_SECRET)) {
-  throw new Error(
-    "JWT_SECRET must be set to a strong, unique value in production (refusing to start with the default dev secret)."
-  );
+
+// Resolved lazily on first use, not at module load: Workers only populate
+// process.env from bindings once request handling begins, not at pure
+// module-evaluation time (same constraint as env.DB in src/prisma.ts) -
+// reading it eagerly here always saw it as undefined and wrongly refused to
+// boot in production, even with a real secret configured.
+let _jwtSecret: string | undefined;
+function jwtSecret(): string {
+  if (_jwtSecret === undefined) {
+    if (
+      process.env.NODE_ENV === "production" &&
+      (!process.env.JWT_SECRET || process.env.JWT_SECRET === DEFAULT_DEV_SECRET)
+    ) {
+      throw new Error(
+        "JWT_SECRET must be set to a strong, unique value in production (refusing to start with the default dev secret)."
+      );
+    }
+    _jwtSecret = process.env.JWT_SECRET || DEFAULT_DEV_SECRET;
+  }
+  return _jwtSecret;
 }
-const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_DEV_SECRET;
 const TOKEN_TTL = "7d";
 const CHALLENGE_TTL = "5m"; // short-lived 2FA challenge token
 
@@ -32,21 +47,21 @@ export interface AuthedRequest extends Request {
 }
 
 export function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_TTL });
+  return jwt.sign(payload, jwtSecret(), { expiresIn: TOKEN_TTL });
 }
 
 export function verifyToken(token: string): JwtPayload {
-  return jwt.verify(token, JWT_SECRET) as JwtPayload;
+  return jwt.verify(token, jwtSecret()) as JwtPayload;
 }
 
 export function signChallenge(userId: string): string {
-  return jwt.sign({ sub: userId, twofa: true } as ChallengePayload, JWT_SECRET, {
+  return jwt.sign({ sub: userId, twofa: true } as ChallengePayload, jwtSecret(), {
     expiresIn: CHALLENGE_TTL,
   });
 }
 
 export function verifyChallenge(token: string): ChallengePayload {
-  const p = jwt.verify(token, JWT_SECRET) as ChallengePayload;
+  const p = jwt.verify(token, jwtSecret()) as ChallengePayload;
   if (!p || (p as any).twofa !== true) throw new Error("Not a 2FA challenge token");
   return p;
 }

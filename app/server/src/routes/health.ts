@@ -51,8 +51,8 @@ router.get("/config", (_req: Request, res: Response) => {
           : "Disabled: SSO buttons show 'not configured'. Set GOOGLE_WEB_CLIENT_ID to enable.",
     },
     smileIdentity: {
-      ok: isSmileConfigured,
-      note: isSmileConfigured
+      ok: isSmileConfigured(),
+      note: isSmileConfigured()
         ? "Document Verification (ID + selfie) enabled."
         : "Simulated: KYC relies on manual admin review only. Set SMILE_PARTNER_ID + SMILE_API_KEY to enable.",
     },

@@ -435,7 +435,7 @@ router.post("/kyc/submit", requireAuth, async (req: AuthedRequest, res: Response
   let kycStatus = "PENDING";
   let kycNote: string | null = null;
 
-  if (isSmileConfigured && NG_ID_TYPES.includes(idType)) {
+  if (isSmileConfigured() && NG_ID_TYPES.includes(idType)) {
     const docs = await prisma.kycDocument.findMany({
       where: { userId: user.id, docType: { in: ["ID", "SELFIE"] } },
       orderBy: { createdAt: "desc" },

@@ -7,8 +7,6 @@
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
 
-const ISSUER = process.env.TOTP_ISSUER || "Afrizone";
-
 export const DEV_TOTP_BYPASS = "000000";
 
 export const totp = {
@@ -19,7 +17,11 @@ export const totp = {
 
   /** otpauth:// URL for QR enrolment (scanned by Google Authenticator etc.). */
   otpauthUrl(secret: string, email: string): string {
-    return authenticator.keyuri(email, ISSUER, secret);
+    // Read lazily, not at module load: Workers only populate process.env from
+    // bindings once request handling begins, not at pure module-evaluation
+    // time - see src/services/paystack.ts for the same pattern.
+    const issuer = process.env.TOTP_ISSUER || "Afrizone";
+    return authenticator.keyuri(email, issuer, secret);
   },
 
   /** Render an otpauth URL as a PNG data URL for the QR image. */
