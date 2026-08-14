@@ -12,6 +12,7 @@ cd app/server
 npm install
 npx prisma generate
 npx wrangler d1 migrations apply afrizone-db --local
+npm run seed     # demo data - also applies it to the local D1 emulation
 npm run dev      # wrangler dev - starts a local Worker (see its output for the port)
 ```
 
@@ -32,7 +33,7 @@ Demo workers log in with `<firstname>.<lastname>@afrizone.work` / `worker123`
 | `npm run deploy` | `wrangler deploy` - what Workers Builds also runs on push to `main` |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | `vitest run` via `@cloudflare/vitest-pool-workers` - runs inside real `workerd`, real D1/R2 |
-| `npm run seed` | Seed admin + workers + tasks + applications + payments |
+| `npm run seed` | Seed admin + workers + tasks + applications + payments (writes to `prisma/dev.db`, then dumps + applies the same data to `wrangler dev`'s local D1 emulation) |
 | `npm run prisma:push` | `prisma db push` - local-dev-only convenience, not used against D1 (see below) |
 
 ## Module system

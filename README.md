@@ -56,7 +56,8 @@ cd app/server
 npm install
 npx prisma generate
 npx wrangler d1 migrations apply afrizone-db --local
-npm run dev        # wrangler dev - see its output for the local URL
+npm run seed        # demo data - also applies it to the local D1 emulation
+npm run dev          # wrangler dev - see its output for the local URL
 ```
 
 **2: Admin web**
@@ -81,13 +82,10 @@ npx expo start       # press i / a / w, or scan the QR with Expo Go
 
 2FA is off by default for admins; the dev bypass code is `000000` when enabled.
 
-> **Note:** `npm run seed` (`server/prisma/seed.ts`) still writes through a plain
-> Prisma client against `DATABASE_URL`, not D1 - it does not currently populate
-> `wrangler dev`'s local D1 emulation, so the demo logins above won't exist
-> there yet. Register a fresh account through the app instead for local
-> Workers-based testing (`admin@afrizone.work` can be promoted to `SUPER_ADMIN`
-> via `wrangler d1 execute afrizone-db --local`). Porting the seed script to D1
-> is a known follow-up, not done as part of the Cloudflare migration.
+> `npm run seed` (`server/prisma/seed.ts`) writes through a plain Prisma
+> client against `DATABASE_URL` as before, then dumps the result to SQL and
+> applies it to `wrangler dev`'s local D1 emulation via
+> `wrangler d1 execute --local` - the demo logins above work against both.
 
 See each app's own README for details: [`server/README.md`](app/server/README.md),
 [`web-admin/README.md`](app/web-admin/README.md), [`mobile/README.md`](app/mobile/README.md).

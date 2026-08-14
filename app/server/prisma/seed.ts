@@ -1,9 +1,84 @@
 import "dotenv/config";
+import { execSync } from "child_process";
+import fs from "fs";
+import path from "path";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { computeWht } from "../src/util/tax";
 
 const prisma = new PrismaClient();
+
+// Tables in delete-safe order (children before parents) - same order as the
+// deleteMany() calls below. Insert order (built from this, reversed) is
+// parents before children, so FK references always exist by insert time.
+const TABLES_CHILD_TO_PARENT = [
+  "AuditLog",
+  "ClockEvent",
+  "Withdrawal",
+  "Contract",
+  "Dispute",
+  "KycVerification",
+  "KycDocument",
+  "Rating",
+  "Payment",
+  "Funding",
+  "Timesheet",
+  "Application",
+  "Task",
+  "PasswordReset",
+  "OtpCode",
+  "User",
+  "JobApplication",
+  "Job",
+  "TaxRate",
+  "Category",
+  "Setting",
+];
+
+function sqlLiteral(v: unknown): string {
+  if (v === null || v === undefined) return "NULL";
+  if (typeof v === "number") return String(v);
+  if (typeof v === "boolean") return v ? "1" : "0";
+  if (v instanceof Date) return `'${v.toISOString()}'`;
+  return `'${String(v).replace(/'/g, "''")}'`;
+}
+
+/**
+ * Dumps prisma/dev.db's freshly-seeded rows to SQL and applies them to
+ * wrangler dev's local D1 emulation (a real SQLite file, but its exact path
+ * is an undocumented Miniflare internal - going through `wrangler d1 execute`
+ * instead keeps this on the officially supported interface). The D1 schema
+ * itself is untouched here: it's expected to already exist via
+ * `wrangler d1 migrations apply afrizone-db --local`.
+ */
+async function seedLocalD1() {
+  const serverRoot = path.join(__dirname, "..");
+  const lines: string[] = ["PRAGMA foreign_keys=OFF;"];
+  for (const table of TABLES_CHILD_TO_PARENT) {
+    lines.push(`DELETE FROM "${table}";`);
+  }
+  for (const table of [...TABLES_CHILD_TO_PARENT].reverse()) {
+    const rows = await prisma.$queryRawUnsafe<Record<string, unknown>[]>(`SELECT * FROM "${table}"`);
+    for (const row of rows) {
+      const cols = Object.keys(row);
+      const vals = cols.map((c) => sqlLiteral(row[c]));
+      lines.push(`INSERT INTO "${table}" (${cols.map((c) => `"${c}"`).join(",")}) VALUES (${vals.join(",")});`);
+    }
+  }
+
+  const dumpPath = path.join(serverRoot, "prisma", ".seed-dump.sql");
+  fs.writeFileSync(dumpPath, lines.join("\n"));
+  try {
+    // execSync (not execFileSync): dumpPath is the only interpolated value
+    // here and it's derived from __dirname, not user input.
+    execSync(`npx wrangler d1 execute afrizone-db --local --file="${dumpPath}"`, {
+      cwd: serverRoot,
+      stdio: "inherit",
+    });
+  } finally {
+    fs.unlinkSync(dumpPath);
+  }
+}
 
 // Default worker password (all demo workers share it).
 const WORKER_PW = "worker123";
@@ -533,6 +608,10 @@ async function main() {
   console.log("Seed complete:", counts);
   console.log("Admin login: admin@afrizone.work / afrizone123");
   console.log(`Worker logins: <name>@afrizone.work / ${WORKER_PW}`);
+
+  console.log("Applying the same data to wrangler dev's local D1 emulation...");
+  await seedLocalD1();
+  console.log("D1 (local) seeded.");
 }
 
 main()

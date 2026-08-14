@@ -1,10 +1,12 @@
 node_modules
 dist
 .env
+.dev.vars
 *.db
 *.db-journal
 prisma/dev.db
 prisma/*.db
+prisma/.seed-dump.sql
 .wrangler
 .pgdata
 *.log
