@@ -7,7 +7,9 @@ on:
     branches: [main]
 
 env:
-  NODE_VERSION: "20"
+  # wrangler/miniflare (server tests) require Node >=22; kept in sync with
+  # local dev (v24).
+  NODE_VERSION: "24"
 
 jobs:
   server:
