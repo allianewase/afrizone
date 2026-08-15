@@ -17,13 +17,13 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.afrizonemart.com/api"
+        "EXPO_PUBLIC_API_URL": "https://api.parttime.afrizonemart.com/api"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.afrizonemart.com/api"
+        "EXPO_PUBLIC_API_URL": "https://api.parttime.afrizonemart.com/api"
       }
     }
   },

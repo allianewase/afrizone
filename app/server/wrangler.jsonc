@@ -11,8 +11,12 @@
   // (JWT_SECRET, PAYSTACK_SECRET, etc.) still go through `wrangler secret put`
   // or the dashboard's Secret type, never here.
   "vars": {
-    "CORS_ORIGIN": "https://admin.afrizonemart.com,https://afrizone.pages.dev",
-    "WEB_ADMIN_URL": "https://admin.afrizonemart.com"
+    // Partime-specific hostnames only - never api.afrizonemart.com or
+    // admin.afrizonemart.com, which belong to Afrizoma's separate
+    // e-commerce infrastructure. See the api.parttime.afrizonemart.com /
+    // admin.parttime.afrizonemart.com Worker/Pages custom domains.
+    "CORS_ORIGIN": "https://admin.parttime.afrizonemart.com,https://afrizone.pages.dev",
+    "WEB_ADMIN_URL": "https://admin.parttime.afrizonemart.com"
   },
   "d1_databases": [
     {

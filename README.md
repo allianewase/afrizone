@@ -99,12 +99,15 @@ Both the API and web-admin run on Cloudflare, auto-deploying on push to `main`:
   non-secret config). Secrets (`JWT_SECRET`, `PAYSTACK_SECRET`, etc.) are set
   via `wrangler secret put` or the dashboard's Settings → Variables and
   Secrets, listed in `app/server/.env.production.example`. Live at
-  `https://api.afrizonemart.com`.
+  `https://api.parttime.afrizonemart.com` - **never `api.afrizonemart.com`**,
+  which is Afrizoma's separate e-commerce backend on Railway.
 - **web-admin**: Cloudflare Pages (`app/web-admin`), via the dashboard's Git
   integration - runs `npm run build`. Env vars (`VITE_API_URL`, etc.) are set
   per-environment in the Pages project settings, listed in
   `app/web-admin/.env.production.example`. Live at
-  `https://admin.afrizonemart.com` (`https://afrizone.pages.dev` still works).
+  `https://admin.parttime.afrizonemart.com` (`https://afrizone.pages.dev`
+  still works) - **never `admin.afrizonemart.com`**, Afrizoma's own admin
+  domain.
 - **mobile**: not hosted - `EXPO_PUBLIC_API_URL` is injected at build time via
   `app/mobile/eas.json`'s `preview`/`production` profiles for EAS builds; local
   dev still points at your LAN IP via `app/mobile/.env` (gitignored).
