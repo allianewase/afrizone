@@ -11,6 +11,11 @@ web-build/
 *.p12
 *.key
 *.mobileprovision
+# Managed workflow: generated fresh by `expo prebuild` / EAS Build, never
+# committed - see PR discussion on the splashscreen_logo build fix for why
+# running prebuild locally is a legitimate diagnostic step.
+/android
+/ios
 
 # Metro
 .metro-health-check*
