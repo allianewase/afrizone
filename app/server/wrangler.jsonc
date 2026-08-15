@@ -16,7 +16,23 @@
     // e-commerce infrastructure. See the api.parttime.afrizonemart.com /
     // admin.parttime.afrizonemart.com Worker/Pages custom domains.
     "CORS_ORIGIN": "https://admin.parttime.afrizonemart.com,https://afrizone.pages.dev",
-    "WEB_ADMIN_URL": "https://admin.parttime.afrizonemart.com"
+    "WEB_ADMIN_URL": "https://admin.parttime.afrizonemart.com",
+    // OAuth client IDs are public identifiers, not secrets (they already ship
+    // inside the mobile app bundle) - safe to check in, unlike GOOGLE_*
+    // client *secrets*, which this app never needs (ID-token verification
+    // only). Same client id used for both audiences per GOOGLE_SETUP.md's
+    // "reuse the web client" option; GOOGLE_IOS_CLIENT_ID/
+    // GOOGLE_ANDROID_CLIENT_ID are still unset - see GOOGLE_SETUP.md, they
+    // need a real EAS/signing keystore SHA-1 that doesn't exist yet.
+    "GOOGLE_WEB_CLIENT_ID": "204043649636-s12j8pmc2r73uodu15t3213gblo44t68.apps.googleusercontent.com",
+    "GOOGLE_EXPO_CLIENT_ID": "204043649636-s12j8pmc2r73uodu15t3213gblo44t68.apps.googleusercontent.com",
+    // Provider name only, not a secret - inert until TERMII_API_KEY (a real
+    // secret, set separately via `wrangler secret put`) is also present;
+    // sms.ts's `enabled` check requires both. No mobile screen currently
+    // calls the phone-OTP endpoints (removed in the dove-design rebuild), so
+    // this has no visible effect yet either way - wired for whenever that
+    // screen comes back.
+    "SMS_PROVIDER": "termii"
   },
   "d1_databases": [
     {

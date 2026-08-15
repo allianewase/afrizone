@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
-import { Text, StyleSheet, Pressable } from 'react-native';
+import { Text, View, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
+import { GoogleButton } from '../../src/components/GoogleButton';
 import { Banner } from '../../src/components/Feedback';
 import { PasswordField } from '../../src/components/PasswordField';
 import { UnderlineInput } from '../../src/components/UnderlineInput';
+import { PatternDivider } from '../../src/components/Motif';
 import { AuthScreen, AuthFooterLink } from '../../src/components/AuthShell';
-import { colors, spacing, type } from '../../src/theme';
+import { colors, spacing, type, motif } from '../../src/theme';
 import { useAuth } from '../../src/auth/AuthContext';
 
 const emailValid = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
 
 /**
- * Worker sign-in: email + password only. Phone-OTP and Google sign-in were
- * dropped to match the reference design exactly, which orphaned otp.tsx and
- * GoogleButton.tsx (both deleted).
+ * Worker sign-in: Google, or email + password. Phone-OTP was dropped to match
+ * the reference design exactly, which orphaned otp.tsx (deleted); Google
+ * sign-in was dropped the same way but restored on request - GoogleButton.tsx
+ * came back verbatim from git history (bf22baa^), still fully compatible with
+ * the current theme/API.
  *
  * On password sign-in: if the backend returns `requires2fa` we push the 2FA
  * screen; otherwise we route new/never-completed users to KYC and returning
@@ -70,6 +74,14 @@ export default function LoginScreen() {
     >
       {error ? <Banner tone="danger" icon="alert" title="Couldn’t sign in" message={error} /> : null}
 
+      <GoogleButton onSuccess={routeAfterAuth} onError={setError} />
+
+      <View style={styles.dividerRow}>
+        <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
+        <Text style={styles.dividerText}>or sign in with email</Text>
+        <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
+      </View>
+
       <UnderlineInput
         label="Email"
         value={email}
@@ -107,4 +119,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   forgotRow: { alignSelf: 'flex-end' },
   forgotText: { color: colors.goldInk, fontSize: type.size.sm, fontWeight: '700' },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  dividerMotif: { flex: 1 },
+  dividerText: { color: colors.textMuted, fontSize: type.size.sm },
 });

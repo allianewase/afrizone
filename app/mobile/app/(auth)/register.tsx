@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
+import { Text, View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
+import { GoogleButton } from '../../src/components/GoogleButton';
 import { Banner } from '../../src/components/Feedback';
 import { PasswordField } from '../../src/components/PasswordField';
 import { UnderlineInput } from '../../src/components/UnderlineInput';
+import { PatternDivider } from '../../src/components/Motif';
 import { AuthScreen, AuthFooterLink } from '../../src/components/AuthShell';
+import { colors, spacing, type, motif } from '../../src/theme';
 import { useAuth } from '../../src/auth/AuthContext';
 
 const MIN_PASSWORD = 8;
 const emailValid = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
 
 /**
- * Worker sign-up: name + email + password + confirm → register → creates a
- * WORKER (isNewUser:true) and routes to the KYC stepper.
+ * Worker sign-up: Google, or name + email + password + confirm → register →
+ * creates a WORKER (isNewUser:true) and routes to the KYC stepper.
  */
 export default function RegisterScreen() {
   const router = useRouter();
@@ -31,13 +35,17 @@ export default function RegisterScreen() {
   const matchOk = confirm.length > 0 && confirm === password;
   const canSubmit = nameOk && emailOk && passOk && matchOk;
 
+  function routeAfterAuth(isNewUser: boolean) {
+    router.replace(isNewUser ? '/(auth)/kyc' : '/(tabs)/home');
+  }
+
   async function onSubmit() {
     if (!canSubmit || busy) return;
     setBusy(true);
     setError(null);
     try {
       const isNewUser = await register(name, email, password);
-      router.replace(isNewUser ? '/(auth)/kyc' : '/(tabs)/home');
+      routeAfterAuth(isNewUser);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create your account.');
     } finally {
@@ -55,6 +63,14 @@ export default function RegisterScreen() {
       }
     >
       {error ? <Banner tone="danger" icon="alert" title="Couldn’t sign up" message={error} /> : null}
+
+      <GoogleButton onSuccess={routeAfterAuth} onError={setError} />
+
+      <View style={styles.dividerRow}>
+        <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
+        <Text style={styles.dividerText}>or sign up with email</Text>
+        <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
+      </View>
 
       <UnderlineInput
         label="Full name"
@@ -100,3 +116,9 @@ export default function RegisterScreen() {
     </AuthScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  dividerMotif: { flex: 1 },
+  dividerText: { color: colors.textMuted, fontSize: type.size.sm },
+});

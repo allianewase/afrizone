@@ -17,13 +17,17 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.parttime.afrizonemart.com/api"
+        "EXPO_PUBLIC_API_URL": "https://api.parttime.afrizonemart.com/api",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "204043649636-s12j8pmc2r73uodu15t3213gblo44t68.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID": "204043649636-s12j8pmc2r73uodu15t3213gblo44t68.apps.googleusercontent.com"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.parttime.afrizonemart.com/api"
+        "EXPO_PUBLIC_API_URL": "https://api.parttime.afrizonemart.com/api",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "204043649636-s12j8pmc2r73uodu15t3213gblo44t68.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID": "204043649636-s12j8pmc2r73uodu15t3213gblo44t68.apps.googleusercontent.com"
       }
     }
   },
