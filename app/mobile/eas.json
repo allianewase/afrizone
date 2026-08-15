@@ -18,16 +18,20 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.parttime.afrizonemart.com/api",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "204043649636-s12j8pmc2r73uodu15t3213gblo44t68.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID": "204043649636-s12j8pmc2r73uodu15t3213gblo44t68.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "499781649562-7p27mo45qt0u172oj4i8i7eh4ru08h1f.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "499781649562-fe1l2p2hibinhv1ohf1qegkeo4h57890.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "499781649562-31b6frc4u68q87j9l07p95fqag576f9g.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID": "499781649562-ssvksjgvd5580p3307dkuc2qn6komvmb.apps.googleusercontent.com"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.parttime.afrizonemart.com/api",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "204043649636-s12j8pmc2r73uodu15t3213gblo44t68.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID": "204043649636-s12j8pmc2r73uodu15t3213gblo44t68.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "499781649562-7p27mo45qt0u172oj4i8i7eh4ru08h1f.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "499781649562-fe1l2p2hibinhv1ohf1qegkeo4h57890.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "499781649562-31b6frc4u68q87j9l07p95fqag576f9g.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID": "499781649562-ssvksjgvd5580p3307dkuc2qn6komvmb.apps.googleusercontent.com"
       }
     }
   },

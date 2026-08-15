@@ -20,12 +20,16 @@
     // OAuth client IDs are public identifiers, not secrets (they already ship
     // inside the mobile app bundle) - safe to check in, unlike GOOGLE_*
     // client *secrets*, which this app never needs (ID-token verification
-    // only). Same client id used for both audiences per GOOGLE_SETUP.md's
-    // "reuse the web client" option; GOOGLE_IOS_CLIENT_ID/
-    // GOOGLE_ANDROID_CLIENT_ID are still unset - see GOOGLE_SETUP.md, they
-    // need a real EAS/signing keystore SHA-1 that doesn't exist yet.
-    "GOOGLE_WEB_CLIENT_ID": "204043649636-s12j8pmc2r73uodu15t3213gblo44t68.apps.googleusercontent.com",
-    "GOOGLE_EXPO_CLIENT_ID": "204043649636-s12j8pmc2r73uodu15t3213gblo44t68.apps.googleusercontent.com",
+    // only). All four from a dedicated "afrizone-part-time" Google Cloud
+    // project (499781649562) - never the shared Afrizoma project's client
+    // ids. GOOGLE_ANDROID_CLIENT_ID is registered against the local debug
+    // keystore's SHA-1, so it's valid for dev/testing builds only; a real
+    // Play Store release build will need its own separate Android client
+    // registered against the EAS-managed release keystore.
+    "GOOGLE_WEB_CLIENT_ID": "499781649562-7p27mo45qt0u172oj4i8i7eh4ru08h1f.apps.googleusercontent.com",
+    "GOOGLE_IOS_CLIENT_ID": "499781649562-fe1l2p2hibinhv1ohf1qegkeo4h57890.apps.googleusercontent.com",
+    "GOOGLE_ANDROID_CLIENT_ID": "499781649562-31b6frc4u68q87j9l07p95fqag576f9g.apps.googleusercontent.com",
+    "GOOGLE_EXPO_CLIENT_ID": "499781649562-ssvksjgvd5580p3307dkuc2qn6komvmb.apps.googleusercontent.com",
     // Provider name only, not a secret - inert until TERMII_API_KEY (a real
     // secret, set separately via `wrangler secret put`) is also present;
     // sms.ts's `enabled` check requires both. No mobile screen currently
