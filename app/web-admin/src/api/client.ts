@@ -117,6 +117,26 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   return data as T
 }
 
+/**
+ * Fetches a binary resource (e.g. a KYC document image) with the same auth
+ * header `request()` uses, and returns an object URL for it. Needed because
+ * `<img src>` can't send an Authorization header itself, and the KYC file
+ * route requires one (it's ownership-checked, not a public URL). Caller owns
+ * the returned URL and must revoke it (`URL.revokeObjectURL`) when done.
+ */
+export async function fetchAuthedObjectUrl(path: string): Promise<string> {
+  const headers: Record<string, string> = {}
+  const token = getToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const res = await fetch(`${API_ORIGIN}${path}`, { headers })
+  if (!res.ok) {
+    throw new ApiError(`Could not load file (${res.status})`, res.status)
+  }
+  const blob = await res.blob()
+  return URL.createObjectURL(blob)
+}
+
 // ===== typed endpoint helpers =====
 export const api = {
   // Auth

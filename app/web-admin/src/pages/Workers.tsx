@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { API_ORIGIN, api, ApiError } from '../api/client'
+import { api, ApiError, fetchAuthedObjectUrl } from '../api/client'
 import { useApi } from '../lib/useApi'
 import type { KycDocument, Worker, WorkerDetail } from '../api/types'
 import {
@@ -36,9 +36,64 @@ const DOC_TYPE_LABEL: Record<string, string> = {
   DOCS: 'Supporting Documents',
 }
 
-// doc.url is a server-relative path (e.g. /uploads/kyc/xyz.jpg); prefix with
-// the API's origin so it resolves when the frontend is hosted separately.
-const docSrc = (url: string) => `${API_ORIGIN}${url}`
+// doc.url points at an authenticated file route (see storage.ts's resolveUrl),
+// not a public path - a plain <img src> can't send the Authorization header
+// it requires, so this fetches the bytes with the header and hands back an
+// object URL instead. Shows a placeholder while loading and on failure
+// (expired/invalid token, deleted object, etc.) rather than a broken image.
+function AuthedImage({
+  url,
+  alt,
+  style,
+  onClick,
+}: {
+  url: string
+  alt: string
+  style?: React.CSSProperties
+  onClick?: (e: React.MouseEvent) => void
+}) {
+  const [objectUrl, setObjectUrl] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    let created: string | null = null
+    setObjectUrl(null)
+    setFailed(false)
+    fetchAuthedObjectUrl(url)
+      .then((u) => {
+        if (cancelled) {
+          URL.revokeObjectURL(u)
+          return
+        }
+        created = u
+        setObjectUrl(u)
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true)
+      })
+    return () => {
+      cancelled = true
+      if (created) URL.revokeObjectURL(created)
+    }
+  }, [url])
+
+  if (failed) {
+    return (
+      <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg2)', color: 'var(--muted)', fontSize: 11 }}>
+        Failed to load
+      </div>
+    )
+  }
+  if (!objectUrl) {
+    return (
+      <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg2)' }}>
+        <span className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
+      </div>
+    )
+  }
+  return <img src={objectUrl} alt={alt} style={style} onClick={onClick} />
+}
 
 // ─── KYC document viewer + decision modal ─────────────────────────────────────
 function KycDocsModal({
@@ -118,8 +173,8 @@ function KycDocsModal({
                           onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--line-2)')}
                           title={doc.originalName}
                         >
-                          <img
-                            src={docSrc(doc.url)}
+                          <AuthedImage
+                            url={doc.url}
                             alt={doc.originalName}
                             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                           />
@@ -177,8 +232,8 @@ function KycDocsModal({
           >
             <Icon name="x" />
           </button>
-          <img
-            src={docSrc(lightbox.url)}
+          <AuthedImage
+            url={lightbox.url}
             alt={lightbox.originalName}
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: '90vw', maxHeight: '88vh', borderRadius: 12, boxShadow: '0 8px 60px rgba(0,0,0,.5)' }}
