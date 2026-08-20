@@ -10,15 +10,19 @@ import { PatternDivider } from '../../src/components/Motif';
 import { AuthScreen, AuthFooterLink } from '../../src/components/AuthShell';
 import { colors, spacing, type, motif } from '../../src/theme';
 import { useAuth } from '../../src/auth/AuthContext';
+import { toE164, isValidNgNumber } from '../../src/lib/format';
 
+const COUNTRY_PREFIX = '+234'; // Nigeria default
 const emailValid = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
 
 /**
- * Worker sign-in: Google, or email + password. Phone-OTP was dropped to match
- * the reference design exactly, which orphaned otp.tsx (deleted); Google
- * sign-in was dropped the same way but restored on request - GoogleButton.tsx
- * came back verbatim from git history (bf22baa^), still fully compatible with
- * the current theme/API.
+ * Worker sign-in: phone+OTP, Google, or email + password. Phone-OTP and
+ * Google were both dropped to match the reference design exactly, which
+ * orphaned otp.tsx and GoogleButton.tsx (both deleted) - restored on request
+ * for the pilot launch, which needs phone-based sign-up for workers without
+ * reliable email. Both came back compatible with the current theme/API with
+ * only layout adaptation needed (old AuthShell/AuthCard -> current
+ * AuthScreen), no logic changes.
  *
  * On password sign-in: if the backend returns `requires2fa` we push the 2FA
  * screen; otherwise we route new/never-completed users to KYC and returning
@@ -26,17 +30,44 @@ const emailValid = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
  */
 export default function LoginScreen() {
   const router = useRouter();
-  const { loginPassword } = useAuth();
+  const { requestOtp, loginPassword } = useAuth();
+
+  // Phone OTP entry (collapsible).
+  const [phoneOpen, setPhoneOpen] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [phoneBusy, setPhoneBusy] = useState(false);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const phoneOk = isValidNgNumber(phone);
   const canSignIn = emailValid(email) && password.length > 0;
 
   function routeAfterAuth(isNewUser: boolean) {
     router.replace(isNewUser ? '/(auth)/kyc' : '/(tabs)/home');
+  }
+
+  async function onPhoneContinue() {
+    if (!phoneOk) {
+      setError('Enter a valid Nigerian mobile number.');
+      return;
+    }
+    setPhoneBusy(true);
+    setError(null);
+    const e164 = toE164(COUNTRY_PREFIX, phone);
+    try {
+      const res = await requestOtp(e164);
+      router.push({
+        pathname: '/(auth)/otp',
+        params: { phone: e164, devCode: res.devCode ?? '' },
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not send a code.');
+    } finally {
+      setPhoneBusy(false);
+    }
   }
 
   async function onSignIn() {
@@ -73,6 +104,45 @@ export default function LoginScreen() {
       }
     >
       {error ? <Banner tone="danger" icon="alert" title="Couldn’t sign in" message={error} /> : null}
+
+      {!phoneOpen ? (
+        <Button
+          label="Continue with phone"
+          icon="phone"
+          variant="secondary"
+          onPress={() => {
+            setError(null);
+            setPhoneOpen(true);
+          }}
+        />
+      ) : (
+        <View style={styles.phoneBlock}>
+          <UnderlineInput
+            label="Mobile number"
+            value={phone}
+            onChangeText={(t) => setPhone(t.replace(/[^\d\s]/g, '').slice(0, 14))}
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            placeholder="803 000 0001"
+            hint={`We'll text a code to ${COUNTRY_PREFIX} ${phone || '…'}`}
+            accessibilityLabel="Phone number"
+            autoFocus
+          />
+          <Button
+            label="Send code"
+            icon="chevron-right"
+            onPress={onPhoneContinue}
+            loading={phoneBusy}
+            disabled={!phoneOk || phoneBusy}
+          />
+        </View>
+      )}
+
+      <View style={styles.dividerRow}>
+        <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
+        <Text style={styles.dividerText}>or continue with</Text>
+        <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
+      </View>
 
       <GoogleButton onSuccess={routeAfterAuth} onError={setError} />
 
@@ -122,4 +192,5 @@ const styles = StyleSheet.create({
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   dividerMotif: { flex: 1 },
   dividerText: { color: colors.textMuted, fontSize: type.size.sm },
+  phoneBlock: { gap: spacing.md },
 });

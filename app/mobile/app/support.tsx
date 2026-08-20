@@ -53,8 +53,8 @@ const FAQS: { q: string; a: string }[] = [
   },
 ];
 
-const CONTACT_EMAIL = 'support@afrizone.work';
-const WHATSAPP_NUMBER = '2348000000000';
+const CONTACT_EMAIL = 'support@afrizonemart.com';
+const WHATSAPP_NUMBER = '2347036149590';
 
 function openEmail() {
   void Linking.openURL(`mailto:${CONTACT_EMAIL}?subject=Afrizone%20Part%20Time%20Support`);
