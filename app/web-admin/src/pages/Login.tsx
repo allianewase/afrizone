@@ -6,9 +6,10 @@ import GoogleButton from '../auth/GoogleButton'
 import Button from '../components/ui/Button'
 import OtpInput from '../components/ui/OtpInput'
 import Icon from '../components/Icon'
-import Logo from '../components/Logo'
+import AuthSplitShell from '../components/AuthSplitShell'
 import './Login.css'
 import Input from '../components/ui/Input'
+import PasswordInput from '../components/ui/PasswordInput'
 import { Label } from '@/components/shadcn/label'
 
 const DEV = import.meta.env.DEV
@@ -66,12 +67,7 @@ export default function Login() {
   }
 
   return (
-    <div className="login-screen">
-      <div className="glass login-card rv in">
-        <div className="login-brand">
-          <Logo size={46} tone="light" tagline />
-        </div>
-
+    <AuthSplitShell>
         {challenge ? (
           /* ===== Step 2: 2FA challenge ===== */
           <>
@@ -156,10 +152,8 @@ export default function Login() {
               </div>
               <div className="field" style={{ marginBottom: 10 }}>
                 <Label htmlFor="password">Password</Label>
-                <Input
+                <PasswordInput
                   id="password"
-                  
-                  type="password"
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -204,7 +198,6 @@ export default function Login() {
             )}
           </>
         )}
-      </div>
-    </div>
+    </AuthSplitShell>
   )
 }

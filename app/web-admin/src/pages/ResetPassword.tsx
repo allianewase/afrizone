@@ -3,9 +3,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import Button from '../components/ui/Button'
 import Icon from '../components/Icon'
-import Logo from '../components/Logo'
+import AuthSplitShell from '../components/AuthSplitShell'
 import './Login.css'
-import Input from '../components/ui/Input'
+import PasswordInput from '../components/ui/PasswordInput'
 import { Label } from '@/components/shadcn/label'
 
 export default function ResetPassword() {
@@ -42,12 +42,7 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="login-screen">
-      <div className="glass login-card rv in">
-        <div className="login-brand">
-          <Logo size={46} tone="light" tagline />
-        </div>
-
+    <AuthSplitShell>
         {done ? (
           <>
             <h1>Password updated</h1>
@@ -87,10 +82,8 @@ export default function ResetPassword() {
             <form onSubmit={onSubmit} noValidate>
               <div className="field" style={{ marginBottom: 14 }}>
                 <Label htmlFor="pw">New password</Label>
-                <Input
+                <PasswordInput
                   id="pw"
-                  
-                  type="password"
                   autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -99,10 +92,8 @@ export default function ResetPassword() {
               </div>
               <div className="field" style={{ marginBottom: 18 }}>
                 <Label htmlFor="pw2">Confirm password</Label>
-                <Input
+                <PasswordInput
                   id="pw2"
-                  
-                  type="password"
                   autoComplete="new-password"
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
@@ -133,7 +124,6 @@ export default function ResetPassword() {
             </Link>
           </>
         )}
-      </div>
-    </div>
+    </AuthSplitShell>
   )
 }

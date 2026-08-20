@@ -1,33 +1,135 @@
-.login-screen {
+/* Split auth shell: a branded left panel + a plain white form panel, shared by
+   Login / ForgotPassword / ResetPassword. Replaces the old single centred
+   card floating on a full-bleed navy backdrop - that backdrop only ever
+   existed because it inherited an inline navy background on <body> meant for
+   the pre-JS boot splash (see index.html), which happened to leak through
+   here too. This gives the panel its own explicit background instead, so
+   it's no longer accidentally coupled to that.
+   Layout/format follows a reference brought by the user (a Termii login
+   screen: split panel, stat/value-prop block, thin top accent bar) - colours
+   are Afrizone's own (--rail navy + --clay gold), not the reference's. */
+.auth-split {
   min-height: 100vh;
   display: grid;
-  place-items: center;
-  padding: 24px;
+  grid-template-columns: minmax(360px, 42%) 1fr;
   position: relative;
-  overflow: hidden;
 }
-.login-screen::before {
+.auth-split::before {
+  /* Thin brand accent bar across the very top, full width. */
   content: '';
   position: absolute;
-  top: -10%;
-  right: -8%;
-  width: 60vmin;
-  height: 60vmin;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: var(--clay);
+  z-index: 2;
+}
+
+/* ── left panel: brand + value prop ─────────────────────────────────────── */
+.auth-panel {
+  position: relative;
+  overflow: hidden;
+  background: var(--rail);
+  color: var(--rail-text);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 28px;
+  padding: 56px 48px;
+}
+.auth-panel::after {
+  content: '';
+  position: absolute;
+  top: -12%;
+  right: -10%;
+  width: 65vmin;
+  height: 65vmin;
   background-image: var(--motif);
   background-repeat: repeat;
-  background-size: 40px 40px;
-  opacity: 0.07;
+  background-size: 44px 44px;
+  opacity: 0.06;
   pointer-events: none;
   -webkit-mask-image: radial-gradient(circle, #000 55%, transparent 75%);
   mask-image: radial-gradient(circle, #000 55%, transparent 75%);
 }
-.login-card {
-  width: 100%;
-  max-width: 420px;
-  padding: 34px 32px;
-  background: var(--surface);
+.auth-panel-brand {
   position: relative;
   z-index: 1;
+}
+.auth-panel-rule {
+  position: relative;
+  z-index: 1;
+  height: 1px;
+  background: var(--rail-line);
+  width: 100%;
+}
+.auth-panel-copy {
+  position: relative;
+  z-index: 1;
+}
+.auth-panel-copy h2 {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+}
+.auth-panel-copy h2 .accent {
+  color: var(--clay);
+}
+.auth-panel-copy p {
+  color: var(--rail-muted);
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0 0 22px;
+  max-width: 40ch;
+}
+.auth-panel-points {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.auth-panel-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--rail-text);
+}
+.auth-panel-point .dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--clay);
+}
+
+@media (max-width: 900px) {
+  .auth-split {
+    grid-template-columns: 1fr;
+  }
+  .auth-panel {
+    display: none;
+  }
+}
+
+/* ── right panel: the form itself ───────────────────────────────────────── */
+.auth-form-wrap {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+}
+.auth-form {
+  width: 100%;
+  max-width: 400px;
+}
+.auth-form label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 .login-brand {
   display: flex;
@@ -35,14 +137,13 @@
   gap: 12px;
   margin-bottom: 26px;
 }
-/* .login-brand .mark / b / .sub are gone: the three auth screens render the
-   Logo component inside this wrapper and nothing else, so those rules had
-   nothing to match. */
-.login-card h1 {
+.login-card h1,
+.auth-form h1 {
   font-size: 28px;
   font-weight: 800;
 }
-.login-card .lede {
+.login-card .lede,
+.auth-form .lede {
   color: var(--muted);
   font-size: 14px;
   margin: 6px 0 26px;
@@ -123,6 +224,35 @@
   background-repeat: repeat-x;
   background-size: 20px 20px;
   opacity: 0.4;
+}
+
+/* password field with a visibility toggle */
+.pw-field {
+  position: relative;
+}
+.pw-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  color: var(--faint);
+  cursor: pointer;
+}
+.pw-toggle:hover {
+  color: var(--muted);
+  background: var(--glass);
+}
+.pw-toggle:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
 }
 
 /* reset-password success */

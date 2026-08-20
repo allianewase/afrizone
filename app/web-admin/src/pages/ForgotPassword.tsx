@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import Button from '../components/ui/Button'
 import Icon from '../components/Icon'
-import Logo from '../components/Logo'
+import AuthSplitShell from '../components/AuthSplitShell'
 import './Login.css'
 import Input from '../components/ui/Input'
 import { Label } from '@/components/shadcn/label'
@@ -34,12 +34,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="login-screen">
-      <div className="glass login-card rv in">
-        <div className="login-brand">
-          <Logo size={46} tone="light" tagline />
-        </div>
-
+    <AuthSplitShell>
         {sent ? (
           <>
             <h1>Check your email</h1>
@@ -109,7 +104,6 @@ export default function ForgotPassword() {
             </Link>
           </>
         )}
-      </div>
-    </div>
+    </AuthSplitShell>
   )
 }
