@@ -39,7 +39,11 @@ export function loadGoogleIdentity(): Promise<GisId> {
       return
     }
     const script = document.createElement('script')
-    script.src = 'https://accounts.google.com/gsi/client'
+    // hl=en pins the rendered button/consent text to English regardless of
+    // the browser's or the signed-in Google account's language setting -
+    // otherwise GIS auto-localizes ("Se connecter avec Google" for French
+    // browsers/accounts), which doesn't match the rest of the admin console.
+    script.src = 'https://accounts.google.com/gsi/client?hl=en'
     script.async = true
     script.defer = true
     script.onload = () => {
