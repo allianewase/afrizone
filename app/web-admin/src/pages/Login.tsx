@@ -17,8 +17,8 @@ export default function Login() {
   const { user, login, verifyTwoFactor, applySession, loading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [email, setEmail] = useState('admin@afrizone.work')
-  const [password, setPassword] = useState('afrizone123')
+  const [email, setEmail] = useState(DEV ? 'admin@afrizone.work' : '')
+  const [password, setPassword] = useState(DEV ? 'afrizone123' : '')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -197,9 +197,11 @@ export default function Login() {
 
             <GoogleButton onSuccess={applySession} />
 
-            <div className="login-hint">
-              Demo · <b>admin@afrizone.work</b> / <b>afrizone123</b>
-            </div>
+            {DEV && (
+              <div className="login-hint">
+                Demo · <b>admin@afrizone.work</b> / <b>afrizone123</b>
+              </div>
+            )}
           </>
         )}
       </div>
