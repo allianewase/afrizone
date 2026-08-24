@@ -22,6 +22,7 @@ import {
   verifyChallenge,
   publicUser,
   hashPassword,
+  isAdmin,
 } from "../auth";
 import { Role } from "../types";
 import { totp } from "../services/totp";
@@ -152,7 +153,10 @@ router.post("/google", async (req, res) => {
 
   if (ctx === "admin") {
     // Invite-only: must already exist as an admin. Do NOT auto-create.
-    if (!user || user.role === "WORKER") {
+    // Allow-by-list. `user.role === "WORKER"` refused exactly one role and
+    // admitted every other, so adding any new non-admin role (COURIER is on
+    // the roadmap) would have let holders of it sign in to the admin console.
+    if (!user || !isAdmin(user.role)) {
       return res.status(400).json({ error: "No admin account for this Google email" });
     }
   } else if (!user) {

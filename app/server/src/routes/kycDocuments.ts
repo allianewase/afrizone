@@ -1,6 +1,6 @@
 import { Router, Response as ExpressResponse } from "express";
 import { prisma } from "../prisma";
-import { requireAuth, AuthedRequest, verifyToken } from "../auth";
+import { requireAuth, AuthedRequest, verifyToken, isAdmin } from "../auth";
 import { uploadToR2, resolveUrl, getFileStream } from "../services/storage";
 
 const DOC_TYPES = ["ID", "SELFIE", "DOCS"] as const;
@@ -133,6 +133,31 @@ export async function handleKycUpload(request: Request): Promise<Response> {
 }
 
 /**
+ * Who may read a stored KYC document. ALLOW-BY-LIST: it enumerates the two
+ * cases that GRANT access and refuses everything else, including role values
+ * this file has never heard of.
+ *
+ * It replaces `if (!owns && payload.role === "WORKER")`, which enumerated the
+ * one role it wanted to DENY and therefore granted every other role. That was
+ * safe only by accident, because WORKER happened to be the sole non-admin
+ * entry in ROLES. Adding one role there - COURIER is on the roadmap - would
+ * silently have handed every holder of it read access to every worker's
+ * government ID and selfie.
+ *
+ * Exported so the "unknown role is denied" property can be tested directly: it
+ * cannot be exercised over HTTP, because verifyToken rejects any role that is
+ * not already in ROLES.
+ */
+export function canReadKycDocument(
+  requester: { sub: string; role?: string | null },
+  doc: { userId: string } | null | undefined
+): boolean {
+  if (!doc) return false; // no row -> nothing to authorise
+  if (doc.userId === requester.sub) return true; // the owner
+  return isAdmin(requester.role); // ADMIN_ROLES only
+}
+
+/**
  * GET /api/me/kyc/documents/file/:filename: stream a document's bytes back,
  * after checking the requester owns it (admins may view any worker's).
  * Replaces the old express.static /uploads mount, which served local-disk
@@ -154,10 +179,22 @@ export async function handleKycFileGet(request: Request, filename: string): Prom
     });
   }
 
-  const owns = await prisma.kycDocument.findFirst({
-    where: { filename, userId: payload.sub },
-  });
-  if (!owns && payload.role === "WORKER") {
+  // Resolve the row FIRST, then authorise against it. Two changes from the old
+  // `!owns && role === "WORKER"` form:
+  //
+  //  - The lookup is by filename alone, so a document with NO backing row can
+  //    no longer be streamed. Previously the query was scoped to the caller,
+  //    was consulted only as a deny signal, and an admin-role token therefore
+  //    reached the R2 read for any caller-supplied key - including objects
+  //    under the kyc/ prefix that no KycDocument row points at.
+  //  - The decision is allow-by-list, so an unrecognised role is refused
+  //    rather than granted.
+  //
+  // filename is not unique in the schema, hence findFirst.
+  const doc = await prisma.kycDocument.findFirst({ where: { filename } });
+  if (!canReadKycDocument(payload, doc)) {
+    // 404 rather than 403: a 403 would confirm the document exists to someone
+    // not entitled to know that.
     return new Response(JSON.stringify({ error: "Not found" }), {
       status: 404,
       headers: { "Content-Type": "application/json" },
