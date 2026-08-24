@@ -9,26 +9,35 @@ export const adminRouter = Router();
 const ENTITY_TYPES = ["PAYMENT", "TIMESHEET"] as const;
 type EntityType = (typeof ENTITY_TYPES)[number];
 
-/** Fetch the underlying entity and verify it belongs to this worker. */
+/**
+ * Fetch the underlying entity, verify it belongs to this worker, and capture
+ * the status the dispute is interrupting so it can be restored on resolution.
+ *
+ * `priorStatus` matters: resolving a dispute used to hard-code the entity back
+ * to APPROVED regardless of where it came from. For a payment that had already
+ * been RELEASED that pushed it back into the release queue to be paid a SECOND
+ * time, while the wallet - which counts released payments but still counts the
+ * withdrawal against them - showed a negative balance in the meantime.
+ */
 async function resolveEntity(
   type: EntityType,
   entityId: string,
   workerId: string
-): Promise<{ title: string; gross?: number; net?: number } | null> {
+): Promise<{ title: string; gross?: number; net?: number; priorStatus: string } | null> {
   if (type === "PAYMENT") {
     const p = await prisma.payment.findUnique({
       where: { id: entityId },
       include: { task: true },
     });
     if (!p || p.workerId !== workerId) return null;
-    return { title: p.task.title, gross: p.gross, net: p.net };
+    return { title: p.task.title, gross: p.gross, net: p.net, priorStatus: p.status };
   } else {
     const t = await prisma.timesheet.findUnique({
       where: { id: entityId },
       include: { task: true },
     });
     if (!t || t.workerId !== workerId) return null;
-    return { title: t.task.title };
+    return { title: t.task.title, priorStatus: t.status };
   }
 }
 
@@ -113,16 +122,22 @@ adminRouter.patch(
       include: { worker: { select: { id: true, name: true } } },
     });
 
-    // Un-flag the underlying entity so it can continue its normal lifecycle.
+    // Un-flag the underlying entity so it can continue its normal lifecycle,
+    // restoring the status the dispute interrupted. Hard-coding APPROVED here
+    // discarded that state: a PENDING payment jumped the approval queue, and a
+    // RELEASED one (now blocked at creation, but historic rows exist) went back
+    // to be paid twice. Rows predating priorStatus fall back to the old
+    // behaviour, which is the best available answer for them.
+    const restored = existing.priorStatus ?? "APPROVED";
     if (existing.entityType === "PAYMENT") {
       await prisma.payment.update({
         where: { id: existing.entityId },
-        data: { status: "APPROVED" },
+        data: { status: restored },
       });
     } else {
       await prisma.timesheet.update({
         where: { id: existing.entityId },
-        data: { status: "APPROVED" },
+        data: { status: restored },
       });
     }
 
@@ -171,6 +186,16 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
     return res.status(409).json({ error: "An open dispute already exists for this item" });
   }
 
+  // Money that has already left cannot be pulled back into the dispute
+  // lifecycle: flipping a RELEASED payment to DISPUTED and then resolving it
+  // returned it to the release queue to be paid a second time. A complaint
+  // about an already-paid amount is a support matter, not a state change.
+  if (entityType === "PAYMENT" && entity.priorStatus === "RELEASED") {
+    return res.status(409).json({
+      error: "This payment has already been released. Contact support about it instead.",
+    });
+  }
+
   // Mark the underlying entity as DISPUTED.
   if (entityType === "PAYMENT") {
     await prisma.payment.update({ where: { id: entityId }, data: { status: "DISPUTED" } });
@@ -179,7 +204,7 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
   }
 
   const dispute = await prisma.dispute.create({
-    data: { workerId, entityType, entityId, reason: r },
+    data: { workerId, entityType, entityId, reason: r, priorStatus: entity.priorStatus },
   });
 
   res.status(201).json({

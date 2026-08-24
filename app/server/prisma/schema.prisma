@@ -341,6 +341,11 @@ model Dispute {
   reason     String
   status     String   @default("OPEN") // DisputeStatus: OPEN | RESOLVED | CLOSED
   resolution String?  // admin note when resolving / closing
+  // Status of the disputed Payment/Timesheet at the moment the dispute was
+  // raised, so closing the dispute restores it instead of guessing. Nullable
+  // for rows created before this column existed - those fall back to APPROVED,
+  // the old hard-coded behaviour.
+  priorStatus String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

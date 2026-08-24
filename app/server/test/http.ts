@@ -30,8 +30,21 @@ export async function apiGet(path: string, token?: string): Promise<ApiResult> {
 }
 
 export async function apiPost(path: string, json?: unknown, token?: string): Promise<ApiResult> {
+  return apiSend("POST", path, json, token);
+}
+
+export async function apiPatch(path: string, json?: unknown, token?: string): Promise<ApiResult> {
+  return apiSend("PATCH", path, json, token);
+}
+
+async function apiSend(
+  method: "POST" | "PATCH",
+  path: string,
+  json?: unknown,
+  token?: string
+): Promise<ApiResult> {
   const res = await SELF.fetch(`http://local.test${path}`, {
-    method: "POST",
+    method,
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -1,0 +1,13 @@
+-- Records the status of the disputed Payment/Timesheet at the moment the
+-- dispute was raised, so resolving the dispute restores that status instead of
+-- hard-coding APPROVED.
+--
+-- Why it matters: resolving a dispute previously forced the entity to APPROVED
+-- regardless of where it came from. A payment that had already been RELEASED
+-- therefore re-entered the release queue and could be paid a SECOND time, and a
+-- PENDING payment skipped the approval step entirely.
+--
+-- Nullable and additive: existing rows keep NULL and fall back to the previous
+-- APPROVED behaviour, so this is safe to apply to a populated database and
+-- needs no backfill.
+ALTER TABLE "Dispute" ADD COLUMN "priorStatus" TEXT;
