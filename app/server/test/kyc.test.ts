@@ -14,18 +14,39 @@ describe("worker KYC submission", () => {
         bankCode: "058",
         bankAccountNumber: "0123456789",
         bankName: "GTBank",
-        tier: "DISPATCH_RIDER",
+        tier: "DISPATCH",
       },
       token
     );
 
     expect(res.status).toBe(200);
     expect(res.body.kycStatus).toBe("PENDING");
-    expect(res.body.tiers).toContain("DISPATCH_RIDER");
+    expect(res.body.tiers).toContain("DISPATCH");
     expect(res.body.bankMasked).toBe("****1234");
 
     const stored = await testPrisma().user.findUnique({ where: { id: user.id } });
     expect(stored?.tin).toBe("12345678");
+  });
+
+  // Regression: `tier as Tier` was a compile-time cast only, so ANY string off
+  // the request body was stored. This column is what applications.ts gates task
+  // eligibility on, so an unchecked tier meant a worker could self-assert
+  // whatever a task required and apply to it. This test previously asserted the
+  // bug - it submitted "DISPATCH_RIDER", which is not a real tier, and expected
+  // it to be stored.
+  it("rejects a tier that is not in the known tier list", async () => {
+    const { token, user } = await createUserWithToken("WORKER");
+
+    const res = await apiPost(
+      "/api/me/kyc/submit",
+      { tin: "12345678", tier: "DISPATCH_RIDER" },
+      token
+    );
+
+    expect(res.status).toBe(400);
+
+    const stored = await testPrisma().user.findUnique({ where: { id: user.id } });
+    expect(stored?.tiers ?? "").not.toContain("DISPATCH_RIDER");
   });
 });
 

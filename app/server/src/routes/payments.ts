@@ -1,13 +1,15 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
-import { requireAuth, AuthedRequest } from "../auth";
+import { requireAuth, requireRole, AuthedRequest } from "../auth";
 import { writeAudit } from "../util/audit";
 import { notifyWorker, notifyWorkers } from "../services/push";
 
 const router = Router();
 
 // GET /api/payments?status= → joined with worker {id,name} and task {id,title}
-router.get("/", requireAuth, async (req: AuthedRequest, res: Response) => {
+// Admin-only: the worker's own view is GET /api/me/transactions and
+// GET /api/me/payments/:id, both already scoped to req.user.id.
+router.get("/", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGER"), async (req: AuthedRequest, res: Response) => {
   const status = req.query.status ? String(req.query.status) : undefined;
   const payments = await prisma.payment.findMany({
     where: status ? { status } : undefined,
@@ -32,7 +34,7 @@ router.get("/", requireAuth, async (req: AuthedRequest, res: Response) => {
 });
 
 // POST /api/payments/:id/release → sets RELEASED, writes AuditLog
-router.post("/:id/release", requireAuth, async (req: AuthedRequest, res: Response) => {
+router.post("/:id/release", requireAuth, requireRole("SUPER_ADMIN"), async (req: AuthedRequest, res: Response) => {
   const payment = await prisma.payment.findUnique({ where: { id: req.params.id } });
   if (!payment) return res.status(404).json({ error: "Payment not found" });
   if (payment.status === "RELEASED") return res.status(400).json({ error: "Payment already released" });
@@ -60,7 +62,7 @@ router.post("/:id/release", requireAuth, async (req: AuthedRequest, res: Respons
 });
 
 // POST /api/payments/release-all → releases all APPROVED → {released, totalNet}
-router.post("/release-all", requireAuth, async (req: AuthedRequest, res: Response) => {
+router.post("/release-all", requireAuth, requireRole("SUPER_ADMIN"), async (req: AuthedRequest, res: Response) => {
   const approved = await prisma.payment.findMany({ where: { status: "APPROVED" } });
   const totalNet = approved.reduce((sum, p) => sum + p.net, 0);
 

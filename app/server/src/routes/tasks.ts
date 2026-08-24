@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
-import { requireAuth, AuthedRequest } from "../auth";
+import { requireAuth, requireRole, isAdmin, AuthedRequest } from "../auth";
 import { tiersToArray } from "../types";
 
 const router = Router();
@@ -22,7 +22,11 @@ router.get("/", requireAuth, async (_req: AuthedRequest, res: Response) => {
 });
 
 // POST /api/tasks → create
-router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
+// Admin-only. Guarded per-handler, NOT at the router: GET / and GET /:id below
+// are the mobile app's task feed and must stay open to workers.
+// createdById is attribution, not authorization - an unguarded version let a
+// worker mint a task with any budget and then apply to it.
+router.post("/", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGER"), async (req: AuthedRequest, res: Response) => {
   const b = req.body || {};
   if (!b.title || !b.description || !b.category || !b.tier || !b.payModel) {
     return res.status(400).json({ error: "title, description, category, tier, payModel are required" });
@@ -94,11 +98,19 @@ router.get("/:id", requireAuth, async (req: AuthedRequest, res: Response) => {
 
   const { applications: _drop, ...taskFields } = task as any;
   const counts = await withCounts(taskFields);
+  // Workers legitimately read this route (the mobile task-detail screen), but
+  // must not see who else applied - the applicant list carries other workers'
+  // names, tiers, KYC status and ratings. Allow-by-list, not
+  // `role === "WORKER"`: a deny-by-exception check fails open for any
+  // unexpected role value.
+  if (!isAdmin(req.user?.role)) return res.json(counts);
   res.json({ ...counts, applications });
 });
 
 // PATCH /api/tasks/:id → partial update
-router.patch("/:id", requireAuth, async (req: AuthedRequest, res: Response) => {
+// Admin-only: rate, budget and status are writable here, so an unguarded
+// version let any worker rewrite a task's pay before claiming it.
+router.patch("/:id", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGER"), async (req: AuthedRequest, res: Response) => {
   const existing = await prisma.task.findUnique({ where: { id: req.params.id } });
   if (!existing) return res.status(404).json({ error: "Task not found" });
 

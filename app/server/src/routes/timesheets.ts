@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
-import { requireAuth, AuthedRequest } from "../auth";
+import { requireAuth, requireRole, AuthedRequest } from "../auth";
 import { tiersToArray } from "../types";
 import { computeWht } from "../util/tax";
 
@@ -9,7 +9,8 @@ const router = Router();
 const SLA_HOURS = 48; // 24–48h SLA per design spec; use 48h ceiling.
 
 // GET /api/timesheets?status=SUBMITTED → joined w/ worker + task + slaHoursLeft
-router.get("/", requireAuth, async (req: AuthedRequest, res: Response) => {
+// Admin-only: the worker's own view is GET /api/me/timesheets, already scoped.
+router.get("/", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGER"), async (req: AuthedRequest, res: Response) => {
   const status = req.query.status ? String(req.query.status) : undefined;
   const sheets = await prisma.timesheet.findMany({
     where: status ? { status } : undefined,
@@ -75,7 +76,10 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
 
 // POST /api/timesheets/:id/approve → creates a Payment (status APPROVED),
 // gross = hours*task.rate (HOURLY) or task.budget (FIXED).
-router.post("/:id/approve", requireAuth, async (req: AuthedRequest, res: Response) => {
+// Admin-only. This is the money-minting endpoint: approving a timesheet
+// creates the Payment row (gross = hours * rate). A worker submits their own
+// hours, so letting them also approve was a complete self-serve payout chain.
+router.post("/:id/approve", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGER"), async (req: AuthedRequest, res: Response) => {
   const sheet = await prisma.timesheet.findUnique({ where: { id: req.params.id }, include: { task: true } });
   if (!sheet) return res.status(404).json({ error: "Timesheet not found" });
   if (sheet.status === "APPROVED") return res.status(400).json({ error: "Timesheet already approved" });
@@ -113,7 +117,7 @@ router.post("/:id/approve", requireAuth, async (req: AuthedRequest, res: Respons
 });
 
 // POST /api/timesheets/:id/dispute → body {reason}
-router.post("/:id/dispute", requireAuth, async (req: AuthedRequest, res: Response) => {
+router.post("/:id/dispute", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGER"), async (req: AuthedRequest, res: Response) => {
   const { reason } = req.body || {};
   const sheet = await prisma.timesheet.findUnique({ where: { id: req.params.id } });
   if (!sheet) return res.status(404).json({ error: "Timesheet not found" });

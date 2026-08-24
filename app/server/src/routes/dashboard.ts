@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
-import { requireAuth, AuthedRequest } from "../auth";
+import { requireAuth, requireRole, AuthedRequest } from "../auth";
 
 const router = Router();
 
@@ -29,7 +29,7 @@ function monthBounds(year: number, month: number) {
 }
 
 // GET /api/dashboard/stats
-router.get("/stats", requireAuth, async (_req: AuthedRequest, res: Response) => {
+router.get("/stats", requireAuth, requireRole("SUPER_ADMIN", "HR_ADMIN", "TASK_MANAGER"), async (_req: AuthedRequest, res: Response) => {
   const now = new Date();
   const { start: monthStart, end: monthEnd } = monthBounds(now.getFullYear(), now.getMonth());
 

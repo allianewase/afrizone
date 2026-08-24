@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
-import { requireAuth, AuthedRequest } from "../auth";
+import { requireAuth, requireRole, isAdmin, AuthedRequest } from "../auth";
 import { EMPLOYMENT_TYPES, JOB_STATUSES } from "../types";
 
 const router = Router();
@@ -19,7 +19,7 @@ router.get("/", requireAuth, async (_req: AuthedRequest, res: Response) => {
 });
 
 // POST /api/jobs → create
-router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
+router.post("/", requireAuth, requireRole("SUPER_ADMIN", "HR_ADMIN"), async (req: AuthedRequest, res: Response) => {
   const b = req.body || {};
   if (!b.title || !b.department || !b.location || !b.employmentType || !b.description) {
     return res
@@ -63,11 +63,14 @@ router.get("/:id", requireAuth, async (req: AuthedRequest, res: Response) => {
 
   const { candidates, ...jobFields } = job as any;
   const counts = await withCounts(jobFields);
+  // Workers browse job listings from the mobile Jobs tab, but the candidate
+  // list is other applicants' names, emails, phone numbers and CV notes.
+  if (!isAdmin(req.user?.role)) return res.json(counts);
   res.json({ ...counts, candidates });
 });
 
 // PATCH /api/jobs/:id → partial update (e.g. status)
-router.patch("/:id", requireAuth, async (req: AuthedRequest, res: Response) => {
+router.patch("/:id", requireAuth, requireRole("SUPER_ADMIN", "HR_ADMIN"), async (req: AuthedRequest, res: Response) => {
   const existing = await prisma.job.findUnique({ where: { id: req.params.id } });
   if (!existing) return res.status(404).json({ error: "Job not found" });
 

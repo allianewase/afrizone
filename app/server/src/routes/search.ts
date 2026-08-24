@@ -1,12 +1,13 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
-import { requireAuth, AuthedRequest } from "../auth";
+import { requireAuth, requireRole, AuthedRequest } from "../auth";
 
 const router = Router();
 
 // GET /api/search?q=<query>  (min 2 chars)
 // Returns tasks and workers matching the query string.
-router.get("/", requireAuth, async (req: AuthedRequest, res: Response) => {
+// Admin-only: searches across every worker, task and payment on the platform.
+router.get("/", requireAuth, requireRole("SUPER_ADMIN", "HR_ADMIN", "TASK_MANAGER"), async (req: AuthedRequest, res: Response) => {
   const q = String(req.query.q ?? "").trim();
   if (q.length < 2) return res.json({ tasks: [], workers: [] });
 

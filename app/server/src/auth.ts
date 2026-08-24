@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
-import { Role, tiersToArray } from "./types";
+import { Role, ROLES, tiersToArray } from "./types";
 
 const DEFAULT_DEV_SECRET = "dev-secret-change-me";
 
@@ -47,11 +47,35 @@ export interface AuthedRequest extends Request {
 }
 
 export function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, jwtSecret(), { expiresIn: TOKEN_TTL });
+  // typ marks this positively as a full session token. Challenge tokens never
+  // carry it, so a future strict check can require it outright; today we reject
+  // on the negative signals below so that already-issued tokens keep working.
+  return jwt.sign({ ...payload, typ: "session" }, jwtSecret(), { expiresIn: TOKEN_TTL });
 }
 
+/**
+ * Decode a FULL SESSION token. Rejects anything that is merely signed by us.
+ *
+ * A 2FA challenge is signed with the same key (signChallenge below), so a bare
+ * jwt.verify() cast used to accept one as a session. That made 2FA decorative:
+ * the challenge handed out after the password step could be sent as a bearer
+ * token, used to re-key the victim's authenticator via /2fa/setup, and
+ * exchanged for a genuine token. It was also role-less, so every
+ * `if (role === "WORKER")` guard downstream failed open.
+ *
+ * Both holes close here: reject the challenge discriminator explicitly, and
+ * require a role that is actually in ROLES - a payload without a valid role is
+ * never a session, whatever else it contains.
+ */
 export function verifyToken(token: string): JwtPayload {
-  return jwt.verify(token, jwtSecret()) as JwtPayload;
+  const p = jwt.verify(token, jwtSecret()) as JwtPayload & { twofa?: unknown };
+  if (!p || (p as any).twofa === true) {
+    throw new Error("2FA challenge token is not a session token");
+  }
+  if (!p.role || !ROLES.includes(p.role)) {
+    throw new Error("Token carries no valid role");
+  }
+  return p;
 }
 
 export function signChallenge(userId: string): string {
@@ -75,11 +99,28 @@ export async function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, 10);
 }
 
-// Shape a User row for API responses (tiers as array, no passwordHash).
+// Shape a User row for API responses (tiers as array, no secrets).
+//
+// totpSecret MUST be stripped: this shape is returned by GET /api/auth/me and
+// by the admin worker routes, and leaking the secret lets anyone holding the
+// response generate valid 2FA codes for that account - defeating 2FA without
+// needing the authenticator at all. Same for the raw password hash.
 export function publicUser(u: any) {
   if (!u) return u;
-  const { passwordHash, tiers, ...rest } = u;
+  const { passwordHash, totpSecret, tiers, ...rest } = u;
   return { ...rest, tiers: tiersToArray(tiers) };
+}
+
+/** Roles that may act administratively. WORKER is deliberately absent. */
+export const ADMIN_ROLES: Role[] = ["SUPER_ADMIN", "HR_ADMIN", "TASK_MANAGER"];
+
+/**
+ * Allow-by-list admin test. Prefer this over `role === "WORKER"` checks: those
+ * are deny-by-exception and fail OPEN for any role the author didn't foresee
+ * (an absent role, or any role added later).
+ */
+export function isAdmin(role?: string | null): boolean {
+  return !!role && ADMIN_ROLES.includes(role as Role);
 }
 
 export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
@@ -89,6 +130,10 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
     return res.status(401).json({ error: "Missing or invalid Authorization header" });
   }
   try {
+    // verifyToken now rejects 2FA challenge tokens and any payload without a
+    // valid role, so req.user.role is always a real Role past this point. That
+    // matters beyond this function: downstream handlers branch on the role, and
+    // a role-less req.user made every one of those branches fail open.
     const payload = verifyToken(token);
     req.user = { id: payload.sub, role: payload.role, email: payload.email };
     return next();

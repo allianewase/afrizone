@@ -24,7 +24,9 @@ function wallet(
 }
 
 // GET /api/workers → users where role=WORKER
-router.get("/", requireAuth, async (_req: AuthedRequest, res: Response) => {
+// Admin-only: the full worker directory. Guarded per-handler to match the
+// existing style in this file (the KYC-review routes below already do).
+router.get("/", requireAuth, requireRole("SUPER_ADMIN", "HR_ADMIN", "TASK_MANAGER"), async (_req: AuthedRequest, res: Response) => {
   const workers = await prisma.user.findMany({
     where: { role: "WORKER" },
     orderBy: { name: "asc" },
@@ -43,7 +45,9 @@ router.get("/", requireAuth, async (_req: AuthedRequest, res: Response) => {
 });
 
 // GET /api/workers/:id → full worker + applications/payments summary + wallet
-router.get("/:id", requireAuth, async (req: AuthedRequest, res: Response) => {
+// Admin-only: returns the full user row (phone, TIN, bank details) plus every
+// application, payment and a derived wallet for that worker.
+router.get("/:id", requireAuth, requireRole("SUPER_ADMIN", "HR_ADMIN", "TASK_MANAGER"), async (req: AuthedRequest, res: Response) => {
   const worker = await prisma.user.findUnique({
     where: { id: req.params.id },
     include: {

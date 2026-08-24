@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
 import { requireAuth, AuthedRequest } from "../auth";
-import { tiersToArray, tiersToString, Tier } from "../types";
+import { tiersToArray, tiersToString, Tier, TIERS } from "../types";
 import { isSmileConfigured, submitDocumentVerification, NgIdType, NG_ID_TYPES } from "../services/smileIdentity";
 import { getFileBuffer } from "../services/storage";
 
@@ -427,9 +427,25 @@ router.post("/kyc/submit", requireAuth, async (req: AuthedRequest, res: Response
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
   if (!user) return res.status(404).json({ error: "User not found" });
 
+  // `tier as Tier` is a compile-time cast that does nothing at runtime, so this
+  // previously accepted ANY string off the request body. That mattered because
+  // applications.ts gates task eligibility solely on this column: a worker
+  // could self-assert whatever tier a task required and apply to it
+  // immediately. Validate against the real list before storing.
+  //
+  // NOTE: this still lets a worker self-declare a VALID tier without admin
+  // approval, which the mobile KYC copy ("an admin still needs to approve your
+  // tier") promises does not happen. Closing that properly means promoting
+  // tiers only on admin approval - a behavioural change to the worker journey,
+  // so it needs product sign-off rather than being slipped into a security fix.
   let tiers = tiersToArray(user.tiers);
-  if (tier && !tiers.includes(tier as Tier)) {
-    tiers = [...tiers, tier as Tier];
+  if (tier !== undefined && tier !== null && tier !== "") {
+    if (!TIERS.includes(tier as Tier)) {
+      return res.status(400).json({ error: "Invalid tier" });
+    }
+    if (!tiers.includes(tier as Tier)) {
+      tiers = [...tiers, tier as Tier];
+    }
   }
 
   let kycStatus = "PENDING";

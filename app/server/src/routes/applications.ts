@@ -1,13 +1,14 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
-import { requireAuth, AuthedRequest } from "../auth";
+import { requireAuth, requireRole, AuthedRequest } from "../auth";
 import { tiersToArray } from "../types";
 import { notifyWorker } from "../services/push";
 
 const router = Router();
 
 // GET /api/applications?status=APPLIED → joined with worker + task
-router.get("/", requireAuth, async (req: AuthedRequest, res: Response) => {
+// Admin-only: the worker's own view is GET /api/me/applications, already scoped.
+router.get("/", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGER"), async (req: AuthedRequest, res: Response) => {
   const status = req.query.status ? String(req.query.status) : undefined;
   const apps = await prisma.application.findMany({
     where: status ? { status } : undefined,
@@ -66,7 +67,10 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
 });
 
 // POST /api/applications/:id/approve → bump task filled; if full → task FILLED
-router.post("/:id/approve", requireAuth, async (req: AuthedRequest, res: Response) => {
+// Admin-only. Approving flips the task to FILLED and auto-creates a signed
+// contract, so an unguarded version let a worker onboard themselves onto any
+// task by approving their own application.
+router.post("/:id/approve", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGER"), async (req: AuthedRequest, res: Response) => {
   const app = await prisma.application.findUnique({ where: { id: req.params.id }, include: { task: true } });
   if (!app) return res.status(404).json({ error: "Application not found" });
   if (app.status === "APPROVED") return res.status(400).json({ error: "Application already approved" });
@@ -106,7 +110,7 @@ router.post("/:id/approve", requireAuth, async (req: AuthedRequest, res: Respons
 });
 
 // POST /api/applications/:id/reject → body {reason}
-router.post("/:id/reject", requireAuth, async (req: AuthedRequest, res: Response) => {
+router.post("/:id/reject", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGER"), async (req: AuthedRequest, res: Response) => {
   const { reason } = req.body || {};
   const app = await prisma.application.findUnique({ where: { id: req.params.id } });
   if (!app) return res.status(404).json({ error: "Application not found" });

@@ -64,6 +64,20 @@ router.post("/2fa/setup", requireAuth, async (req: AuthedRequest, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
   if (!user) return res.status(404).json({ error: "User not found" });
 
+  // Re-keying an ALREADY-ENABLED authenticator must prove control of the
+  // current one. Without this, anyone who reaches this endpoint can silently
+  // replace a live secret with one they generated and then pass 2FA with it,
+  // which turns 2FA into a formality rather than a second factor.
+  if (user.totpEnabled) {
+    const { code } = req.body || {};
+    if (!code) {
+      return res.status(400).json({ error: "Enter a code from your current authenticator to re-configure 2FA" });
+    }
+    if (!user.totpSecret || !totp.verify(user.totpSecret, String(code))) {
+      return res.status(400).json({ error: "Invalid code" });
+    }
+  }
+
   const secret = totp.generateSecret();
   await prisma.user.update({ where: { id: user.id }, data: { totpSecret: secret } });
 

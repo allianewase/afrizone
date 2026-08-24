@@ -1,13 +1,14 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
-import { requireAuth, AuthedRequest } from "../auth";
+import { requireAuth, requireRole, isAdmin, AuthedRequest } from "../auth";
 import { writeAudit } from "../util/audit";
 import { STAGES } from "../types";
 
 const router = Router();
 
 // GET /api/candidates?jobId= → JobApplication[] joined with job {id,title}
-router.get("/", requireAuth, async (req: AuthedRequest, res: Response) => {
+// Admin-only: candidate rows carry name, email, phone and CV notes.
+router.get("/", requireAuth, requireRole("SUPER_ADMIN", "HR_ADMIN"), async (req: AuthedRequest, res: Response) => {
   const jobId = req.query.jobId ? String(req.query.jobId) : undefined;
   const candidates = await prisma.jobApplication.findMany({
     where: jobId ? { jobId } : undefined,
@@ -58,7 +59,7 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
 });
 
 // POST /api/candidates/:id/move → body {stage}; writes AuditLog "candidate.move"
-router.post("/:id/move", requireAuth, async (req: AuthedRequest, res: Response) => {
+router.post("/:id/move", requireAuth, requireRole("SUPER_ADMIN", "HR_ADMIN"), async (req: AuthedRequest, res: Response) => {
   const { stage } = req.body || {};
   if (!stage || !STAGES.includes(stage)) {
     return res.status(400).json({ error: `stage must be one of ${STAGES.join(", ")}` });

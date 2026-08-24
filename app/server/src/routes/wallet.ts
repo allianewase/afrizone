@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import crypto from "crypto";
 import { prisma } from "../prisma";
-import { requireAuth, AuthedRequest } from "../auth";
+import { requireAuth, requireRole, AuthedRequest } from "../auth";
 import { paystack } from "../services/paystack";
 
 const router = Router();
@@ -103,15 +103,28 @@ router.post("/withdraw", requireAuth, async (req: AuthedRequest, res: Response) 
   return res.status(201).json({ ...withdrawal, simulated: true });
 });
 
-// DEV ONLY: settle the caller's PROCESSING withdrawals to PAID, to demo the
-// full flow without webhooks. Disabled when Paystack is live (real settlement
-// must come from the verified webhook).
-router.post("/dev/settle", requireAuth, async (req: AuthedRequest, res: Response) => {
-  if (paystack.enabled) {
+// DEV ONLY, ADMIN ONLY: settle PROCESSING withdrawals to PAID so the full
+// wallet flow can be demoed without Paystack webhooks. Optionally scoped to one
+// worker via body {workerId}; otherwise settles every PROCESSING withdrawal.
+// Disabled in production and whenever Paystack is live (real settlement must
+// come from the verified webhook).
+router.post("/dev/settle", requireAuth, requireRole("SUPER_ADMIN"), async (req: AuthedRequest, res: Response) => {
+  // Gate on the ENVIRONMENT, not on Paystack config. Keying it to
+  // `paystack.enabled` meant that in exactly the deployments where withdrawals
+  // are simulated (no PAYSTACK_SECRET), this endpoint was live - and being
+  // self-scoped to req.user.id was the problem, not the protection: any worker
+  // could mark their own withdrawals PAID.
+  if (process.env.NODE_ENV === "production" || paystack.enabled) {
     return res.status(403).json({ error: "Live mode: settlement happens via the Paystack webhook." });
   }
+  // Scoping to req.user.id would now settle the ADMIN's own withdrawals, which
+  // is not what this endpoint is for. Take an explicit target instead.
+  const { workerId } = req.body || {};
   const result = await prisma.withdrawal.updateMany({
-    where: { workerId: req.user!.id, status: "PROCESSING" },
+    where: {
+      status: "PROCESSING",
+      ...(workerId ? { workerId: String(workerId) } : {}),
+    },
     data: { status: "PAID" },
   });
   res.json({ settled: result.count });

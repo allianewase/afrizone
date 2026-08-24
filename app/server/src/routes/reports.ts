@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
-import { requireAuth, AuthedRequest } from "../auth";
+import { requireAuth, requireRole, AuthedRequest } from "../auth";
 
 const router = Router();
 
@@ -30,7 +30,7 @@ function monthBounds(year: number, month: number) {
 }
 
 // GET /api/reports/summary
-router.get("/summary", requireAuth, async (_req: AuthedRequest, res: Response) => {
+router.get("/summary", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGER"), async (_req: AuthedRequest, res: Response) => {
   const [payments, allTasks] = await Promise.all([
     prisma.payment.findMany({
       where: { status: { in: ["RELEASED", "APPROVED"] } },

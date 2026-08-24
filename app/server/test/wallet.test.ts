@@ -70,7 +70,15 @@ describe("wallet withdrawals", () => {
     const again = await apiPost("/api/wallet/withdraw", { amount: 5000 }, token);
     expect(again.status).toBe(400);
 
-    const settle = await apiPost("/api/wallet/dev/settle", undefined, token);
+    // dev/settle is admin-only. It marks PROCESSING withdrawals PAID, and it
+    // is self-scoped to the caller - so while a worker could reach it, a worker
+    // could settle their own withdrawals. Previously this test asserted exactly
+    // that, using the worker's own token.
+    const workerSettle = await apiPost("/api/wallet/dev/settle", undefined, token);
+    expect(workerSettle.status).toBe(403);
+
+    const { token: adminToken } = await createUserWithToken("SUPER_ADMIN");
+    const settle = await apiPost("/api/wallet/dev/settle", { workerId: user.id }, adminToken);
     expect(settle.status).toBe(200);
     expect(settle.body.settled).toBe(1);
 
