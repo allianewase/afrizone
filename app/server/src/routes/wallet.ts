@@ -8,16 +8,13 @@ const router = Router();
 
 const MIN_WITHDRAWAL = 5000; // ₦5,000 minimum.
 
-// Available balance = Σ net of RELEASED payments − Σ non-failed withdrawals.
-async function availableBalance(workerId: string): Promise<number> {
-  const [payments, withdrawals] = await Promise.all([
-    prisma.payment.findMany({ where: { workerId, status: "RELEASED" } }),
-    prisma.withdrawal.findMany({ where: { workerId, status: { not: "FAILED" } } }),
-  ]);
-  const released = payments.reduce((s, p) => s + p.net, 0);
-  const withdrawn = withdrawals.reduce((s, w) => s + w.amount, 0);
-  return released - withdrawn;
-}
+// The available-balance calculation now lives inside the conditional INSERT in
+// the withdraw handler below, so the check and the write are one atomic
+// statement. The read-only version workers see is walletFrom() in routes/me.ts,
+// which backs GET /api/me/wallet.
+//
+// Both express the same rule: Σ net of RELEASED payments − Σ non-FAILED
+// withdrawals. If you change one, change the other.
 
 // POST /api/wallet/withdraw → body {amount}. Acting worker = req.user.id.
 // Guards: integer, ≥ ₦5,000, ≤ available. Creates a Withdrawal and (when
@@ -40,25 +37,55 @@ router.post("/withdraw", requireAuth, async (req: AuthedRequest, res: Response) 
     return res.status(400).json({ error: "No bank account on file. Submit KYC first." });
   }
 
-  const available = await availableBalance(workerId);
-  if (amt > available) {
+  const provider = paystack.enabled ? "paystack" : "simulated";
+
+  // The reference doubles as the idempotency key and already carries a UNIQUE
+  // constraint - but it used to be a fresh UUID per request, so the constraint
+  // could never fire and a retry simply created a SECOND withdrawal. A courier
+  // double-tapping on patchy data got paid twice. Deriving it from a
+  // client-supplied key makes a retry collide with the original.
+  const rawKey = (req.body || {}).idempotencyKey;
+  const clientKey =
+    typeof rawKey === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(rawKey) ? rawKey : null;
+  // Scoped to the worker, so one worker's key can never collide with another's.
+  const reference = clientKey
+    ? `afz_wd_${workerId}_${clientKey}`
+    : `afz_wd_${crypto.randomUUID()}`;
+
+  if (clientKey) {
+    // A retry of a request that already succeeded returns the original row
+    // rather than a duplicate or an error.
+    const existing = await prisma.withdrawal.findUnique({ where: { reference } });
+    if (existing) return res.status(200).json(existing);
+  }
+
+  // Balance check and insert in ONE statement. Doing them separately let two
+  // concurrent requests both read a sufficient balance and both insert,
+  // overdrawing the wallet - and D1/SQLite has no row locks to hold between
+  // them. The WHERE recomputes the balance at write time, so the second writer
+  // sees the first one's row and inserts nothing.
+  //
+  // createdAt is bound as an ISO STRING, deliberately. The D1 adapter infers a
+  // column's type from the runtime value and maps any number to Double, never
+  // DateTime - and it picks a column's type from the first row in a result set,
+  // so a single numeric createdAt would make reads of the whole Withdrawal
+  // table type-unstable and break the wallet screen.
+  const id = `wd_${crypto.randomUUID()}`;
+  const nowIso = new Date().toISOString();
+  const inserted = await prisma.$executeRaw`
+    INSERT INTO "Withdrawal" ("id", "workerId", "amount", "bankMasked", "status", "provider", "reference", "createdAt")
+    SELECT ${id}, ${workerId}, ${amt}, ${worker.bankMasked}, 'PROCESSING', ${provider}, ${reference}, ${nowIso}
+    WHERE (
+      (SELECT COALESCE(SUM("net"), 0) FROM "Payment" WHERE "workerId" = ${workerId} AND "status" = 'RELEASED')
+      - (SELECT COALESCE(SUM("amount"), 0) FROM "Withdrawal" WHERE "workerId" = ${workerId} AND "status" <> 'FAILED')
+    ) >= ${amt}
+  `;
+
+  if (inserted === 0) {
     return res.status(400).json({ error: "Amount exceeds available balance" });
   }
 
-  const reference = `afz_wd_${crypto.randomUUID()}`;
-  const provider = paystack.enabled ? "paystack" : "simulated";
-
-  // Create the ledger row first (PROCESSING) so we never lose track of intent.
-  const withdrawal = await prisma.withdrawal.create({
-    data: {
-      workerId,
-      amount: amt,
-      bankMasked: worker.bankMasked,
-      status: "PROCESSING",
-      provider,
-      reference,
-    },
-  });
+  const withdrawal = await prisma.withdrawal.findUniqueOrThrow({ where: { id } });
 
   if (paystack.enabled) {
     // Real payout requires a NUBAN account + bank code on the worker.

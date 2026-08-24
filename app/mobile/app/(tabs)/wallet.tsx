@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -206,12 +206,24 @@ function WithdrawSheet({
   const tooMuch = value > available;
   const tooLittle = value < WITHDRAW_MIN;
 
+  // Identifies ONE intended withdrawal, and must survive a retry.
+  //
+  // If the request fails, the worker taps again - and on a patchy connection
+  // the first attempt may actually have succeeded, with only the response
+  // lost. Reusing the key makes the server return that original withdrawal
+  // instead of creating a second one and paying them twice. Generated once per
+  // intent (below, on first submit) and cleared in close(), so a genuinely
+  // separate withdrawal gets a fresh key.
+  const idemKeyRef = useRef<string | null>(null);
+
   async function submit() {
     setBusy(true);
     setError(null);
+    if (!idemKeyRef.current) {
+      idemKeyRef.current = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
     try {
-      // REAL: POST /api/wallet/withdraw {amount}
-      await api.withdraw(value);
+      await api.withdraw(value, idemKeyRef.current);
       setDone(true);
       onWithdrawn();
     } catch (e) {
@@ -226,6 +238,10 @@ function WithdrawSheet({
     setDone(false);
     setAmount('');
     setError(null);
+    // A new sheet is a new withdrawal intent, so it must not reuse the key -
+    // otherwise the server would treat a genuine second withdrawal as a retry
+    // of the first and return the old row instead of paying out again.
+    idemKeyRef.current = null;
     onClose();
   }
 

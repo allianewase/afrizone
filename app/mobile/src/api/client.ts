@@ -341,11 +341,22 @@ export const api = {
     return request<Transaction[]>('/me/transactions', { signal });
   },
 
-  /** POST /api/wallet/withdraw: request a payout (PROCESSING). */
-  withdraw(amount: number): Promise<Withdrawal> {
+  /**
+   * POST /api/wallet/withdraw: request a payout (PROCESSING).
+   *
+   * `idempotencyKey` MUST stay the same across retries of the same intended
+   * withdrawal, and MUST differ between separate withdrawals. The server keys
+   * the payout off it, so a request that is retried - a dropped response on a
+   * patchy connection, a double tap - returns the original withdrawal instead
+   * of creating a second one and paying the worker twice.
+   *
+   * The caller generates it once when the user confirms, not per attempt: a key
+   * generated inside a retry loop defeats the whole mechanism.
+   */
+  withdraw(amount: number, idempotencyKey: string): Promise<Withdrawal> {
     return request<Withdrawal>('/wallet/withdraw', {
       method: 'POST',
-      body: { amount },
+      body: { amount, idempotencyKey },
     });
   },
 
