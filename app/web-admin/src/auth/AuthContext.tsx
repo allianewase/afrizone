@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { api, clearToken, getToken, setToken } from '../api/client'
+import { ApiError, api, clearToken, getToken, setToken } from '../api/client'
 import { isTwoFactorRequired, type AuthSuccess, type User } from '../api/types'
 import Splash from '../components/Splash'
 
@@ -50,9 +50,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((res) => {
         if (active) setUser(res.user)
       })
-      .catch(() => {
-        clearToken()
-        if (active) setUser(null)
+      .catch((err: unknown) => {
+        // Only a real auth rejection invalidates the session. Previously ANY
+        // failure here called clearToken(), which turned a transient, fully
+        // retryable error (a 429 from the auth rate limiter, a Worker 5xx, a
+        // dropped connection) into a permanent logout - deleting a JWT that
+        // was still valid for days. That is how a burst of /auth/me calls
+        // silently locked admins out of the whole console.
+        const status = err instanceof ApiError ? err.status : 0
+        if (status === 401 || status === 403) {
+          clearToken()
+          if (active) setUser(null)
+        } else if (active) {
+          // Keep the token and stay signed out for this render only: the next
+          // navigation or reload re-attempts hydration with the token intact.
+          setUser(null)
+        }
       })
       .finally(() => {
         if (active) setLoading(false)

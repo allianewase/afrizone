@@ -102,8 +102,24 @@ app.use(express.json());
 // otherwise. Cloudflare's edge always sets CF-Connecting-IP on real traffic;
 // falling back to a constant key in local dev (where that header is absent)
 // just means dev testing shares one bucket, which is fine.
-const rateLimitKey = (req: ExpressRequest) =>
-  req.headers["cf-connecting-ip"]?.toString() || "local-dev";
+// The "local-dev" fallback is only ever correct off-edge. If CF-Connecting-IP
+// were ever missing on real traffic, EVERY user would collapse into a single
+// shared bucket and rate-limit each other out of the whole API - so make that
+// misconfiguration loud instead of silent.
+let warnedMissingClientIp = false;
+const rateLimitKey = (req: ExpressRequest) => {
+  const ip = req.headers["cf-connecting-ip"]?.toString();
+  if (ip) return ip;
+  if (process.env.NODE_ENV === "production" && !warnedMissingClientIp) {
+    warnedMissingClientIp = true;
+    console.error(
+      "[ratelimit] CF-Connecting-IP absent in production: all clients now share " +
+        "one rate-limit bucket. Check that this Worker is reached through the " +
+        "Cloudflare edge and not a route that strips the header."
+    );
+  }
+  return "local-dev";
+};
 
 let apiLimiter: ReturnType<typeof rateLimit> | undefined;
 app.use("/api", (req, res, next) => {
@@ -121,9 +137,22 @@ app.use("/api", (req, res, next) => {
 let authLimiter: ReturnType<typeof rateLimit> | undefined;
 app.use("/api/auth", (req, res, next) => {
   if (process.env.NODE_ENV === "test") return next();
+  // GET /api/auth/me is session *hydration*, not credential submission: the
+  // admin SPA fires it on every full page load (twice under StrictMode in
+  // dev). Counting it against the brute-force budget meant ~10 page loads
+  // exhausted the window and started 429ing admins out of their own console.
+  // Brute-force protection belongs on the endpoints that actually verify a
+  // credential; /me only reads a session that requireAuth already validates.
+  // It still falls under the general /api limiter above.
+  if (req.method === "GET" && req.path === "/me") return next();
   authLimiter ??= rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 20,
+    // 60, not 20: this prefix also covers the mobile OTP endpoints, and
+    // Nigerian carrier CGNAT puts many real workers behind one shared IP, so a
+    // tight per-IP budget locks strangers out of *signing up*. 60/15min is
+    // still orders of magnitude too slow to brute-force a bcrypt-hashed
+    // password, which is where the real protection lives.
+    max: 60,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: "Too many auth requests. Try again later." },
