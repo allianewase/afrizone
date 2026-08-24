@@ -6,6 +6,7 @@
 
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
+import { devAuthShortcutsEnabled } from "../env";
 
 export const DEV_TOTP_BYPASS = "000000";
 
@@ -32,7 +33,10 @@ export const totp = {
   /** Verify a 6-digit code against the secret. Honours the dev bypass. */
   verify(secret: string, code: string): boolean {
     const c = String(code || "").trim();
-    if (process.env.NODE_ENV !== "production" && c === DEV_TOTP_BYPASS) return true;
+    // Fail closed - see src/env.ts. NODE_ENV is unset on Workers, so the old
+    // `!== "production"` test left this fixed code accepted in production,
+    // defeating two-factor auth entirely for anyone who knew it.
+    if (devAuthShortcutsEnabled() && c === DEV_TOTP_BYPASS) return true;
     if (!secret) return false;
     try {
       return authenticator.verify({ token: c, secret });

@@ -6,7 +6,7 @@
 // OTP codes are hashed (sha256) at rest, single-use, 10-min expiry,
 // rate-limited to <=5 requests/hour/phone, and locked after >=5 wrong attempts.
 // Dev/sim: code is returned as devCode when SMS is not configured; master code
-// 123456 always works when NODE_ENV !== "production".
+// 123456 works ONLY when NODE_ENV is explicitly "development" or "test".
 
 import { Router } from "express";
 import crypto from "crypto";
@@ -14,6 +14,7 @@ import { prisma } from "../prisma";
 import { signToken, publicUser, hashPassword } from "../auth";
 import { Role } from "../types";
 import { sms } from "../services/sms";
+import { devAuthShortcutsEnabled } from "../env";
 
 const router = Router();
 
@@ -23,7 +24,10 @@ const MAX_REQUESTS_PER_WINDOW = 5;
 const MAX_ATTEMPTS = 5;
 const MASTER_CODE = "123456";
 
-const isDev = () => process.env.NODE_ENV !== "production";
+// Fail closed: a bypass must be opted into, never left on because a variable
+// was missing. See src/env.ts - NODE_ENV is unset on Workers, so the previous
+// `!== "production"` test made the master code live in production.
+const isDev = devAuthShortcutsEnabled;
 
 function hashCode(code: string): string {
   return crypto.createHash("sha256").update(code).digest("hex");

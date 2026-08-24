@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 import { Role, ROLES, tiersToArray } from "./types";
+import { devAuthShortcutsEnabled } from "./env";
 
 const DEFAULT_DEV_SECRET = "dev-secret-change-me";
 
@@ -14,12 +15,19 @@ const DEFAULT_DEV_SECRET = "dev-secret-change-me";
 let _jwtSecret: string | undefined;
 function jwtSecret(): string {
   if (_jwtSecret === undefined) {
+    // Refuse the default secret UNLESS we are explicitly in dev or test.
+    //
+    // This used to trigger only when NODE_ENV === "production" - which is never
+    // set on Workers, so the guard was inert exactly where it mattered. Had
+    // JWT_SECRET ever been unset in production the server would have quietly
+    // signed every session with a secret published in this repository, letting
+    // anyone mint a valid admin token. Inverted so the safe path is the default.
     if (
-      process.env.NODE_ENV === "production" &&
+      !devAuthShortcutsEnabled() &&
       (!process.env.JWT_SECRET || process.env.JWT_SECRET === DEFAULT_DEV_SECRET)
     ) {
       throw new Error(
-        "JWT_SECRET must be set to a strong, unique value in production (refusing to start with the default dev secret)."
+        "JWT_SECRET must be set to a strong, unique value outside development (refusing to start with the default dev secret)."
       );
     }
     _jwtSecret = process.env.JWT_SECRET || DEFAULT_DEV_SECRET;

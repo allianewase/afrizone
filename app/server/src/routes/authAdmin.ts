@@ -26,11 +26,16 @@ import {
 import { Role } from "../types";
 import { totp } from "../services/totp";
 import { google } from "../services/google";
+import { devAuthShortcutsEnabled } from "../env";
 
 const router = Router();
 
 const RESET_TTL_MS = 30 * 60 * 1000; // 30 minutes
-const isDev = () => process.env.NODE_ENV !== "production";
+// Fail closed - see src/env.ts. This gate controls whether a password-reset
+// token is returned in the API response; with NODE_ENV unset on Workers the old
+// `!== "production"` test handed that token to any caller who knew an admin's
+// email address, which is an account takeover in two requests.
+const isDev = devAuthShortcutsEnabled;
 
 function sha256(s: string): string {
   return crypto.createHash("sha256").update(s).digest("hex");

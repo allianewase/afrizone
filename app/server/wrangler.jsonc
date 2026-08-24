@@ -11,6 +11,16 @@
   // (JWT_SECRET, PAYSTACK_SECRET, etc.) still go through `wrangler secret put`
   // or the dashboard's Secret type, never here.
   "vars": {
+    // Cloudflare Workers do NOT set NODE_ENV, and it was absent here - so
+    // process.env.NODE_ENV was undefined in production. Every developer gate
+    // was written as `NODE_ENV !== "production"`, which meant they were all
+    // ACTIVE in production: a fixed master OTP code, a password-reset token
+    // returned in the API response, and a fixed TOTP code that defeated 2FA.
+    // The gates have since been inverted to require an explicit opt-in
+    // (see src/env.ts), so this var is now defence in depth rather than the
+    // only thing standing between production and those bypasses. Set it
+    // anyway: libraries also branch on it, and it should never be undefined.
+    "NODE_ENV": "production",
     // Partime-specific hostnames only - never api.afrizonemart.com or
     // admin.afrizonemart.com, which belong to Afrizoma's separate
     // e-commerce infrastructure. See the api.parttime.afrizonemart.com /
