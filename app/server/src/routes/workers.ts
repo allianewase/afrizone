@@ -2,7 +2,7 @@ import { Router, Response } from "express";
 import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest, publicUser } from "../auth";
 import { tiersToArray } from "../types";
-import { writeAudit } from "../util/audit";
+import { writeAudit, userActor } from "../util/audit";
 import { resolveUrl } from "../services/storage";
 import { notifyWorker } from "../services/push";
 
@@ -102,7 +102,7 @@ router.post(
       where: { id: worker.id },
       data: { kycStatus: decision },
     });
-    await writeAudit(req.user!.id, "KYC_DECISION", "User", worker.id, { decision });
+    await writeAudit(userActor(req.user!.id), "KYC_DECISION", "User", worker.id, { decision });
 
     void notifyWorker(
       prisma,

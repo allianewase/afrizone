@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
 import { requireAuth, requireRole, isAdmin, AuthedRequest } from "../auth";
-import { writeAudit } from "../util/audit";
+import { writeAudit, userActor } from "../util/audit";
 import { STAGES } from "../types";
 
 const router = Router();
@@ -71,7 +71,7 @@ router.post("/:id/move", requireAuth, requireRole("SUPER_ADMIN", "HR_ADMIN"), as
     where: { id: candidate.id },
     data: { stage },
   });
-  await writeAudit(req.user!.id, "candidate.move", "JobApplication", candidate.id, {
+  await writeAudit(userActor(req.user!.id), "candidate.move", "JobApplication", candidate.id, {
     from: candidate.stage,
     to: stage,
     jobId: candidate.jobId,

@@ -151,15 +151,24 @@ model Payment {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  actorId   String
+  id String @id @default(cuid())
+  // Nullable: an automated actor has no User row. actorId was REQUIRED and
+  // FK'd to User, so any system-initiated action failed its audit insert
+  // outright - which blocks every webhook, scheduled job and integration in
+  // the roadmap from being auditable at all.
+  actorId   String?
+  actorType String  @default("USER") // ActorType: USER | SYSTEM | WEBHOOK | JOB | INTEGRATION
+  actorRef  String? // identifies a non-USER actor, e.g. "paystack"
   action    String
   entity    String
   entityId  String
   meta      String? // JSON serialized as String (SQLite has no Json type)
   createdAt DateTime @default(now())
 
-  actor User @relation(fields: [actorId], references: [id])
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([actorId])
 }
 
 // ── v2: Hiring ────────────────────────────────────────────────────────────────

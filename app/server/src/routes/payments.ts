@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest } from "../auth";
-import { writeAudit } from "../util/audit";
+import { writeAudit, userActor, auditData } from "../util/audit";
 import { notifyWorker, notifyWorkers } from "../services/push";
 
 const router = Router();
@@ -43,7 +43,7 @@ router.post("/:id/release", requireAuth, requireRole("SUPER_ADMIN"), async (req:
     where: { id: payment.id },
     data: { status: "RELEASED" },
   });
-  await writeAudit(req.user!.id, "PAYMENT_RELEASED", "Payment", payment.id, {
+  await writeAudit(userActor(req.user!.id), "PAYMENT_RELEASED", "Payment", payment.id, {
     net: payment.net,
     gross: payment.gross,
     workerId: payment.workerId,
@@ -69,14 +69,15 @@ router.post("/release-all", requireAuth, requireRole("SUPER_ADMIN"), async (req:
   await prisma.$transaction(async (tx) => {
     await tx.payment.updateMany({ where: { status: "APPROVED" }, data: { status: "RELEASED" } });
     for (const p of approved) {
+      // auditData() rather than writeAudit(), so this writes through the
+      // transaction's own client instead of a second connection.
       await tx.auditLog.create({
-        data: {
-          actorId: req.user!.id,
-          action: "PAYMENT_RELEASED",
-          entity: "Payment",
-          entityId: p.id,
-          meta: JSON.stringify({ net: p.net, gross: p.gross, workerId: p.workerId, batch: true }),
-        },
+        data: auditData(userActor(req.user!.id), "PAYMENT_RELEASED", "Payment", p.id, {
+          net: p.net,
+          gross: p.gross,
+          workerId: p.workerId,
+          batch: true,
+        }),
       });
     }
   });

@@ -35,6 +35,13 @@ export const CONTRACT_STATUSES: ContractStatus[] = ["PENDING_SIGNATURE", "SIGNED
 export type OtpPurpose = "login";
 export const OTP_PURPOSES: OtpPurpose[] = ["login"];
 
+// ── audit ────────────────────────────────────────────────────────────────────
+// Who performed an audited action. USER is a human logged into the platform
+// (AuditLog.actorId FKs to their User row). Every other value is an automated
+// actor with no User row at all, identified by AuditLog.actorRef instead.
+export type ActorType = "USER" | "SYSTEM" | "WEBHOOK" | "JOB" | "INTEGRATION";
+export const ACTOR_TYPES: ActorType[] = ["USER", "SYSTEM", "WEBHOOK", "JOB", "INTEGRATION"];
+
 // tiers <-> comma-separated string helpers (SQLite has no scalar lists).
 export function tiersToArray(s: string | null | undefined): Tier[] {
   if (!s) return [];
