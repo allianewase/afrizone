@@ -29,8 +29,91 @@ const MASTER_CODE = "123456";
 // `!== "production"` test made the master code live in production.
 const isDev = devAuthShortcutsEnabled;
 
-function hashCode(code: string): string {
-  return crypto.createHash("sha256").update(code).digest("hex");
+// ── OTP secret material ──────────────────────────────────────────────────────
+//
+// A six-digit code has only 10^6 possible values, so an UNSALTED sha256 of one
+// is reversible by anyone who can read the table: the entire digest space
+// precomputes to a few megabytes, once, and is reusable forever. Read access to
+// OtpCode therefore used to hand over every live login code on the platform -
+// a database dump, a console query or a support export was an account takeover
+// for every worker with a code outstanding.
+//
+// Two changes close that:
+//   1. a per-row random salt, so one precomputed table cannot cover the table -
+//      each row would need its own 10^6-hash search; and
+//   2. a server-side pepper (the HMAC key) that lives only in the Worker's
+//      environment and never in the database, so a database-only compromise
+//      cannot compute anything at all, not even that per-row search.
+//
+// phone and purpose are bound into the message too, so a digest lifted from one
+// row cannot be replayed against another.
+const DEFAULT_DEV_PEPPER = "dev-otp-pepper-change-me";
+
+// Resolved lazily, never at module scope: Workers only populate process.env
+// from bindings once request handling begins (same constraint as auth.ts's
+// jwtSecret()). Note this caches on first use, so a NODE_ENV change afterwards
+// is not re-evaluated - fine in practice, since the environment is fixed for
+// the lifetime of an isolate.
+let _otpPepper: string | undefined;
+function otpPepper(): string {
+  if (_otpPepper === undefined) {
+    // OTP_PEPPER is the dedicated secret; JWT_SECRET is accepted as a fallback
+    // so this ships without requiring a new binding on day one. Fail closed
+    // outside development rather than hashing with a value published in this
+    // repository.
+    const configured = process.env.OTP_PEPPER || process.env.JWT_SECRET || "";
+    if (!devAuthShortcutsEnabled() && (!configured || configured === DEFAULT_DEV_PEPPER)) {
+      throw new Error(
+        "OTP_PEPPER (or JWT_SECRET) must be set to a strong, unique value outside development: OTP codes are keyed with it."
+      );
+    }
+    _otpPepper = configured || DEFAULT_DEV_PEPPER;
+  }
+  return _otpPepper;
+}
+
+/** 16 random bytes, hex. Stored per row in OtpCode.codeSalt. */
+function newSalt(): string {
+  return (crypto.randomBytes(16) as any).toString("hex");
+}
+
+function hashCode(code: string, salt: string, phone: string, purpose: string): string {
+  return crypto
+    .createHmac("sha256", otpPepper())
+    .update(`${salt}:${phone}:${purpose}:${code}`)
+    .digest("hex");
+}
+
+/** Constant-time digest compare, mirroring services/paystack.ts. */
+function digestsEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && crypto.timingSafeEqual(ab, bb);
+}
+
+/**
+ * A six-digit code from a cryptographic source.
+ *
+ * Math.random() is a non-cryptographic PRNG whose internal state is
+ * recoverable from a handful of outputs - and an attacker can harvest outputs
+ * at will by requesting codes for a phone they control, then predict the next
+ * code issued to someone else. Rejection sampling keeps the distribution
+ * uniform (a bare modulo over a 32-bit draw is biased), and the full
+ * 000000-999999 range is used rather than the old 100000-999999.
+ */
+function generateOtpCode(): string {
+  const RANGE = 1_000_000;
+  const LIMIT = 4_294_967_296 - (4_294_967_296 % RANGE);
+  // The module-scope `import crypto from "crypto"` shadows the global, so reach
+  // for Web Crypto explicitly. Workers always provide it.
+  const webcrypto = (globalThis as any).crypto as Crypto;
+  const buf = new Uint32Array(1);
+  let n: number;
+  do {
+    webcrypto.getRandomValues(buf);
+    n = buf[0];
+  } while (n >= LIMIT);
+  return String(n % RANGE).padStart(6, "0");
 }
 
 // Loose E.164 normalisation: strip spaces/dashes, keep leading +.
@@ -95,11 +178,13 @@ router.post("/otp/request", async (req, res) => {
     return res.status(429).json({ error: "Too many OTP requests. Try again later." });
   }
 
-  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const code = generateOtpCode();
+  const salt = newSalt();
   await prisma.otpCode.create({
     data: {
       phone,
-      codeHash: hashCode(code),
+      codeSalt: salt,
+      codeHash: hashCode(code, salt, phone, "login"),
       purpose: "login",
       expiresAt: new Date(Date.now() + OTP_TTL_MS),
     },
@@ -143,7 +228,7 @@ router.post("/otp/verify", async (req, res) => {
     if (otp.expiresAt < new Date()) {
       return res.status(400).json({ error: "Invalid or expired code" });
     }
-    if (otp.codeHash !== hashCode(code)) {
+    if (!digestsEqual(otp.codeHash, hashCode(code, otp.codeSalt ?? "", phone, otp.purpose))) {
       const attempts = otp.attempts + 1;
       await prisma.otpCode.update({ where: { id: otp.id }, data: { attempts } });
       if (attempts >= MAX_ATTEMPTS) {

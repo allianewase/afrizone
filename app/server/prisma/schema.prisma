@@ -302,7 +302,14 @@ model Contract {
 model OtpCode {
   id         String    @id @default(cuid())
   phone      String
-  codeHash   String // sha256 of the 6-digit code
+  // HMAC-SHA256(server pepper, "salt:phone:purpose:code") - see routes/authOtp.ts.
+  // Was an unsalted sha256 of the six digits alone, which is reversible by
+  // anyone who can read this table: 10^6 values precompute to a few megabytes.
+  codeHash String
+  // Per-row random salt. Nullable only so the column could be added without a
+  // backfill; rows written since always carry one, and a row without one can no
+  // longer be verified against (its digest scheme no longer exists).
+  codeSalt String?
   purpose    String    @default("login") // OtpPurpose enum (login)
   attempts   Int       @default(0)
   expiresAt  DateTime

@@ -1,0 +1,16 @@
+-- OTP codes were stored as an UNSALTED sha256 of the six digits alone. A
+-- six-digit code has only 10^6 possible values, so the whole digest space
+-- precomputes to a few megabytes - any read of this table (a database dump, a
+-- console query, a support export) yielded every live login code in plaintext,
+-- which is an account takeover for every worker with a code outstanding.
+--
+-- Codes are now HMAC-SHA256(server pepper, "salt:phone:purpose:code"): a
+-- per-row salt so one precomputed table cannot cover the table, and a pepper
+-- held only in the Worker environment so a database-only compromise cannot
+-- compute anything at all.
+--
+-- Additive and nullable, so no backfill. Existing rows keep a NULL salt and can
+-- no longer be verified - their digest scheme no longer exists. That is
+-- intentional and harmless: OTPs live 10 minutes, so at worst a handful of
+-- in-flight codes are invalidated and the worker requests another.
+ALTER TABLE "OtpCode" ADD COLUMN "codeSalt" TEXT;
