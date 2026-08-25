@@ -11,6 +11,8 @@ import type {
   Template,
   Tier,
   TwoFactorSetup,
+  Skill,
+  CredentialType,
 } from '../api/types'
 import { formatNaira, formatDate } from '../lib/format'
 import PageHeader from '../components/PageHeader'
@@ -38,7 +40,7 @@ import {
 } from '@/components/shadcn/table'
 
 const TIERS: Tier[] = ['STUDENT', 'DISPATCH', 'REMOTE', 'PROMO', 'TRADE']
-type Tab = 'tax' | 'categories' | 'templates' | 'billing' | 'security'
+type Tab = 'tax' | 'categories' | 'skills' | 'credentialTypes' | 'templates' | 'billing' | 'security'
 
 
 /* ===================== Tax Rates ===================== */
@@ -1045,11 +1047,393 @@ function SecurityTab() {
   )
 }
 
+/* ===================== Skills ===================== */
+
+/**
+ * The skills catalogue.
+ *
+ * Worth stating on the page itself, because it is the thing everyone assumes
+ * wrongly: a skill is the worker's own word and gates nothing. Only credentials
+ * are checked by a person, and only credentials can unlock work. If something
+ * here needs to be guaranteed, it belongs in the next tab instead.
+ */
+function SkillsTab({ canEdit }: { canEdit: boolean }) {
+  const { data, loading, error, reload, setData } = useApi((signal) => api.skills(true, signal))
+  const [busy, setBusy] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState('')
+  const [group, setGroup] = useState('')
+  const skills = useMemo(() => data ?? [], [data])
+
+  const groups = useMemo(() => {
+    const seen = new Map<string, Skill[]>()
+    for (const sk of skills) {
+      const list = seen.get(sk.group) ?? []
+      list.push(sk)
+      seen.set(sk.group, list)
+    }
+    return [...seen.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  }, [skills])
+
+  async function toggleActive(sk: Skill, active: boolean) {
+    setBusy(sk.id)
+    setActionError(null)
+    try {
+      const updated = await api.patchSkill(sk.id, { active })
+      setData((prev) => (prev ?? []).map((x) => (x.id === sk.id ? { ...x, ...updated } : x)))
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Update failed')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function create() {
+    setBusy('new')
+    setActionError(null)
+    try {
+      const made = await api.createSkill({ name: name.trim(), group: group.trim() })
+      setData((prev) => [...(prev ?? []), made])
+      setOpen(false)
+      setName('')
+      setGroup('')
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Could not add that skill')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  if (loading) return <LoadingState label="Loading skills…" />
+  if (error) return <ErrorState message={error} onRetry={reload} />
+
+  return (
+    <>
+      <div className="tabhead">
+        <p className="tabhint">
+          What workers can say they can do. Self-declared and never checked &mdash; use credential
+          types for anything that has to be proven.
+        </p>
+        {canEdit && (
+          <Button variant="primary" size="sm" icon="plus" onClick={() => setOpen(true)}>
+            Add skill
+          </Button>
+        )}
+      </div>
+
+      {actionError && (
+        <div className="login-error" role="alert" style={{ marginBottom: 16 }}>
+          <Icon name="alert" size={15} />
+          {actionError}
+        </div>
+      )}
+
+      {skills.length === 0 ? (
+        <Glass>
+          <EmptyState icon="tag" title="No skills yet" sub="Add the first one to build the picker." />
+        </Glass>
+      ) : (
+        <Glass className="tablewrap">
+          <Table className="dt">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Skill</TableHead>
+                <TableHead>Group</TableHead>
+                <TableHead>Slug</TableHead>
+                <TableHead>Available</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {groups.map(([groupName, items]) =>
+                items.map((sk) => (
+                  <TableRow key={sk.id}>
+                    <TableCell>{sk.name}</TableCell>
+                    <TableCell style={{ color: 'var(--muted)' }}>{groupName}</TableCell>
+                    <TableCell style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--muted)' }}>
+                      {sk.slug}
+                    </TableCell>
+                    <TableCell>
+                      {/* Retiring hides it from the picker but keeps it on the
+                          workers who already declared it - retiring a catalogue
+                          entry must not silently edit somebody's profile. */}
+                      <Switch
+                        checked={sk.active}
+                        disabled={!canEdit || busy === sk.id}
+                        label={`${sk.name} available`}
+                        onChange={(v) => toggleActive(sk, v)}
+                      />
+                    </TableCell>
+                  </TableRow>
+                )),
+              )}
+            </TableBody>
+          </Table>
+        </Glass>
+      )}
+
+      <Modal open={open} onClose={() => setOpen(false)} title="Add a skill">
+        <div className="field">
+          <label htmlFor="sk-name">Name</label>
+          <Input id="sk-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Forklift operation" />
+        </div>
+        <div className="field">
+          <label htmlFor="sk-group">Group</label>
+          <Input id="sk-group" value={group} onChange={(e) => setGroup(e.target.value)} placeholder="Logistics" />
+          <span className="help">How the picker groups it in the worker app.</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <Button
+            variant="primary"
+            loading={busy === 'new'}
+            disabled={!name.trim() || !group.trim()}
+            onClick={create}
+          >
+            Add skill
+          </Button>
+          <Button variant="glass" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+        </div>
+      </Modal>
+    </>
+  )
+}
+
+/* ===================== Credential types ===================== */
+
+/**
+ * What Afrizone recognises as a checkable credential, and what each one
+ * demands from the worker. These are the things that can actually gate work,
+ * because a person looks at the document before it counts.
+ */
+function CredentialTypesTab({ canEdit }: { canEdit: boolean }) {
+  const { data, loading, error, reload, setData } = useApi((signal) => api.credentialTypes(true, signal))
+  const [busy, setBusy] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState('')
+  const [issuerMode, setIssuerMode] = useState<'THIRD_PARTY' | 'AFRIZONE'>('THIRD_PARTY')
+  const [reviewMode, setReviewMode] = useState<'ADMIN_REVIEW' | 'SELF_DECLARED'>('ADMIN_REVIEW')
+  const [requiresExpiry, setRequiresExpiry] = useState(false)
+  const [requiresReference, setRequiresReference] = useState(false)
+  const [issuerHint, setIssuerHint] = useState('')
+  const types = useMemo(() => data ?? [], [data])
+
+  async function toggleActive(t: CredentialType, active: boolean) {
+    setBusy(t.id)
+    setActionError(null)
+    try {
+      const updated = await api.patchCredentialType(t.id, { active })
+      setData((prev) => (prev ?? []).map((x) => (x.id === t.id ? { ...x, ...updated } : x)))
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Update failed')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function create() {
+    setBusy('new')
+    setActionError(null)
+    try {
+      const made = await api.createCredentialType({
+        name: name.trim(),
+        issuerMode,
+        reviewMode,
+        requiresExpiry,
+        requiresReference,
+        issuerHint: issuerHint.trim() || null,
+      })
+      setData((prev) => [...(prev ?? []), made])
+      setOpen(false)
+      setName('')
+      setIssuerHint('')
+      setRequiresExpiry(false)
+      setRequiresReference(false)
+      setIssuerMode('THIRD_PARTY')
+      setReviewMode('ADMIN_REVIEW')
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Could not add that credential type')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  if (loading) return <LoadingState label="Loading credential types…" />
+  if (error) return <ErrorState message={error} onRetry={reload} />
+
+  return (
+    <>
+      <div className="tabhead">
+        <p className="tabhint">
+          The documents Afrizone checks. Only these can unlock work &mdash; a skill never does.
+        </p>
+        {canEdit && (
+          <Button variant="primary" size="sm" icon="plus" onClick={() => setOpen(true)}>
+            Add type
+          </Button>
+        )}
+      </div>
+
+      {actionError && (
+        <div className="login-error" role="alert" style={{ marginBottom: 16 }}>
+          <Icon name="alert" size={15} />
+          {actionError}
+        </div>
+      )}
+
+      {types.length === 0 ? (
+        <Glass>
+          <EmptyState icon="shield" title="No credential types" sub="Add one to start collecting documents." />
+        </Glass>
+      ) : (
+        <Glass className="tablewrap">
+          <Table className="dt">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Credential</TableHead>
+                <TableHead>Issued by</TableHead>
+                <TableHead>Checked</TableHead>
+                <TableHead>Requires</TableHead>
+                <TableHead>Available</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {types.map((t) => {
+                const needs = [
+                  t.requiresFile ? 'document' : null,
+                  t.requiresExpiry ? 'expiry' : null,
+                  t.requiresReference ? 'reference' : null,
+                ].filter(Boolean)
+                return (
+                  <TableRow key={t.id}>
+                    <TableCell>
+                      {t.name}
+                      <div style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--muted)' }}>
+                        {t.slug}
+                      </div>
+                    </TableCell>
+                    <TableCell style={{ color: 'var(--muted)' }}>
+                      {t.issuerMode === 'AFRIZONE' ? 'Afrizone' : 'Third party'}
+                    </TableCell>
+                    <TableCell style={{ color: 'var(--muted)' }}>
+                      {t.reviewMode === 'ADMIN_REVIEW' ? 'By an admin' : 'Not checked'}
+                    </TableCell>
+                    <TableCell style={{ color: 'var(--muted)', fontSize: 12 }}>
+                      {needs.length ? needs.join(', ') : '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={t.active}
+                        disabled={!canEdit || busy === t.id}
+                        label={`${t.name} available`}
+                        onChange={(v) => toggleActive(t, v)}
+                      />
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </Glass>
+      )}
+
+      <Modal open={open} onClose={() => setOpen(false)} title="Add a credential type">
+        <div className="field">
+          <label htmlFor="ct-name">Name</label>
+          <Input id="ct-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Food handler permit" />
+        </div>
+
+        <div className="field">
+          <label htmlFor="ct-issuer">Issued by</label>
+          <select
+            id="ct-issuer"
+            className="select"
+            value={issuerMode}
+            onChange={(e) => setIssuerMode(e.target.value as 'THIRD_PARTY' | 'AFRIZONE')}
+          >
+            <option value="THIRD_PARTY">Somebody else (worker uploads their document)</option>
+            <option value="AFRIZONE">Afrizone (awarded from work history, no document)</option>
+          </select>
+          <span className="help">
+            {issuerMode === 'AFRIZONE'
+              ? 'Awarded by an admin on the strength of work done here. This is how somebody with no formal certificate can still qualify.'
+              : 'The worker submits it with evidence, and it goes to the review queue.'}
+          </span>
+        </div>
+
+        <div className="field">
+          <label htmlFor="ct-review">Checked by</label>
+          <select
+            id="ct-review"
+            className="select"
+            value={reviewMode}
+            onChange={(e) => setReviewMode(e.target.value as 'ADMIN_REVIEW' | 'SELF_DECLARED')}
+          >
+            <option value="ADMIN_REVIEW">An admin reviews it</option>
+            <option value="SELF_DECLARED">Nobody &mdash; recorded on the worker&apos;s word</option>
+          </select>
+          <span className="help">
+            {reviewMode === 'SELF_DECLARED'
+              ? 'Recorded but never verified, so it can never unlock work. Right for things like a CV.'
+              : 'Goes into the verification queue and can unlock work once approved.'}
+          </span>
+        </div>
+
+        {issuerMode === 'THIRD_PARTY' && (
+          <>
+            <div className="field">
+              <label htmlFor="ct-hint">Issuer hint</label>
+              <Input
+                id="ct-hint"
+                value={issuerHint}
+                onChange={(e) => setIssuerHint(e.target.value)}
+                placeholder="FRSC"
+              />
+              <span className="help">Shown to the worker as a placeholder.</span>
+            </div>
+            <div className="field" style={{ display: 'flex', gap: 16, flexDirection: 'row' }}>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={requiresExpiry}
+                  onChange={(e) => setRequiresExpiry(e.target.checked)}
+                />
+                Has an expiry date
+              </label>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={requiresReference}
+                  onChange={(e) => setRequiresReference(e.target.checked)}
+                />
+                Has a reference number
+              </label>
+            </div>
+          </>
+        )}
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <Button variant="primary" loading={busy === 'new'} disabled={!name.trim()} onClick={create}>
+            Add type
+          </Button>
+          <Button variant="glass" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+        </div>
+      </Modal>
+    </>
+  )
+}
+
 /* ===================== Page ===================== */
 
 const TABS: { id: Tab; label: string; icon: 'percent' | 'tag' | 'mail' | 'naira' | 'shield' }[] = [
   { id: 'tax', label: 'Tax rates', icon: 'percent' },
   { id: 'categories', label: 'Categories', icon: 'tag' },
+  { id: 'skills', label: 'Skills', icon: 'tag' },
+  { id: 'credentialTypes', label: 'Credential types', icon: 'shield' },
   { id: 'templates', label: 'Templates', icon: 'mail' },
   { id: 'billing', label: 'Billing', icon: 'naira' },
   { id: 'security', label: 'Security', icon: 'shield' },
@@ -1103,6 +1487,12 @@ export default function Settings() {
         </TabsContent>
         <TabsContent value="categories">
           <CategoriesTab canEdit={canEdit} />
+        </TabsContent>
+        <TabsContent value="skills">
+          <SkillsTab canEdit={canEdit} />
+        </TabsContent>
+        <TabsContent value="credentialTypes">
+          <CredentialTypesTab canEdit={canEdit} />
         </TabsContent>
         <TabsContent value="templates">
           <TemplatesTab canEdit={canEdit} />

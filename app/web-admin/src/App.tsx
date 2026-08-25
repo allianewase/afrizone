@@ -14,6 +14,7 @@ import Hiring from './pages/Hiring'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Disputes from './pages/Disputes'
+import Verification from './pages/Verification'
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/timesheets" element={<Timesheets />} />
         <Route path="/payments" element={<Payments />} />
         <Route path="/disputes" element={<Disputes />} />
+        <Route path="/verification" element={<Verification />} />
         <Route path="/workers" element={<Workers />} />
         <Route path="/hiring" element={<Hiring />} />
         <Route path="/reports" element={<Reports />} />

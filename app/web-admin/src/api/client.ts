@@ -35,6 +35,13 @@ import type {
   User,
   Worker,
   WorkerDetail,
+  Skill,
+  CredentialType,
+  Credential,
+  CredentialDetail,
+  CredentialFilter,
+  RejectionReasonCode,
+  CredentialCorrections,
 } from './types'
 
 const TOKEN_KEY = 'afz_token'
@@ -309,6 +316,41 @@ export const api = {
     request<Category>('/settings/categories', { method: 'POST', body }),
   patchCategory: (id: string, body: Partial<Category>) =>
     request<Category>(`/settings/categories/${id}`, { method: 'PATCH', body }),
+  // ── Talent profile ─────────────────────────────────────────────────────────
+  skills: (all = false, signal?: AbortSignal) =>
+    request<Skill[]>(`/settings/skills${all ? '?all=1' : ''}`, { signal }),
+  createSkill: (body: Partial<Skill>) =>
+    request<Skill>('/settings/skills', { method: 'POST', body }),
+  patchSkill: (id: string, body: Partial<Skill>) =>
+    request<Skill>(`/settings/skills/${id}`, { method: 'PATCH', body }),
+
+  credentialTypes: (all = false, signal?: AbortSignal) =>
+    request<CredentialType[]>(`/settings/credential-types${all ? '?all=1' : ''}`, { signal }),
+  createCredentialType: (body: Partial<CredentialType>) =>
+    request<CredentialType>('/settings/credential-types', { method: 'POST', body }),
+  patchCredentialType: (id: string, body: Partial<CredentialType>) =>
+    request<CredentialType>(`/settings/credential-types/${id}`, { method: 'PATCH', body }),
+
+  credentials: (filter: CredentialFilter, signal?: AbortSignal) =>
+    request<Credential[]>(`/credentials?filter=${filter}`, { signal }),
+  credentialPendingCount: (signal?: AbortSignal) =>
+    request<{ pending: number }>('/credentials/pending-count', { signal }),
+  credential: (id: string, signal?: AbortSignal) =>
+    request<CredentialDetail>(`/credentials/${id}`, { signal }),
+  reviewCredential: (
+    id: string,
+    body:
+      | { decision: 'APPROVE'; corrections?: CredentialCorrections }
+      | { decision: 'REJECT' | 'REVOKE'; reasonCode: RejectionReasonCode; reasonText?: string },
+  ) => request<Credential>(`/credentials/${id}/review`, { method: 'POST', body }),
+
+  workerProfile: (id: string, signal?: AbortSignal) =>
+    request<any>(`/workers/${id}/profile`, { signal }),
+  setWorkerTiers: (id: string, tiers: string[]) =>
+    request<any>(`/workers/${id}/tiers`, { method: 'PATCH', body: { tiers } }),
+  grantCredential: (workerId: string, body: { credentialTypeId: string; title?: string; expiresAt?: string; note?: string }) =>
+    request<Credential>(`/workers/${workerId}/credentials`, { method: 'POST', body }),
+
   templates: (signal?: AbortSignal) =>
     request<Template[]>('/settings/templates', { signal }),
   putTemplate: (key: string, value: string) =>

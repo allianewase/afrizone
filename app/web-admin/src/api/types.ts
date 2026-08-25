@@ -346,3 +346,108 @@ export interface ReportsSummary {
   }
   topCategories: { label: string; tasks: number; spend: number }[]
 }
+
+// ── Talent profile: skills and credentials ───────────────────────────────────
+
+export interface Skill {
+  id: string
+  name: string
+  slug: string
+  group: string
+  active: boolean
+  sortOrder: number
+}
+
+export type ReviewMode = 'ADMIN_REVIEW' | 'SELF_DECLARED'
+export type IssuerMode = 'THIRD_PARTY' | 'AFRIZONE'
+
+export interface CredentialType {
+  id: string
+  name: string
+  slug: string
+  reviewMode: ReviewMode
+  issuerMode: IssuerMode
+  requiresExpiry: boolean
+  requiresReference: boolean
+  requiresFile: boolean
+  issuerHint: string | null
+  active: boolean
+  sortOrder: number
+}
+
+/**
+ * `status` is what is stored; `state` is what to show.
+ *
+ * They differ for two cases the server derives rather than stores: a VERIFIED
+ * credential past its expiry reads as EXPIRED, and a self-declared one reads
+ * as SELF_DECLARED rather than pretending to be awaiting review. Render
+ * `state`, never `status`.
+ */
+export type CredentialState =
+  | 'PENDING'
+  | 'VERIFIED'
+  | 'EXPIRED'
+  | 'REJECTED'
+  | 'REVOKED'
+  | 'SELF_DECLARED'
+
+export interface Credential {
+  id: string
+  title: string
+  issuer: string | null
+  referenceNumber: string | null
+  issuedAt: string | null
+  expiresAt: string | null
+  status: string
+  state: CredentialState
+  valid: boolean
+  expiringSoon: boolean
+  rejectionReason: string | null
+  reviewedAt: string | null
+  reviewedBy?: { id: string; name: string } | null
+  createdAt: string
+  credentialType: CredentialType
+  worker?: {
+    id: string
+    name: string
+    email: string
+    phone: string | null
+    kycStatus: string
+    tiers: string[]
+  }
+  document?: {
+    id: string
+    filename: string
+    mimeType: string | null
+    originalName: string | null
+  } | null
+}
+
+/** GET /api/credentials/:id — everything the reviewer needs on one screen. */
+export interface CredentialDetail extends Credential {
+  otherCredentials: Credential[]
+  /**
+   * Set when this reference number is already VERIFIED on a different worker -
+   * the signature of a document being passed around. A warning for the
+   * reviewer to weigh, never an automatic refusal.
+   */
+  duplicateOf: { workerId: string; workerName: string } | null
+}
+
+export type CredentialFilter = 'pending' | 'verified' | 'rejected' | 'revoked' | 'expiring'
+
+export type RejectionReasonCode =
+  | 'blurry'
+  | 'expired'
+  | 'name_mismatch'
+  | 'wrong_type'
+  | 'not_genuine'
+  | 'other'
+
+export interface CredentialCorrections {
+  title?: string
+  issuer?: string | null
+  referenceNumber?: string | null
+  issuedAt?: string | null
+  expiresAt?: string | null
+}
