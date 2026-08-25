@@ -33,47 +33,47 @@ datasource db {
 // Helpers tiersToString / tiersToArray in src/types.ts do the conversion.
 
 model User {
-  id             String   @id @default(cuid())
-  name           String
-  email          String   @unique
-  phone          String?  @unique           // worker OTP login (E.164, e.g. +2348030000001)
-  passwordHash   String?                     // nullable: workers are passwordless (phone OTP)
-  totpSecret     String?                     // pending or active TOTP secret (RFC 6238)
-  totpEnabled    Boolean  @default(false)
-  googleId       String?  @unique            // Google SSO subject (admin)
-  role           String   @default("WORKER") // Role enum
-  tiers          String   @default("")        // comma-separated Tier[]: see note above
-  kycStatus      String   @default("PENDING") // KycStatus enum
-  kycNote        String?  // latest verification note (auto-reject reason from Smile ID, or admin note)
-  location       String?
-  rating         Float?
-  completedCount Int      @default(0)
-  bankMasked     String?
+  id                String   @id @default(cuid())
+  name              String
+  email             String   @unique
+  phone             String?  @unique // worker OTP login (E.164, e.g. +2348030000001)
+  passwordHash      String? // nullable: workers are passwordless (phone OTP)
+  totpSecret        String? // pending or active TOTP secret (RFC 6238)
+  totpEnabled       Boolean  @default(false)
+  googleId          String?  @unique // Google SSO subject (admin)
+  role              String   @default("WORKER") // Role enum
+  tiers             String   @default("") // comma-separated Tier[]: see note above
+  kycStatus         String   @default("PENDING") // KycStatus enum
+  kycNote           String? // latest verification note (auto-reject reason from Smile ID, or admin note)
+  location          String?
+  rating            Float?
+  completedCount    Int      @default(0)
+  bankMasked        String?
   bankAccountNumber String? // real payout account (NUBAN): required for live Paystack transfers
   bankCode          String? // Paystack bank code, e.g. "058" (GTBank)
   bankName          String?
   tin               String? // Tax Identification Number: stored from KYC / profile edit
   pushToken         String? // Expo push token (ExponentPushToken[...]): updated on each login
-  notifTasks     Boolean  @default(true)  // push: task matches & approval status changes
-  notifPay       Boolean  @default(true)  // push: payment releases & withdrawal updates
-  notifEmail     Boolean  @default(false) // email summary digest (future)
-  createdAt      DateTime @default(now())
+  notifTasks        Boolean  @default(true) // push: task matches & approval status changes
+  notifPay          Boolean  @default(true) // push: payment releases & withdrawal updates
+  notifEmail        Boolean  @default(false) // email summary digest (future)
+  createdAt         DateTime @default(now())
 
-  tasksCreated Task[]        @relation("TaskCreatedBy")
-  applications Application[]
-  timesheets   Timesheet[]
-  payments     Payment[]
-  auditLogs    AuditLog[]
-  clockEvents  ClockEvent[]
-  withdrawals  Withdrawal[]
+  tasksCreated      Task[]            @relation("TaskCreatedBy")
+  applications      Application[]
+  timesheets        Timesheet[]
+  payments          Payment[]
+  auditLogs         AuditLog[]
+  clockEvents       ClockEvent[]
+  withdrawals       Withdrawal[]
   fundingsInitiated Funding[]
-  contracts    Contract[]
-  passwordResets PasswordReset[]
-  kycDocuments   KycDocument[]
-  kycVerifications KycVerification[]
-  disputes        Dispute[]
-  ratingsReceived Rating[] @relation("WorkerRatings")
-  ratingsGiven    Rating[] @relation("RatingsGiven")
+  contracts         Contract[]
+  passwordResets    PasswordReset[]
+  kycDocuments      KycDocument[]
+  kycVerifications  KycVerification[]
+  disputes          Dispute[]
+  ratingsReceived   Rating[]          @relation("WorkerRatings")
+  ratingsGiven      Rating[]          @relation("RatingsGiven")
 }
 
 model Task {
@@ -89,8 +89,8 @@ model Task {
   endDate        DateTime
   locationType   String // LocationType enum (PHYSICAL | REMOTE)
   address        String?
-  lat            Float?   // task site latitude : required for real geofence check
-  lng            Float?   // task site longitude: required for real geofence check
+  lat            Float? // task site latitude : required for real geofence check
+  lng            Float? // task site longitude: required for real geofence check
   geofenceRadius Int      @default(100)
   slots          Int
   status         String   @default("OPEN") // TaskStatus enum
@@ -105,6 +105,8 @@ model Task {
   clockEvents  ClockEvent[]
   contracts    Contract[]
   ratings      Rating[]
+
+  @@index([status])
 }
 
 model Application {
@@ -118,6 +120,10 @@ model Application {
 
   task   Task @relation(fields: [taskId], references: [id])
   worker User @relation(fields: [workerId], references: [id])
+
+  @@index([taskId, status])
+  @@index([workerId, status])
+  @@index([taskId, workerId])
 }
 
 model Timesheet {
@@ -133,6 +139,9 @@ model Timesheet {
 
   task   Task @relation(fields: [taskId], references: [id])
   worker User @relation(fields: [workerId], references: [id])
+
+  @@index([status])
+  @@index([workerId])
 }
 
 model Payment {
@@ -148,16 +157,19 @@ model Payment {
 
   worker User @relation(fields: [workerId], references: [id])
   task   Task @relation(fields: [taskId], references: [id])
+
+  @@index([status])
+  @@index([workerId])
 }
 
 model AuditLog {
-  id String @id @default(cuid())
+  id        String   @id @default(cuid())
   // Nullable: an automated actor has no User row. actorId was REQUIRED and
   // FK'd to User, so any system-initiated action failed its audit insert
   // outright - which blocks every webhook, scheduled job and integration in
   // the roadmap from being auditable at all.
   actorId   String?
-  actorType String  @default("USER") // ActorType: USER | SYSTEM | WEBHOOK | JOB | INTEGRATION
+  actorType String   @default("USER") // ActorType: USER | SYSTEM | WEBHOOK | JOB | INTEGRATION
   actorRef  String? // identifies a non-USER actor, e.g. "paystack"
   action    String
   entity    String
@@ -247,6 +259,8 @@ model ClockEvent {
 
   worker User @relation(fields: [workerId], references: [id])
   task   Task @relation(fields: [taskId], references: [id])
+
+  @@index([workerId, taskId, createdAt])
 }
 
 model Withdrawal {
@@ -255,9 +269,9 @@ model Withdrawal {
   amount        Int
   bankMasked    String
   status        String   @default("PROCESSING") // WithdrawalStatus enum (PROCESSING | PAID | FAILED)
-  provider      String?  // "paystack" | "simulated"
+  provider      String? // "paystack" | "simulated"
   reference     String?  @unique // our idempotency key, also sent to Paystack
-  providerRef   String?  // Paystack transfer_code
+  providerRef   String? // Paystack transfer_code
   failureReason String?
   createdAt     DateTime @default(now())
 
@@ -273,9 +287,9 @@ model Funding {
   id          String   @id @default(cuid())
   amount      Int
   status      String   @default("PENDING") // FundingStatus enum (PENDING | SUCCESS | FAILED)
-  provider    String?  // "paystack" | "simulated"
+  provider    String? // "paystack" | "simulated"
   reference   String   @unique // our idempotency key, also sent to Paystack
-  providerRef String?  // Paystack transaction access_code
+  providerRef String? // Paystack transaction access_code
   initiatedBy String
   createdAt   DateTime @default(now())
 
@@ -295,6 +309,9 @@ model Contract {
 
   task   Task @relation(fields: [taskId], references: [id])
   worker User @relation(fields: [workerId], references: [id])
+
+  @@index([taskId, workerId])
+  @@index([workerId])
 }
 
 // ── Auth: phone OTP + password reset (hashed at rest, single-use, time-boxed) ──
@@ -305,11 +322,11 @@ model OtpCode {
   // HMAC-SHA256(server pepper, "salt:phone:purpose:code") - see routes/authOtp.ts.
   // Was an unsalted sha256 of the six digits alone, which is reversible by
   // anyone who can read this table: 10^6 values precompute to a few megabytes.
-  codeHash String
+  codeHash   String
   // Per-row random salt. Nullable only so the column could be added without a
   // backfill; rows written since always carry one, and a row without one can no
   // longer be verified against (its digest scheme no longer exists).
-  codeSalt String?
+  codeSalt   String?
   purpose    String    @default("login") // OtpPurpose enum (login)
   attempts   Int       @default(0)
   expiresAt  DateTime
@@ -336,34 +353,34 @@ model Rating {
   id          String   @id @default(cuid())
   workerId    String
   taskId      String
-  score       Int      // 1–5 stars
+  score       Int // 1–5 stars
   note        String?
   createdById String
   createdAt   DateTime @default(now())
 
-  worker    User @relation("WorkerRatings",  fields: [workerId],    references: [id])
-  task      Task @relation(                  fields: [taskId],      references: [id])
-  createdBy User @relation("RatingsGiven",   fields: [createdById], references: [id])
+  worker    User @relation("WorkerRatings", fields: [workerId], references: [id])
+  task      Task @relation(fields: [taskId], references: [id])
+  createdBy User @relation("RatingsGiven", fields: [createdById], references: [id])
 
   @@unique([workerId, taskId]) // one rating per worker per task
   @@index([workerId])
 }
 
 model Dispute {
-  id         String   @id @default(cuid())
-  workerId   String
-  entityType String   // PAYMENT | TIMESHEET
-  entityId   String
-  reason     String
-  status     String   @default("OPEN") // DisputeStatus: OPEN | RESOLVED | CLOSED
-  resolution String?  // admin note when resolving / closing
+  id          String   @id @default(cuid())
+  workerId    String
+  entityType  String // PAYMENT | TIMESHEET
+  entityId    String
+  reason      String
+  status      String   @default("OPEN") // DisputeStatus: OPEN | RESOLVED | CLOSED
+  resolution  String? // admin note when resolving / closing
   // Status of the disputed Payment/Timesheet at the moment the dispute was
   // raised, so closing the dispute restores it instead of guessing. Nullable
   // for rows created before this column existed - those fall back to APPROVED,
   // the old hard-coded behaviour.
   priorStatus String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   worker User @relation(fields: [workerId], references: [id])
 
@@ -374,11 +391,11 @@ model Dispute {
 model KycDocument {
   id           String   @id @default(cuid())
   userId       String
-  docType      String   // "ID" | "SELFIE" | "DOCS"
-  filename     String   // stored filename on disk
+  docType      String // "ID" | "SELFIE" | "DOCS"
+  filename     String // stored filename on disk
   originalName String?
   mimeType     String?
-  path         String   // absolute path on disk
+  path         String // absolute path on disk
   createdAt    DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
