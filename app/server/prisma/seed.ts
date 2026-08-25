@@ -13,6 +13,15 @@ const prisma = new PrismaClient();
 // parents before children, so FK references always exist by insert time.
 const TABLES_CHILD_TO_PARENT = [
   "AuditLog",
+  // Talent profile. Credential references User, CredentialType AND KycDocument,
+  // so it has to be cleared before all three.
+  "Credential",
+  "WorkerSkill",
+  // Notification references User. It was added with the inbox and belongs here
+  // for the same reason as everything else in this list: without it, a re-seed
+  // leaves the previous run's rows behind, which is exactly the kind of
+  // leftover that makes a "clean" database behave unaccountably.
+  "Notification",
   "ClockEvent",
   "Withdrawal",
   "Contract",
@@ -30,6 +39,9 @@ const TABLES_CHILD_TO_PARENT = [
   "User",
   "JobApplication",
   "Job",
+  // Parents of the two talent-profile tables above, so they come after them.
+  "Skill",
+  "CredentialType",
   "TaxRate",
   "Category",
   "Setting",
@@ -104,6 +116,11 @@ async function main() {
   // auth tables (PasswordReset FKs User; OtpCode is standalone but clear too)
   await prisma.passwordReset.deleteMany();
   await prisma.otpCode.deleteMany();
+  // talent profile: both FK User, so they must go first
+  await prisma.credential.deleteMany();
+  await prisma.workerSkill.deleteMany();
+  await prisma.credentialType.deleteMany();
+  await prisma.skill.deleteMany();
   await prisma.user.deleteMany();
   // v2 tables
   await prisma.jobApplication.deleteMany();
@@ -580,6 +597,117 @@ async function main() {
     await prisma.category.create({ data: { ...cat, active: true } });
   }
 
+  // ── Talent profile: skills + credential types ─────────────────────
+  //
+  // A starter catalogue, so the pickers and the review desk are not empty on
+  // first run. Afrizone edits this from Settings; nothing here is load-bearing.
+  //
+  // Note what is a SKILL and what is a CREDENTIAL. Skills are self-declared and
+  // gate nothing. Anything that must actually be guaranteed - a licence, a
+  // certification, proof of enrolment - is a credential type, because only
+  // those are checked by a person. See schema.prisma.
+  const skills: Array<{ name: string; slug: string; group: string; sortOrder: number }> = [
+    { name: "Motorcycle riding", slug: "motorcycle-riding", group: "Logistics", sortOrder: 1 },
+    { name: "Route planning", slug: "route-planning", group: "Logistics", sortOrder: 2 },
+    { name: "Parcel handling", slug: "parcel-handling", group: "Logistics", sortOrder: 3 },
+    { name: "Customer service", slug: "customer-service", group: "Retail", sortOrder: 1 },
+    { name: "Product sampling", slug: "product-sampling", group: "Retail", sortOrder: 2 },
+    { name: "Merchandising", slug: "merchandising", group: "Retail", sortOrder: 3 },
+    { name: "Cash handling", slug: "cash-handling", group: "Retail", sortOrder: 4 },
+    { name: "Data entry", slug: "data-entry", group: "Office", sortOrder: 1 },
+    { name: "Survey administration", slug: "survey-administration", group: "Office", sortOrder: 2 },
+    { name: "Social media", slug: "social-media", group: "Office", sortOrder: 3 },
+    { name: "Photography", slug: "photography", group: "Creative", sortOrder: 1 },
+    { name: "Event setup", slug: "event-setup", group: "Creative", sortOrder: 2 },
+    { name: "Electrical work", slug: "electrical-work", group: "Trade", sortOrder: 1 },
+    { name: "Plumbing", slug: "plumbing", group: "Trade", sortOrder: 2 },
+    { name: "Carpentry", slug: "carpentry", group: "Trade", sortOrder: 3 },
+  ];
+  for (const sk of skills) {
+    await prisma.skill.create({ data: { ...sk, active: true } });
+  }
+
+  const credentialTypes: Array<{
+    name: string;
+    slug: string;
+    reviewMode: string;
+    issuerMode: string;
+    requiresExpiry: boolean;
+    requiresReference: boolean;
+    requiresFile: boolean;
+    issuerHint?: string;
+    sortOrder: number;
+  }> = [
+    {
+      name: "Driver's licence",
+      slug: "drivers-licence",
+      reviewMode: "ADMIN_REVIEW",
+      issuerMode: "THIRD_PARTY",
+      requiresExpiry: true,
+      requiresReference: true,
+      requiresFile: true,
+      issuerHint: "FRSC",
+      sortOrder: 1,
+    },
+    {
+      name: "Vehicle registration",
+      slug: "vehicle-registration",
+      reviewMode: "ADMIN_REVIEW",
+      issuerMode: "THIRD_PARTY",
+      requiresExpiry: true,
+      requiresReference: true,
+      requiresFile: true,
+      sortOrder: 2,
+    },
+    {
+      name: "Student enrolment",
+      slug: "student-enrolment",
+      reviewMode: "ADMIN_REVIEW",
+      issuerMode: "THIRD_PARTY",
+      requiresExpiry: true,
+      requiresReference: true,
+      requiresFile: true,
+      issuerHint: "University or polytechnic",
+      sortOrder: 3,
+    },
+    {
+      name: "Trade certification",
+      slug: "trade-certification",
+      reviewMode: "ADMIN_REVIEW",
+      issuerMode: "THIRD_PARTY",
+      requiresExpiry: false,
+      requiresReference: false,
+      requiresFile: true,
+      sortOrder: 4,
+    },
+    {
+      name: "CV",
+      slug: "cv",
+      reviewMode: "SELF_DECLARED",
+      issuerMode: "THIRD_PARTY",
+      requiresExpiry: false,
+      requiresReference: false,
+      requiresFile: true,
+      sortOrder: 5,
+    },
+    {
+      // Issued by Afrizone on the evidence of platform history rather than any
+      // third-party paper. This is the route by which a worker who is plainly
+      // competent, but holds no formal certificate, can still pass a gate.
+      name: "Afrizone verified dispatch rider",
+      slug: "afrizone-verified-dispatch",
+      reviewMode: "ADMIN_REVIEW",
+      issuerMode: "AFRIZONE",
+      requiresExpiry: false,
+      requiresReference: false,
+      requiresFile: false,
+      sortOrder: 6,
+    },
+  ];
+  for (const ct of credentialTypes) {
+    await prisma.credentialType.create({ data: { ...ct, active: true } });
+  }
+
   // ── v2: Settings, templates ───────────────────────────────────────────────
   const templates: Array<{ key: string; value: string }> = [
     { key: "contract.default", value: "This agreement is between Afrizone and {{worker}} for {{task}}." },
@@ -604,6 +732,8 @@ async function main() {
     clockEvents: await prisma.clockEvent.count(),
     withdrawals: await prisma.withdrawal.count(),
     contracts: await prisma.contract.count(),
+    skills: await prisma.skill.count(),
+    credentialTypes: await prisma.credentialType.count(),
   };
   console.log("Seed complete:", counts);
   console.log("Admin login: admin@afrizone.work / afrizone123");

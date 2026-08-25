@@ -59,22 +59,25 @@ model User {
   notifEmail        Boolean  @default(false) // email summary digest (future)
   createdAt         DateTime @default(now())
 
-  tasksCreated      Task[]            @relation("TaskCreatedBy")
-  applications      Application[]
-  timesheets        Timesheet[]
-  payments          Payment[]
-  auditLogs         AuditLog[]
-  clockEvents       ClockEvent[]
-  withdrawals       Withdrawal[]
-  fundingsInitiated Funding[]
-  contracts         Contract[]
-  passwordResets    PasswordReset[]
-  kycDocuments      KycDocument[]
-  kycVerifications  KycVerification[]
-  disputes          Dispute[]
-  ratingsReceived   Rating[]          @relation("WorkerRatings")
-  ratingsGiven      Rating[]          @relation("RatingsGiven")
-  notifications     Notification[]
+  tasksCreated        Task[]            @relation("TaskCreatedBy")
+  applications        Application[]
+  timesheets          Timesheet[]
+  payments            Payment[]
+  auditLogs           AuditLog[]
+  clockEvents         ClockEvent[]
+  withdrawals         Withdrawal[]
+  fundingsInitiated   Funding[]
+  contracts           Contract[]
+  passwordResets      PasswordReset[]
+  kycDocuments        KycDocument[]
+  kycVerifications    KycVerification[]
+  disputes            Dispute[]
+  ratingsReceived     Rating[]          @relation("WorkerRatings")
+  ratingsGiven        Rating[]          @relation("RatingsGiven")
+  notifications       Notification[]
+  skills              WorkerSkill[]
+  credentials         Credential[]      @relation("WorkerCredentials")
+  credentialsReviewed Credential[]      @relation("CredentialsReviewed")
 }
 
 model Task {
@@ -399,7 +402,9 @@ model KycDocument {
   path         String // absolute path on disk
   createdAt    DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+  // A credential's evidence is stored through this same pipeline.
+  credentials Credential[]
 
   @@index([userId])
 }
@@ -450,4 +455,111 @@ model Notification {
   @@index([userId, createdAt])
   // The unread badge, which is polled far more often than the list is opened.
   @@index([userId, readAt])
+}
+
+// ── Talent profile: skills and credentials ───────────────────────────────────
+//
+// The distinction between these two is the whole design, and it is deliberate:
+//
+//   SKILLS are self-declared and carry NO verification state whatsoever. They
+//   are for search, ranking and admin judgement. They never gate anything.
+//   A "checked by us" badge on a skill that unlocks nothing is a promise the
+//   interface makes and the eligibility engine breaks, so the badge does not
+//   exist - and neither does the column behind it.
+//
+//   CREDENTIALS are the things that can be guaranteed, because a person looked
+//   at a document and said so. Anything that must gate access is modelled as a
+//   credential type, never as a skill.
+
+// The Afrizone-controlled catalogue of skills a worker can declare.
+model Skill {
+  id        String  @id @default(cuid())
+  name      String
+  // Stable identifier for code and imports. `name` is deliberately NOT unique:
+  // renaming a skill must never orphan the rows pointing at it.
+  slug      String  @unique
+  group     String // e.g. "Logistics", "Retail" - how the picker is grouped
+  active    Boolean @default(true) // soft-retire; rows are never hard-deleted
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  workers WorkerSkill[]
+}
+
+model WorkerSkill {
+  id       String @id @default(cuid())
+  workerId String
+  skillId  String
+  years    Int? // optional self-reported experience
+
+  createdAt DateTime @default(now())
+
+  worker User  @relation(fields: [workerId], references: [id])
+  skill  Skill @relation(fields: [skillId], references: [id])
+
+  @@unique([workerId, skillId])
+  @@index([skillId])
+}
+
+// The Afrizone-controlled catalogue of credential types.
+model CredentialType {
+  id                String  @id @default(cuid())
+  name              String
+  slug              String  @unique
+  // ADMIN_REVIEW: a person checks the document before it counts.
+  // SELF_DECLARED: recorded on the worker's word alone.
+  reviewMode        String  @default("ADMIN_REVIEW")
+  // THIRD_PARTY: issued by someone else, evidenced by their document.
+  // AFRIZONE: issued by Afrizone itself, evidenced by platform history - the
+  // route by which a competent worker with no formal paper can still pass a
+  // gate. Without it the platform could only ever ratify credentials people
+  // already had.
+  issuerMode        String  @default("THIRD_PARTY")
+  requiresExpiry    Boolean @default(false)
+  requiresReference Boolean @default(false)
+  requiresFile      Boolean @default(true)
+  issuerHint        String? // e.g. "FRSC" - shown as placeholder text
+  active            Boolean @default(true)
+  sortOrder         Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  credentials Credential[]
+}
+
+model Credential {
+  id               String    @id @default(cuid())
+  workerId         String
+  credentialTypeId String
+  title            String
+  issuer           String?
+  referenceNumber  String?
+  issuedAt         DateTime?
+  expiresAt        DateTime?
+  // The uploaded evidence, via the same KYC document pipeline.
+  documentId       String?
+  // PENDING | VERIFIED | REJECTED | REVOKED.
+  //
+  // There is deliberately NO stored EXPIRED status. Expiry is computed at read
+  // time - VERIFIED and (expiresAt is null or expiresAt > now) - so a
+  // background job that fails to run can never leave a lapsed licence reading
+  // as valid. A status that decays with the clock must not be a stored value.
+  status           String    @default("PENDING")
+  reviewedById     String?
+  reviewedAt       DateTime?
+  rejectionReason  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  worker         User           @relation("WorkerCredentials", fields: [workerId], references: [id])
+  credentialType CredentialType @relation(fields: [credentialTypeId], references: [id])
+  document       KycDocument?   @relation(fields: [documentId], references: [id])
+  reviewedBy     User?          @relation("CredentialsReviewed", fields: [reviewedById], references: [id])
+
+  // The review queue, and the "expiring soon" filter.
+  @@index([credentialTypeId, status, expiresAt])
+  // One worker's credentials, and the eligibility check in Phase 4.
+  @@index([workerId, status])
 }
