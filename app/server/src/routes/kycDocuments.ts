@@ -4,7 +4,11 @@ import { requireAuth, AuthedRequest, verifyToken, isAdmin } from "../auth";
 import { uploadToR2, resolveUrl, getFileStream } from "../services/storage";
 import { sniffFileType, isAllowedMime, IDENTITY_MIMES, DOCUMENT_MIMES } from "../util/fileType";
 
-const DOC_TYPES = ["ID", "SELFIE", "DOCS"] as const;
+// ID and SELFIE are identity evidence and must be photographs. DOCS, CV and
+// CREDENTIAL are supporting paperwork, where a PDF is the normal form - a
+// scanned licence or a CV is far more often a PDF than a photo.
+const DOC_TYPES = ["ID", "SELFIE", "DOCS", "CV", "CREDENTIAL"] as const;
+const IDENTITY_DOC_TYPES: readonly string[] = ["ID", "SELFIE"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 // The exact shape handleKycUpload generates: `${cuid}-${Date.now()}${ext}`.
@@ -132,7 +136,7 @@ export async function handleKycUpload(request: Request): Promise<Response> {
 
   const docType = form.get("docType");
   if (typeof docType !== "string" || !DOC_TYPES.includes(docType as (typeof DOC_TYPES)[number])) {
-    return new Response(JSON.stringify({ error: "docType must be ID, SELFIE, or DOCS" }), {
+    return new Response(JSON.stringify({ error: `docType must be one of ${DOC_TYPES.join(", ")}` }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });
@@ -160,14 +164,16 @@ export async function handleKycUpload(request: Request): Promise<Response> {
   const sniffed = sniffFileType(new Uint8Array(buffer));
   // Identity documents must be photographs; a PDF "selfie" is not a thing, and
   // narrowing here keeps the highest-risk format off the highest-trust path.
-  const permitted = docType === "DOCS" ? DOCUMENT_MIMES : IDENTITY_MIMES;
+  // Written as an allow-list of the identity types rather than a check for one
+  // supporting type, so adding a further supporting type later cannot
+  // accidentally admit PDFs onto the identity path.
+  const permitted = IDENTITY_DOC_TYPES.includes(docType) ? IDENTITY_MIMES : DOCUMENT_MIMES;
   if (!sniffed || !permitted.includes(sniffed.mime)) {
     return new Response(
       JSON.stringify({
-        error:
-          docType === "DOCS"
-            ? "Upload a JPEG, PNG, WebP or PDF"
-            : "Upload a photo (JPEG, PNG or WebP)",
+          error: IDENTITY_DOC_TYPES.includes(docType)
+          ? "Upload a photo (JPEG, PNG or WebP)"
+          : "Upload a JPEG, PNG, WebP or PDF",
       }),
       { status: 400, headers: { "Content-Type": "application/json" } }
     );

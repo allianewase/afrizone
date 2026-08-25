@@ -23,6 +23,7 @@ import disputesRouter, { adminRouter as adminDisputesRouter } from "./routes/dis
 import ratingsRouter from "./routes/ratings";
 import webhooksRouter from "./routes/webhooks";
 import kycDocumentsRouter, { handleKycUpload, handleKycFileGet } from "./routes/kycDocuments";
+import meTalentRouter from "./routes/meTalent";
 import searchRouter from "./routes/search";
 import healthRouter from "./routes/health";
 import fundingRouter from "./routes/funding";
@@ -193,6 +194,8 @@ app.use("/api/settings", settingsRouter);
 
 // v3: worker-facing (mobile app)
 app.use("/api/me", meRouter);
+// Skills + credentials, also under /api/me (see routes/meTalent.ts).
+app.use("/api/me", meTalentRouter);
 // GET only here - POST is intercepted before Express, see the fetch handler below.
 app.use("/api/me/kyc/documents", kycDocumentsRouter);
 app.use("/api/clock", clockRouter);
