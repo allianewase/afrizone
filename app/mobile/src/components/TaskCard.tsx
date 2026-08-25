@@ -17,16 +17,41 @@ export function TaskCard({ task, onPress }: TaskCardProps) {
   const filled = task.filledCount ?? 0;
   const fillPct = task.slots > 0 ? Math.min(100, Math.round((filled / task.slots) * 100)) : 0;
 
+  // Straight from the server. The card must never work this out for itself:
+  // a card that says one thing and an Apply button that does another is the
+  // single failure the eligibility engine exists to prevent.
+  const el = task.eligibility;
+  const locked = !!el && !el.eligible;
+  // The nearest thing to do about it, in the worker's own words. Beyond one
+  // blocker the card just says how many, because a card is a decision about
+  // whether to tap, not the place to fix anything.
+  const lockLine = locked
+    ? el!.blockers.length === 1
+      ? el!.blockers[0].message
+      : `${el!.blockers.length} things needed before you can apply`
+    : null;
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${task.title}, ${payLabel(task.payModel, task.rate, task.budget)}`}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      accessibilityLabel={
+        locked
+          ? `${task.title}, ${payLabel(task.payModel, task.rate, task.budget)}, locked: ${lockLine}`
+          : `${task.title}, ${payLabel(task.payModel, task.rate, task.budget)}`
+      }
+      style={({ pressed }) => [styles.card, locked && styles.cardLocked, pressed && styles.pressed]}
     >
       <View style={styles.topRow}>
         <TierBadge tier={task.tier} small />
-        <Text style={styles.category}>{task.category}</Text>
+        {locked ? (
+          <View style={styles.lockChip}>
+            <Icon name="lock" size={11} color={colors.goldInk} />
+            <Text style={styles.lockChipText}>Locked</Text>
+          </View>
+        ) : (
+          <Text style={styles.category}>{task.category}</Text>
+        )}
       </View>
 
       <Text style={styles.title} numberOfLines={2}>
@@ -49,6 +74,22 @@ export function TaskCard({ task, onPress }: TaskCardProps) {
       <View style={styles.progressTrack}>
         <View style={[styles.progressFill, { width: `${fillPct}%` }]} />
       </View>
+
+      {lockLine ? (
+        <View style={styles.lockRow}>
+          <Icon name="alert" size={13} color={colors.goldInk} />
+          <Text style={styles.lockText} numberOfLines={2}>
+            {lockLine}
+          </Text>
+        </View>
+      ) : task.requirementsSummary ? (
+        <View style={styles.reqRow}>
+          <Icon name="shield" size={13} color={colors.textMuted} />
+          <Text style={styles.reqText} numberOfLines={1}>
+            {task.requirementsSummary}
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.footer}>
         <MoneyText
@@ -77,7 +118,24 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     ...shadow.soft,
   },
+  // Dimmed, not hidden. A locked task is still worth seeing - it is the reason
+  // to go and upload the document - so it stays legible and stays tappable.
+  cardLocked: { borderColor: colors.amberSoft, backgroundColor: colors.surfaceSand },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  lockChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: 100,
+    backgroundColor: colors.amberSoft,
+  },
+  lockChipText: { color: colors.goldInk, fontSize: 10, fontFamily: fontFamily.bold },
+  lockRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  lockText: { flex: 1, color: colors.goldInk, fontSize: type.size.sm, lineHeight: 18 },
+  reqRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  reqText: { flex: 1, color: colors.textMuted, fontSize: type.size.sm },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   category: { color: colors.textMuted, fontSize: type.size.xs, fontWeight: '600' },
   title: { color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.bold, lineHeight: 22 },

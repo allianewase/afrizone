@@ -67,8 +67,59 @@ export interface Task {
   // augmented by GET /api/tasks
   filledCount?: number;
   applicantCount?: number;
+  requiresIdentityVerified?: boolean;
+  /** One-line summary for cards. Display only - it decides nothing. */
+  requirementsSummary?: string | null;
+  requirements?: TaskRequirements;
+  /**
+   * This worker, this task, decided by the server.
+   *
+   * The app must not recompute any part of this. It used to check the tier and
+   * KYC status itself, which is how a card can end up promising work the server
+   * then refuses - and being told you qualify and then turned away is worse
+   * than being told the truth up front.
+   */
+  eligibility?: Eligibility | null;
   // present on GET /api/tasks/:id
   applications?: Application[];
+}
+
+export interface TaskRequirements {
+  requiresIdentityVerified: boolean;
+  skills: { id: string; name: string }[];
+  credentialTypes: { id: string; name: string }[];
+  version: number;
+}
+
+export type BlockerCode =
+  | 'TIER'
+  | 'IDENTITY'
+  | 'SKILL'
+  | 'CREDENTIAL_MISSING'
+  | 'CREDENTIAL_PENDING'
+  | 'CREDENTIAL_EXPIRED';
+
+export interface Blocker {
+  code: BlockerCode;
+  ref: string | null;
+  /** Already written for a worker to read. Show it as-is; never re-word it here. */
+  message: string;
+  /** Where to send them to fix it. null means there is nothing they can do. */
+  fix: 'skills' | 'credentials' | 'kyc' | null;
+}
+
+export interface Eligibility {
+  eligible: boolean;
+  blockers: Blocker[];
+  /** What they already meet. Shown as ticks - being blocked is not the whole story. */
+  met: string[];
+  checks: number;
+}
+
+export interface TaskEligibility {
+  taskId: string;
+  requirements: TaskRequirements;
+  eligibility: Eligibility;
 }
 
 export interface Application {

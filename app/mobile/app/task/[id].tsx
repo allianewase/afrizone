@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, TextInput, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { Card } from '../../src/components/Card';
 import { Button } from '../../src/components/Button';
@@ -9,12 +9,13 @@ import { Icon } from '../../src/components/Icon';
 import { TierBadge } from '../../src/components/TierBadge';
 import { MoneyText } from '../../src/components/MoneyText';
 import { Banner, LoadingState, ErrorState } from '../../src/components/Feedback';
+import { RequirementsCard } from '../../src/components/RequirementsCard';
 import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
 import { payLabel, formatDate, netFromGross } from '../../src/lib/format';
-import type { Task } from '../../src/api/types';
+import type { Blocker, Task } from '../../src/api/types';
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -29,11 +30,37 @@ export default function TaskDetailScreen() {
     [id]
   );
 
+  /**
+   * Re-read on every return to this screen.
+   *
+   * A worker who taps "Upload" on a blocker, adds the document and comes back
+   * must not find the same refusal waiting for them. The reload is what turns
+   * the requirements card from a verdict into a thing they can act on and see
+   * change.
+   */
+  useFocusEffect(
+    React.useCallback(() => {
+      task.reload();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id])
+  );
+
   const t = task.data;
   const remote = t?.locationType === 'REMOTE';
-  const tierEligible = t ? (user?.tiers ?? []).includes(t.tier) : false;
-  const kycOk = user?.kycStatus === 'TIER_APPROVED';
   const closed = t ? t.status !== 'OPEN' : false;
+
+  /**
+   * The verdict comes from the server, not from this screen.
+   *
+   * This used to be two local checks: the tier read off the user object, and
+   * KYC insisted on TIER_APPROVED. Both were quietly wrong. The server accepts
+   * VERIFIED as well as TIER_APPROVED, and only asks about identity at all when
+   * the task requires it - so a verified worker was being refused here for an
+   * ungated task the server would have accepted. That is the exact drift the
+   * eligibility engine exists to remove, and the fix is to stop deciding here.
+   */
+  const eligibility = t?.eligibility ?? null;
+  const canApply = eligibility ? eligibility.eligible : true;
 
   // Check server-side application state so "Apply" button reflects reality on fresh load.
   const myApp = t?.applications?.find((a) => a.workerId === user?.id);
@@ -113,22 +140,11 @@ export default function TaskDetailScreen() {
           <Text style={styles.section}>About this task</Text>
           <Text style={styles.desc}>{t.description}</Text>
 
-          {/* Eligibility messaging */}
-          {!tierEligible ? (
-            <Banner
-              tone="amber"
-              icon="shield"
-              title="Tier locked"
-              message={`This task needs the ${t.tier} tier. Add it in Profile to apply.`}
-            />
-          ) : !kycOk ? (
-            <Banner
-              tone="amber"
-              icon="shield"
-              title="Finish verification first"
-              message="Applications unlock once your KYC is Tier-Approved."
-            />
-          ) : null}
+          {/* What this task asks for, and where this worker stands against it.
+              Every unmet row is tappable and lands on the screen that fixes
+              it - being told no without being told where to go is the version
+              of this feature that makes people give up. */}
+          <RequirementsCard requirements={t.requirements} eligibility={eligibility} />
         </>
       )}
 
@@ -146,10 +162,10 @@ export default function TaskDetailScreen() {
             <Button label="Applications closed" variant="secondary" disabled />
           ) : (
             <Button
-              label="Apply for this task"
+              label={canApply ? 'Apply for this task' : 'Not yet - see what is needed'}
               icon="chevron-right"
               onPress={() => setSheetOpen(true)}
-              disabled={!tierEligible || !kycOk}
+              disabled={!canApply}
             />
           )}
         </View>
@@ -198,10 +214,15 @@ function ApplySheet({
   const [pitch, setPitch] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A refusal that arrived between opening this screen and pressing submit -
+  // a licence that expired this morning, a credential revoked while the sheet
+  // was open. Rare, and exactly when a bare error message is least helpful.
+  const [blockers, setBlockers] = useState<Blocker[]>([]);
 
   async function submit() {
     setBusy(true);
     setError(null);
+    setBlockers([]);
     try {
       // REAL: POST /api/applications {taskId, pitch}
       await api.apply(task.id, pitch.trim() || undefined);
@@ -209,6 +230,14 @@ function ApplySheet({
     } catch (e) {
       const msg = e instanceof ApiError || e instanceof Error ? e.message : 'Could not submit application.';
       setError(msg);
+      const body =
+        e instanceof ApiError && e.body && typeof e.body === 'object'
+          ? (e.body as { blockers?: Blocker[] })
+          : null;
+      // More than one thing is missing, so list them: the headline names only
+      // the first, and fixing one at a time to discover the next is how people
+      // give up.
+      if (body?.blockers && body.blockers.length > 1) setBlockers(body.blockers);
     } finally {
       setBusy(false);
     }
@@ -231,6 +260,13 @@ function ApplySheet({
           accessibilityLabel="Pitch"
         />
         {error ? <Banner tone="danger" title="Couldn’t apply" message={error} /> : null}
+        {blockers.length > 1
+          ? blockers.slice(1).map((b, i) => (
+              <Text key={`${b.code}-${b.ref ?? i}`} style={styles.blockerLine}>
+                • {b.message}
+              </Text>
+            ))
+          : null}
         <Button label="Submit application" onPress={submit} loading={busy} />
       </View>
     </Modal>
@@ -238,6 +274,12 @@ function ApplySheet({
 }
 
 const styles = StyleSheet.create({
+  blockerLine: {
+    color: colors.dangerInk,
+    fontSize: type.size.sm,
+    lineHeight: 19,
+    marginTop: 2,
+  },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   category: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
   title: { color: colors.text, fontSize: type.size.xxl, fontFamily: fontFamily.extrabold, marginTop: spacing.sm, lineHeight: 30 },

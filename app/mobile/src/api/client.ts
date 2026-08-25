@@ -4,6 +4,7 @@ import type {
   OtpRequestResponse,
   VerifyOtpResponse,
   Task,
+  TaskEligibility,
   WorkerDetail,
   Wallet,
   Job,
@@ -37,10 +38,19 @@ import type {
 
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  /**
+   * The parsed error body, when there was one.
+   *
+   * `message` is the headline and is all most screens need. A refusal on
+   * requirements also carries the full list of blockers, each with somewhere to
+   * go and fix it - and a worker handed one sentence has to guess at the rest.
+   */
+  body: unknown;
+  constructor(message: string, status: number, body: unknown = null) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -98,7 +108,7 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
       (data && typeof data === 'object' && 'error' in data
         ? String((data as { error: unknown }).error)
         : undefined) || `Request failed (${res.status})`;
-    throw new ApiError(msg, res.status);
+    throw new ApiError(msg, res.status, data);
   }
 
   return data as T;
@@ -256,6 +266,17 @@ export const api = {
   /** GET /api/tasks/:id: detail + applications. */
   task(id: string, signal?: AbortSignal): Promise<Task> {
     return request<Task>(`/tasks/${id}`, { signal });
+  },
+
+  /**
+   * GET /api/tasks/:id/eligibility: can this worker take this task, right now.
+   *
+   * Separate from the task payload so a worker who has just uploaded a document
+   * can re-check without refetching the whole task, and so the answer is never
+   * read from a task body cached before they fixed it.
+   */
+  taskEligibility(id: string, signal?: AbortSignal): Promise<TaskEligibility> {
+    return request<TaskEligibility>(`/tasks/${id}/eligibility`, { signal });
   },
 
   /** GET /api/workers/:id: worker + derived wallet. */

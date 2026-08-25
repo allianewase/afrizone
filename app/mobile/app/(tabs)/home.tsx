@@ -79,8 +79,33 @@ export default function HomeScreen() {
     });
   }, [open, q, payFilter, locFilter, tierFilter, filtersActive]);
 
-  const matched = useMemo(() => open.filter((t) => myTiers.includes(t.tier)), [open, myTiers]);
-  const others = useMemo(() => open.filter((t) => !myTiers.includes(t.tier)), [open, myTiers]);
+  /**
+   * Three buckets, decided by the server rather than by matching tiers here.
+   *
+   *   ready    - the worker can apply right now.
+   *   fixable  - they cannot, but everything stopping them is something they
+   *              can do: upload a document, declare a skill, verify their ID.
+   *   locked   - nothing they can do from the app. In practice this is the
+   *              wrong tier, which an admin grants.
+   *
+   * The split that matters is fixable vs locked, not matched vs unmatched. A
+   * task one document away is a reason to open the app tomorrow; a task in a
+   * tier they do not have is not, and running them together buries the first
+   * kind in the second.
+   */
+  const { ready, fixable, locked } = useMemo(() => {
+    const out = { ready: [] as Task[], fixable: [] as Task[], locked: [] as Task[] };
+    for (const t of open) {
+      const el = t.eligibility;
+      // No verdict from the server (an older build, or a failed load) - shown
+      // as normal rather than hidden. Erring toward showing a task the server
+      // may refuse is better than silently hiding work from someone.
+      if (!el || el.eligible) out.ready.push(t);
+      else if (el.blockers.some((b) => b.fix !== null)) out.fixable.push(t);
+      else out.locked.push(t);
+    }
+    return out;
+  }, [open]);
 
   function clearFilters() {
     setQ('');
@@ -130,25 +155,44 @@ export default function HomeScreen() {
 
     return (
       <>
-        <Text style={styles.sectionTitle}>Matched for you</Text>
-        {matched.length === 0 ? (
+        <Text style={styles.sectionTitle}>Ready to apply</Text>
+        {ready.length === 0 ? (
           <EmptyState
             icon="briefcase"
-            title="No matched tasks yet"
-            message="Add a tier in Profile to see tasks matched to your skills."
+            title="Nothing open for you yet"
+            message={
+              fixable.length > 0
+                ? 'There is work below you can unlock - see what it needs.'
+                : 'Add a tier in Profile to see tasks matched to you.'
+            }
           />
         ) : (
           <View style={styles.feed}>
-            {matched.map((t) => (
+            {ready.map((t) => (
               <TaskCard key={t.id} task={t} onPress={() => router.push(`/task/${t.id}`)} />
             ))}
           </View>
         )}
-        {others.length > 0 ? (
+
+        {fixable.length > 0 ? (
           <>
-            <Text style={styles.sectionTitle}>All open tasks</Text>
+            <Text style={styles.sectionTitle}>You can unlock these</Text>
+            <Text style={styles.sectionSub}>
+              Each one needs something you can add yourself. Tap to see what.
+            </Text>
             <View style={styles.feed}>
-              {others.map((t) => (
+              {fixable.map((t) => (
+                <TaskCard key={t.id} task={t} onPress={() => router.push(`/task/${t.id}`)} />
+              ))}
+            </View>
+          </>
+        ) : null}
+
+        {locked.length > 0 ? (
+          <>
+            <Text style={styles.sectionTitle}>Other tiers</Text>
+            <View style={styles.feed}>
+              {locked.map((t) => (
                 <TaskCard key={t.id} task={t} onPress={() => router.push(`/task/${t.id}`)} />
               ))}
             </View>
@@ -527,6 +571,13 @@ const styles = StyleSheet.create({
     fontSize: type.size.lg,
     fontFamily: fontFamily.extrabold,
     marginTop: spacing.xl,
+    marginBottom: spacing.md,
+  },
+  sectionSub: {
+    color: colors.textMuted,
+    fontSize: type.size.sm,
+    lineHeight: 19,
+    marginTop: -spacing.sm,
     marginBottom: spacing.md,
   },
   feed: { gap: spacing.md },
