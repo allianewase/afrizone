@@ -24,6 +24,7 @@ import ratingsRouter from "./routes/ratings";
 import webhooksRouter from "./routes/webhooks";
 import kycDocumentsRouter, { handleKycUpload, handleKycFileGet } from "./routes/kycDocuments";
 import meTalentRouter from "./routes/meTalent";
+import credentialsRouter from "./routes/credentials";
 import searchRouter from "./routes/search";
 import healthRouter from "./routes/health";
 import fundingRouter from "./routes/funding";
@@ -193,6 +194,7 @@ app.use("/api/reports", reportsRouter);
 app.use("/api/settings", settingsRouter);
 
 // v3: worker-facing (mobile app)
+app.use("/api/credentials", credentialsRouter);
 app.use("/api/me", meRouter);
 // Skills + credentials, also under /api/me (see routes/meTalent.ts).
 app.use("/api/me", meTalentRouter);

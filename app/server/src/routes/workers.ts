@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest, publicUser } from "../auth";
-import { tiersToArray } from "../types";
+import { tiersToArray, tiersToString, TIERS, Tier, isCredentialValid, isCredentialExpiring } from "../types";
 import { writeAudit, userActor } from "../util/audit";
 import { resolveUrl } from "../services/storage";
 import { notifyWorker } from "../services/push";
@@ -116,6 +116,218 @@ router.post(
     );
 
     res.json(publicUser(updated));
+  }
+);
+
+/**
+ * GET /api/workers/:id/profile
+ *
+ * The whole picture of one worker, for an admin deciding whether to give them
+ * work: identity status, declared skills, and every credential with its
+ * derived validity. Readable by all three admin roles - a task manager
+ * choosing between applicants needs this, and it grants no power to change
+ * anything.
+ */
+router.get(
+  "/:id/profile",
+  requireAuth,
+  requireRole("SUPER_ADMIN", "HR_ADMIN", "TASK_MANAGER"),
+  async (req: AuthedRequest, res: Response) => {
+    const worker = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      include: {
+        skills: { include: { skill: true } },
+        credentials: { include: { credentialType: true }, orderBy: { createdAt: "desc" } },
+      },
+    });
+    if (!worker || worker.role !== "WORKER") {
+      return res.status(404).json({ error: "Worker not found" });
+    }
+
+    const now = new Date();
+    res.json({
+      ...publicUser(worker),
+      skills: worker.skills.map((ws) => ({
+        skillId: ws.skillId,
+        slug: ws.skill.slug,
+        name: ws.skill.name,
+        group: ws.skill.group,
+        years: ws.years,
+        retired: !ws.skill.active,
+        // Stated here too, because this screen is where somebody is most
+        // tempted to read a skill as a checked fact: it is not one. Skills are
+        // the worker's own word, and gate nothing.
+        selfDeclared: true,
+      })),
+      credentials: worker.credentials.map((c) => ({
+        id: c.id,
+        title: c.title,
+        issuer: c.issuer,
+        referenceNumber: c.referenceNumber,
+        issuedAt: c.issuedAt,
+        expiresAt: c.expiresAt,
+        status: c.status,
+        valid: isCredentialValid(c, now),
+        expiringSoon: isCredentialExpiring(c, 30, now),
+        rejectionReason: c.rejectionReason,
+        reviewedAt: c.reviewedAt,
+        credentialType: c.credentialType,
+      })),
+    });
+  }
+);
+
+/**
+ * PATCH /api/workers/:id/tiers -> body {tiers: Tier[]}
+ *
+ * Fixes a standing defect: tiers were write-once at KYC submission and no
+ * admin could grant or revoke one afterwards. Since applications.ts gates task
+ * eligibility on exactly this column, that meant a worker who genuinely
+ * qualified for a new tier had no route to it at all, and one who should lose
+ * a tier could not be stopped.
+ *
+ * Validated against the real list, because `as Tier` is a compile-time cast
+ * that does nothing at runtime - the same hole that was closed on the worker's
+ * own KYC submission path.
+ */
+router.patch(
+  "/:id/tiers",
+  requireAuth,
+  requireRole("SUPER_ADMIN", "HR_ADMIN"),
+  async (req: AuthedRequest, res: Response) => {
+    const raw = req.body?.tiers;
+    if (!Array.isArray(raw)) return res.status(400).json({ error: "tiers must be an array" });
+
+    const tiers: Tier[] = [];
+    for (const t of raw) {
+      if (typeof t !== "string" || !TIERS.includes(t as Tier)) {
+        return res.status(400).json({ error: `tiers must all be one of ${TIERS.join(", ")}` });
+      }
+      if (!tiers.includes(t as Tier)) tiers.push(t as Tier);
+    }
+
+    const worker = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!worker || worker.role !== "WORKER") {
+      return res.status(404).json({ error: "Worker not found" });
+    }
+
+    const before = tiersToArray(worker.tiers);
+    const updated = await prisma.user.update({
+      where: { id: worker.id },
+      data: { tiers: tiersToString(tiers) },
+    });
+
+    await writeAudit(userActor(req.user!.id), "WORKER_TIERS_SET", "User", worker.id, {
+      before,
+      after: tiers,
+    });
+
+    const granted = tiers.filter((t) => !before.includes(t));
+    const revoked = before.filter((t) => !tiers.includes(t));
+    if (granted.length || revoked.length) {
+      await notifyWorker(
+        prisma,
+        worker.id,
+        granted.length ? "New work unlocked" : "Your work categories changed",
+        granted.length
+          ? `You can now apply for ${granted.join(", ").toLowerCase()} work.`
+          : `Your access to ${revoked.join(", ").toLowerCase()} work has been removed.`,
+        { screen: "tasks" },
+        "notifTasks"
+      );
+    }
+
+    res.json(publicUser(updated));
+  }
+);
+
+/**
+ * POST /api/workers/:id/credentials -> body {credentialTypeId, title?, expiresAt?, note?}
+ *
+ * Grant an AFRIZONE-issued credential: one whose evidence is the worker's
+ * history on this platform rather than a document somebody else issued.
+ *
+ * This is the route by which a worker who is plainly competent, but holds no
+ * formal certificate, can pass a gate. Without it every requirement would be a
+ * requirement to have already been credentialed by an institution, and the
+ * platform could only ever ratify advantages people arrived with.
+ *
+ * It lands VERIFIED immediately, and that is correct: an admin granting it IS
+ * the review, and there is no document for anyone to check afterwards.
+ */
+router.post(
+  "/:id/credentials",
+  requireAuth,
+  requireRole("SUPER_ADMIN", "HR_ADMIN"),
+  async (req: AuthedRequest, res: Response) => {
+    const b = req.body || {};
+    const worker = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!worker || worker.role !== "WORKER") {
+      return res.status(404).json({ error: "Worker not found" });
+    }
+
+    const type = await prisma.credentialType.findUnique({
+      where: { id: String(b.credentialTypeId ?? "") },
+    });
+    if (!type || !type.active) {
+      return res.status(400).json({ error: "That credential type is not available" });
+    }
+    if (type.issuerMode !== "AFRIZONE") {
+      // A third-party credential must come from the worker with their evidence
+      // attached, and go through the review desk. Granting one here would be
+      // asserting a fact about a document nobody has seen.
+      return res.status(400).json({
+        error: "Only Afrizone-issued credentials can be granted. This one needs the worker to submit it.",
+      });
+    }
+
+    let expiresAt: Date | null = null;
+    if (b.expiresAt) {
+      const d = new Date(String(b.expiresAt));
+      if (Number.isNaN(d.getTime())) return res.status(400).json({ error: "expiresAt is not a valid date" });
+      if (d.getTime() <= Date.now()) {
+        return res.status(400).json({ error: "That expiry date has already passed" });
+      }
+      expiresAt = d;
+    }
+
+    const existing = await prisma.credential.findFirst({
+      where: { workerId: worker.id, credentialTypeId: type.id, status: "VERIFIED" },
+    });
+    if (existing) {
+      return res.status(409).json({ error: "This worker already holds that credential" });
+    }
+
+    const created = await prisma.credential.create({
+      data: {
+        workerId: worker.id,
+        credentialTypeId: type.id,
+        title: b.title ? String(b.title).trim() : type.name,
+        issuer: "Afrizone",
+        expiresAt,
+        status: "VERIFIED",
+        reviewedById: req.user!.id,
+        reviewedAt: new Date(),
+      },
+      include: { credentialType: true },
+    });
+
+    await writeAudit(userActor(req.user!.id), "CREDENTIAL_GRANTED", "Credential", created.id, {
+      credentialType: type.slug,
+      workerId: worker.id,
+      note: b.note ? String(b.note).trim() : undefined,
+    });
+
+    await notifyWorker(
+      prisma,
+      worker.id,
+      `${type.name} awarded 🎉`,
+      `Afrizone has awarded you "${created.title}" based on your work here.`,
+      { screen: "credentials" },
+      "notifTasks"
+    );
+
+    res.status(201).json(created);
   }
 );
 
