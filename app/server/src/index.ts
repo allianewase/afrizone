@@ -231,9 +231,13 @@ export default {
     // Express's `res` (a Node stream under httpServerHandler) hangs instead
     // of erroring, since Node streams don't implement the Web Streams sink
     // interface `ReadableStream.pipeTo()` writes to. See routes/kycDocuments.ts.
+    // The still-encoded segment is passed through as-is: decoding it here
+    // threw an uncaught URIError on malformed input ("%zz"), and "%2F" only
+    // becomes a separator AFTER this pattern has matched, so the pattern
+    // cannot be what rejects it. Both are handled in handleKycFileGet.
     const fileMatch = request.method === "GET" && url.pathname.match(/^\/api\/me\/kyc\/documents\/file\/([^/]+)$/);
     if (fileMatch) {
-      return handleKycFileGet(request, decodeURIComponent(fileMatch[1]));
+      return handleKycFileGet(request, fileMatch[1]);
     }
     return workersHandler.fetch!(request, env, ctx);
   },
