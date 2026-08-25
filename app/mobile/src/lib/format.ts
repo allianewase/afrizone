@@ -31,6 +31,20 @@ export function formatDate(iso?: string | null): string {
 }
 
 /**
+ * Same, but keeps the year.
+ *
+ * formatDate drops it, which is right for task dates a week or two out. It is
+ * wrong for anything where the year carries the meaning - a licence reading
+ * "Expires 1 Jun" tells the holder nothing about whether it is still valid.
+ */
+export function formatDateWithYear(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/**
  * Build an E.164 phone from a country prefix (e.g. "+234") and a locally typed
  * national number. Strips a leading 0 (common NG entry) and all non-digits.
  * e.g. ("+234", "0803 000 0001") → "+2348030000001".

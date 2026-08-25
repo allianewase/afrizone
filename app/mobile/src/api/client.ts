@@ -28,6 +28,11 @@ import type {
   PasswordResetResponse,
 
   NotificationPage,
+  Skill,
+  MySkill,
+  CredentialType,
+  Credential,
+  CredentialInput,
 } from './types';
 
 export class ApiError extends Error {
@@ -411,7 +416,7 @@ export const api = {
    * Uses multipart/form-data (not JSON). Returns the created document record.
    */
   async uploadKycDocument(params: {
-    docType: 'ID' | 'SELFIE' | 'DOCS';
+    docType: 'ID' | 'SELFIE' | 'DOCS' | 'CV' | 'CREDENTIAL';
     uri: string;
     mimeType: string;
     filename: string;
@@ -492,6 +497,54 @@ export const api = {
       '/me/notifications/read-all',
       { method: 'POST' }
     );
+  },
+
+  /** GET /api/settings/skills: the catalogue a worker picks from. */
+  skillCatalogue(signal?: AbortSignal): Promise<Skill[]> {
+    return request<Skill[]>('/settings/skills', { signal });
+  },
+
+  /** GET /api/me/skills: what this worker has declared. */
+  mySkills(signal?: AbortSignal): Promise<MySkill[]> {
+    return request<MySkill[]>('/me/skills', { signal });
+  },
+
+  /**
+   * PUT /api/me/skills: replace the whole set in one call.
+   *
+   * Deliberately not one request per tap - the picker is a multi-select, and a
+   * worker on a patchy connection should not end up having saved half of it.
+   */
+  saveMySkills(skills: { skillId: string; years?: number | null }[]): Promise<MySkill[]> {
+    return request<MySkill[]>('/me/skills', { method: 'PUT', body: { skills } });
+  },
+
+  /** GET /api/settings/credential-types: what Afrizone recognises. */
+  credentialTypes(signal?: AbortSignal): Promise<CredentialType[]> {
+    return request<CredentialType[]>('/settings/credential-types', { signal });
+  },
+
+  /** GET /api/me/credentials: this worker's credentials, newest first. */
+  myCredentials(signal?: AbortSignal): Promise<Credential[]> {
+    return request<Credential[]>('/me/credentials', { signal });
+  },
+
+  /** POST /api/me/credentials: submit one for checking. */
+  addCredential(input: CredentialInput): Promise<Credential> {
+    return request<Credential>('/me/credentials', { method: 'POST', body: input });
+  },
+
+  /**
+   * PATCH /api/me/credentials/:id: correct the details.
+   * Any edit sends it back for review - the reviewer approved the old facts.
+   */
+  updateCredential(id: string, input: Partial<CredentialInput>): Promise<Credential> {
+    return request<Credential>(`/me/credentials/${id}`, { method: 'PATCH', body: input });
+  },
+
+  /** DELETE /api/me/credentials/:id: withdraw it. */
+  deleteCredential(id: string): Promise<{ ok: true }> {
+    return request<{ ok: true }>(`/me/credentials/${id}`, { method: 'DELETE' });
   },
 
   /**

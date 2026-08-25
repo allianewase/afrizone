@@ -156,6 +156,25 @@ export default function ProfileScreen() {
             }
             chevron={kyc !== 'PENDING' && kyc !== 'VERIFIED'}
           />
+          {/* Documents and skills sit under Verification rather than in their
+              own section, because that is how a worker thinks about them:
+              everything here is about proving what you can do. The subtitles
+              carry the distinction that matters - documents are checked and
+              unlock work; skills are not and do not. */}
+          <ListRow
+            icon="id"
+            title="Your documents"
+            subtitle="Licences, certificates and your CV"
+            onPress={() => router.push('/profile/credentials')}
+            chevron
+          />
+          <ListRow
+            icon="star"
+            title="Your skills"
+            subtitle="Helps us match you to work"
+            onPress={() => router.push('/profile/skills')}
+            chevron
+          />
         </Card>
       </Section>
 

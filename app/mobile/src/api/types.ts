@@ -370,3 +370,82 @@ export interface NotificationPage {
   items: Notification[];
   unreadCount: number;
 }
+
+// ── Talent profile: skills and credentials ───────────────────────────────────
+
+export interface Skill {
+  id: string;
+  name: string;
+  slug: string;
+  group: string;
+  active: boolean;
+}
+
+/** One of the worker's declared skills, joined with its catalogue entry. */
+export interface MySkill {
+  skillId: string;
+  slug: string;
+  name: string;
+  group: string;
+  years: number | null;
+  /** Retired from the catalogue but kept on this worker's profile. */
+  retired: boolean;
+}
+
+export interface CredentialType {
+  id: string;
+  name: string;
+  slug: string;
+  reviewMode: 'ADMIN_REVIEW' | 'SELF_DECLARED';
+  issuerMode: 'THIRD_PARTY' | 'AFRIZONE';
+  requiresExpiry: boolean;
+  requiresReference: boolean;
+  requiresFile: boolean;
+  issuerHint: string | null;
+  active: boolean;
+}
+
+/**
+ * `state` is what to show; `status` is only what happens to be stored.
+ *
+ * They differ in two cases the server derives against the clock rather than
+ * storing: a verified credential past its expiry is EXPIRED, and a
+ * self-declared one is SELF_DECLARED rather than pretending to await a review
+ * that will never happen. Always render `state`.
+ */
+export type CredentialState =
+  | 'PENDING'
+  | 'VERIFIED'
+  | 'EXPIRED'
+  | 'REJECTED'
+  | 'REVOKED'
+  | 'SELF_DECLARED';
+
+export interface Credential {
+  id: string;
+  title: string;
+  issuer: string | null;
+  referenceNumber: string | null;
+  issuedAt: string | null;
+  expiresAt: string | null;
+  documentId: string | null;
+  status: string;
+  state: CredentialState;
+  /** Whether Afrizone can currently rely on it. */
+  valid: boolean;
+  expiringSoon: boolean;
+  rejectionReason: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  credentialType: CredentialType;
+}
+
+export interface CredentialInput {
+  credentialTypeId: string;
+  title?: string;
+  issuer?: string;
+  referenceNumber?: string;
+  issuedAt?: string | null;
+  expiresAt?: string | null;
+  documentId?: string | null;
+}
