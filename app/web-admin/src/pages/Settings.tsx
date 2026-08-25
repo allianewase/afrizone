@@ -40,7 +40,7 @@ import {
 } from '@/components/shadcn/table'
 
 const TIERS: Tier[] = ['STUDENT', 'DISPATCH', 'REMOTE', 'PROMO', 'TRADE']
-type Tab = 'tax' | 'categories' | 'skills' | 'credentialTypes' | 'templates' | 'billing' | 'security'
+type Tab = 'tax' | 'categories' | 'skills' | 'credentialTypes' | 'requirements' | 'templates' | 'billing' | 'security'
 
 
 /* ===================== Tax Rates ===================== */
@@ -521,6 +521,100 @@ function TemplateCard({
         </div>
       )}
     </Glass>
+  )
+}
+
+/* ===================== Requirements gate ===================== */
+
+const ENFORCE_KEY = 'eligibility.enforce'
+
+/**
+ * The one switch that turns the requirements gate off without a deploy.
+ *
+ * It lives on a screen rather than in a curl command because the moment it is
+ * needed is the worst moment to be looking up an endpoint: something has gone
+ * wrong in the pilot, workers cannot apply, and the fix has to be one click by
+ * whoever is awake.
+ *
+ * Off is a real state with a real cost, so the screen says so plainly rather
+ * than leaving a quiet toggle nobody remembers flipping.
+ */
+function RequirementsTab({ canEdit }: { canEdit: boolean }) {
+  const { data, loading, error, reload, setData } = useApi((signal) => api.templates(signal))
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Absent means ON. The server defaults the same way, and the two must agree:
+  // a screen that reads "off" for a gate the server is enforcing would be worse
+  // than no screen at all.
+  const row = (data ?? []).find((t) => t.key === ENFORCE_KEY)
+  const enforcing = row ? String(row.value).toLowerCase() !== 'off' : true
+
+  async function setEnforcing(next: boolean) {
+    setSaving(true)
+    setSaveError(null)
+    const value = next ? 'on' : 'off'
+    try {
+      const saved = await api.putTemplate(ENFORCE_KEY, value)
+      setData((prev) => {
+        const list = prev ?? []
+        return list.some((t) => t.key === ENFORCE_KEY)
+          ? list.map((t) => (t.key === ENFORCE_KEY ? saved : t))
+          : [...list, saved]
+      })
+    } catch (e) {
+      setSaveError(e instanceof ApiError ? e.message : 'Could not change the setting')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return <LoadingState label="Loading…" />
+  if (error) return <ErrorState message={error} onRetry={reload} />
+
+  return (
+    <>
+      <div className="tabhead">
+        <p className="tabhint">
+          Whether the requirements on a task actually stop a worker applying.
+        </p>
+      </div>
+      <Glass>
+        <div className="gate-row">
+          <div>
+            <b>Enforce task requirements</b>
+            <span>
+              On: a worker who does not meet a task&rsquo;s requirements cannot apply, and is
+              shown what is missing. Off: they still see what a task asks for, but nothing
+              blocks them.
+            </span>
+          </div>
+          <Switch
+            checked={enforcing}
+            onChange={setEnforcing}
+            disabled={!canEdit || saving}
+            label="Enforce task requirements"
+          />
+        </div>
+        {!enforcing && (
+          <div className="login-error" role="status" style={{ marginTop: 14 }}>
+            <Icon name="alert" size={15} />
+            Requirements are not being enforced. Anyone in the right tier can apply to any
+            task, including ones needing a confirmed ID or a checked document.
+          </div>
+        )}
+        {saveError && (
+          <div className="login-error" role="alert" style={{ marginTop: 14 }}>
+            <Icon name="alert" size={15} />
+            {saveError}
+          </div>
+        )}
+        <p className="gate-note">
+          Tier is always enforced, on or off. It is an older rule than this switch, and
+          turning the gate down must not quietly delete it.
+        </p>
+      </Glass>
+    </>
   )
 }
 
@@ -1429,11 +1523,12 @@ function CredentialTypesTab({ canEdit }: { canEdit: boolean }) {
 
 /* ===================== Page ===================== */
 
-const TABS: { id: Tab; label: string; icon: 'percent' | 'tag' | 'mail' | 'naira' | 'shield' }[] = [
+const TABS: { id: Tab; label: string; icon: 'percent' | 'tag' | 'mail' | 'naira' | 'shield' | 'lock' }[] = [
   { id: 'tax', label: 'Tax rates', icon: 'percent' },
   { id: 'categories', label: 'Categories', icon: 'tag' },
   { id: 'skills', label: 'Skills', icon: 'tag' },
   { id: 'credentialTypes', label: 'Credential types', icon: 'shield' },
+  { id: 'requirements', label: 'Requirements', icon: 'lock' },
   { id: 'templates', label: 'Templates', icon: 'mail' },
   { id: 'billing', label: 'Billing', icon: 'naira' },
   { id: 'security', label: 'Security', icon: 'shield' },
@@ -1493,6 +1588,9 @@ export default function Settings() {
         </TabsContent>
         <TabsContent value="credentialTypes">
           <CredentialTypesTab canEdit={canEdit} />
+        </TabsContent>
+        <TabsContent value="requirements">
+          <RequirementsTab canEdit={canEdit} />
         </TabsContent>
         <TabsContent value="templates">
           <TemplatesTab canEdit={canEdit} />
