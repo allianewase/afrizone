@@ -46,28 +46,34 @@ function AuthedImage({
   alt,
   style,
   onClick,
+  variant = 'thumb',
 }: {
   url: string
   alt: string
   style?: React.CSSProperties
   onClick?: (e: React.MouseEvent) => void
+  /** 'full' renders a PDF inline so it can actually be read; 'thumb' badges it. */
+  variant?: 'thumb' | 'full'
 }) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null)
+  const [mime, setMime] = useState<string>('')
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     let created: string | null = null
     setObjectUrl(null)
+    setMime('')
     setFailed(false)
     fetchAuthedObjectUrl(url)
-      .then((u) => {
+      .then(({ url: objUrl, type }) => {
         if (cancelled) {
-          URL.revokeObjectURL(u)
+          URL.revokeObjectURL(objUrl)
           return
         }
-        created = u
-        setObjectUrl(u)
+        created = objUrl
+        setObjectUrl(objUrl)
+        setMime(type)
       })
       .catch(() => {
         if (!cancelled) setFailed(true)
@@ -89,6 +95,41 @@ function AuthedImage({
     return (
       <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg2)' }}>
         <span className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
+      </div>
+    )
+  }
+  // A PDF cannot go in an <img> - it renders as a broken image. Documents may
+  // now be PDFs (CVs, certificates), so show an openable placard instead.
+  if (mime === 'application/pdf') {
+    // In the lightbox, render it so the admin can actually read the document
+    // they are being asked to verify.
+    if (variant === 'full') {
+      return (
+        <iframe
+          src={objectUrl}
+          title={alt}
+          onClick={onClick}
+          style={{ ...style, width: '90vw', height: '88vh', border: 'none', background: '#fff' }}
+        />
+      )
+    }
+    return (
+      <div
+        style={{
+          ...style,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 6,
+          background: 'var(--bg2)',
+          color: 'var(--muted)',
+          cursor: onClick ? 'pointer' : 'default',
+        }}
+        onClick={onClick}
+      >
+        <Icon name="file" size={22} />
+        <span style={{ fontSize: 11, fontWeight: 600 }}>PDF</span>
       </div>
     )
   }
@@ -235,6 +276,7 @@ function KycDocsModal({
           <AuthedImage
             url={lightbox.url}
             alt={lightbox.originalName}
+            variant="full"
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: '90vw', maxHeight: '88vh', borderRadius: 12, boxShadow: '0 8px 60px rgba(0,0,0,.5)' }}
           />

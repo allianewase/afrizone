@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
@@ -346,6 +347,7 @@ export default function KycScreen() {
             title={selectedTier ? `${selectedTier.key} documents` : 'Tier documents'}
             sub={selectedTier?.docLabel ?? 'Supporting documents for your tier.'}
             docType="DOCS"
+            allowPdf
             docId={docsDocId}
             onUploaded={setDocsDocId}
           />
@@ -551,6 +553,7 @@ function UploadStep({
   sub,
   docType,
   preferCamera,
+  allowPdf,
   docId,
   onUploaded,
 }: {
@@ -559,6 +562,8 @@ function UploadStep({
   sub: string;
   docType: 'ID' | 'SELFIE' | 'DOCS';
   preferCamera?: boolean;
+  /** Supporting documents may be a PDF (a CV, a certificate); ID photos may not. */
+  allowPdf?: boolean;
   docId: string | null;
   onUploaded: (id: string) => void;
 }) {
@@ -607,6 +612,40 @@ function UploadStep({
         uri: asset.uri,
         mimeType: asset.mimeType ?? `image/${ext}`,
         filename: asset.fileName ?? `${docType.toLowerCase()}.${ext}`,
+      });
+      onUploaded(doc.id);
+    } catch (e) {
+      setUploadError(e instanceof ApiError || e instanceof Error ? e.message : 'Upload failed. Try again.');
+      setLocalUri(null);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  /**
+   * Pick a PDF (or image) from the device's files, for supporting documents
+   * like a CV or a certificate. Separate from pick(), which uses the image
+   * picker and cannot return a PDF at all.
+   */
+  async function pickDocument() {
+    setUploadError(null);
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    if (result.canceled) return;
+
+    const asset = result.assets[0];
+    // A PDF has no thumbnail to show, so only set a preview for images.
+    setLocalUri(asset.mimeType === 'application/pdf' ? null : asset.uri);
+    setUploading(true);
+    try {
+      const doc = await api.uploadKycDocument({
+        docType,
+        uri: asset.uri,
+        mimeType: asset.mimeType ?? 'application/pdf',
+        filename: asset.name ?? `${docType.toLowerCase()}.pdf`,
       });
       onUploaded(doc.id);
     } catch (e) {
@@ -674,6 +713,12 @@ function UploadStep({
             <Pressable style={styles.pickBtn} onPress={() => void pick(true)} disabled={uploading}>
               <Icon name="camera" size={18} color={colors.clay} />
               <Text style={styles.pickBtnText}>Camera</Text>
+            </Pressable>
+          ) : null}
+          {allowPdf ? (
+            <Pressable style={styles.pickBtn} onPress={() => void pickDocument()} disabled={uploading}>
+              <Icon name="id" size={18} color={colors.clay} />
+              <Text style={styles.pickBtnText}>Upload PDF</Text>
             </Pressable>
           ) : null}
         </View>

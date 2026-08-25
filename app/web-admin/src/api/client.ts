@@ -124,7 +124,9 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
  * route requires one (it's ownership-checked, not a public URL). Caller owns
  * the returned URL and must revoke it (`URL.revokeObjectURL`) when done.
  */
-export async function fetchAuthedObjectUrl(path: string): Promise<string> {
+export async function fetchAuthedObjectUrl(
+  path: string,
+): Promise<{ url: string; type: string }> {
   const headers: Record<string, string> = {}
   const token = getToken()
   if (token) headers['Authorization'] = `Bearer ${token}`
@@ -134,7 +136,12 @@ export async function fetchAuthedObjectUrl(path: string): Promise<string> {
     throw new ApiError(`Could not load file (${res.status})`, res.status)
   }
   const blob = await res.blob()
-  return URL.createObjectURL(blob)
+  // The type comes back so the caller can decide how to render: documents may
+  // now be PDFs (CVs, certificates), not only photographs, and an <img> tag
+  // renders a PDF as a broken image. The server re-validates this type before
+  // serving, so it is one of a known-safe set rather than whatever was
+  // uploaded.
+  return { url: URL.createObjectURL(blob), type: blob.type }
 }
 
 // ===== typed endpoint helpers =====

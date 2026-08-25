@@ -2,6 +2,7 @@ import { Router, Response as ExpressResponse } from "express";
 import { prisma } from "../prisma";
 import { requireAuth, AuthedRequest, verifyToken, isAdmin } from "../auth";
 import { uploadToR2, resolveUrl, getFileStream } from "../services/storage";
+import { sniffFileType, isAllowedMime, IDENTITY_MIMES, DOCUMENT_MIMES } from "../util/fileType";
 
 const DOC_TYPES = ["ID", "SELFIE", "DOCS"] as const;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -90,12 +91,6 @@ export async function handleKycUpload(request: Request): Promise<Response> {
       headers: { "Content-Type": "application/json" },
     });
   }
-  if (!file.type.startsWith("image/")) {
-    return new Response(JSON.stringify({ error: "Only image files are accepted" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
   if (file.size > MAX_FILE_SIZE) {
     return new Response(JSON.stringify({ error: "File too large (max 10 MB)" }), {
       status: 400,
@@ -103,11 +98,32 @@ export async function handleKycUpload(request: Request): Promise<Response> {
     });
   }
 
-  const ext = (file.name.match(/\.[^.]+$/) || [".jpg"])[0];
-  const filename = `${payload.sub}-${Date.now()}${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  await uploadToR2(buffer, filename, file.type);
+  // Decide the type from the BYTES, never from file.type - that is
+  // client-supplied, and `startsWith("image/")` accepted image/svg+xml, which
+  // is a script-bearing document that was then served back from this origin.
+  const sniffed = sniffFileType(new Uint8Array(buffer));
+  // Identity documents must be photographs; a PDF "selfie" is not a thing, and
+  // narrowing here keeps the highest-risk format off the highest-trust path.
+  const permitted = docType === "DOCS" ? DOCUMENT_MIMES : IDENTITY_MIMES;
+  if (!sniffed || !permitted.includes(sniffed.mime)) {
+    return new Response(
+      JSON.stringify({
+        error:
+          docType === "DOCS"
+            ? "Upload a JPEG, PNG, WebP or PDF"
+            : "Upload a photo (JPEG, PNG or WebP)",
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Extension comes from the sniffed type, not from the client's filename -
+  // that filename previously fed straight into the storage key.
+  const filename = `${payload.sub}-${Date.now()}${sniffed.ext}`;
+
+  await uploadToR2(buffer, filename, sniffed.mime);
 
   const doc = await prisma.kycDocument.create({
     data: {
@@ -115,7 +131,9 @@ export async function handleKycUpload(request: Request): Promise<Response> {
       docType,
       filename,
       originalName: file.name,
-      mimeType: file.type,
+      // The SNIFFED type, not the declared one. This value is later served as
+      // a Content-Type, so it must never be attacker-chosen.
+      mimeType: sniffed.mime,
       path: `r2://kyc/${filename}`,
     },
   });
@@ -209,9 +227,26 @@ export async function handleKycFileGet(request: Request, filename: string): Prom
     });
   }
 
+  // Re-validate the stored type at serve time rather than trusting it. Rows
+  // written before uploads were sniffed may carry an attacker-chosen mimeType,
+  // and this response is same-origin with the API - so an unrecognised type is
+  // downgraded to an inert one rather than echoed back.
+  const safeType = isAllowedMime(file.contentType) ? file.contentType : "application/octet-stream";
   return new Response(file.body, {
     status: 200,
-    headers: { "Content-Type": file.contentType || "application/octet-stream" },
+    headers: {
+      "Content-Type": safeType,
+      // Stop the browser second-guessing the type and executing the response.
+      "X-Content-Type-Options": "nosniff",
+      // Belt and braces: even if something script-bearing were served, this
+      // forbids it running. This route is intercepted before Express, so
+      // helmet never sees it and these headers must be set by hand.
+      "Content-Security-Policy": "default-src 'none'; sandbox",
+      // Never render in a frame on another origin.
+      "X-Frame-Options": "DENY",
+      // Private documents must not sit in shared caches.
+      "Cache-Control": "private, no-store",
+    },
   });
 }
 
