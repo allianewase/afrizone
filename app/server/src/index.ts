@@ -36,8 +36,18 @@ app.set("trust proxy", 1);
 // helmet's default "same-origin" policy would silently block those image loads.
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
-// CORS: Vite admin dev server, Expo web preview (8081/19006), + same-origin,
-// plus whatever CORS_ORIGIN adds (e.g. the deployed web-admin/mobile origins).
+// CORS. The allowed origins come from CORS_ORIGIN; the localhost list below is
+// only a fallback for when that is unset.
+//
+// THE FALLBACK IS ALMOST NEVER WHAT RUNS, WHICH IS A TRAP WORTH NAMING.
+// wrangler.jsonc declares CORS_ORIGIN in `vars`, and vars apply to `wrangler
+// dev` exactly as they do to `wrangler deploy` - so a local API run straight
+// from a clean checkout is configured with the PRODUCTION origins, and every
+// localhost origin is refused. Both browser clients (web-admin on 5173, the
+// Expo web preview on 8081) fail against their own local backend, while the
+// code here reads as though localhost were covered. Local development
+// therefore needs CORS_ORIGIN set in app/server/.env, which is gitignored;
+// .env.example carries the line to uncomment.
 //
 // Resolved lazily inside the origin callback, not at module scope: Workers
 // only populate process.env from bindings once request handling begins, not
@@ -55,11 +65,14 @@ app.use(
         .split(",")
         .map((o) => o.trim())
         .filter(Boolean);
-      if (!origin || corsOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
+      // A disallowed origin is `false`, NOT an Error. Passing an Error here
+      // rejects the whole request, which reached the error handler and came
+      // back as a 500 - so an ordinary, correctly-refused cross-origin call
+      // was indistinguishable from the server falling over, in the response
+      // and in the logs. `false` simply omits the CORS headers, which is what
+      // actually enforces the policy: the browser blocks the response. Nothing
+      // is made more permissive by this - a denied origin is still denied.
+      callback(null, !origin || corsOrigins.includes(origin));
     },
     credentials: true,
   })
