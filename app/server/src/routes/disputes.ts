@@ -141,7 +141,7 @@ adminRouter.patch(
       });
     }
 
-    void notifyWorker(
+    await notifyWorker(
       prisma,
       updated.workerId,
       status === "RESOLVED" ? "Dispute resolved" : "Dispute closed",

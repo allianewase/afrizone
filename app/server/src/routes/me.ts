@@ -401,6 +401,102 @@ router.get("/contracts/:id", requireAuth, async (req: AuthedRequest, res: Respon
   });
 });
 
+// ── Notification inbox ───────────────────────────────────────────────────────
+//
+// The durable side of worker notifications. Push is best-effort and silently
+// fails for anyone who declined the permission; these endpoints are how a
+// worker finds out what happened regardless. See services/push.ts.
+
+const INBOX_PAGE_SIZE = 50;
+
+function formatNotification(n: {
+  id: string;
+  title: string;
+  body: string;
+  data: string | null;
+  readAt: Date | null;
+  createdAt: Date;
+}) {
+  let data: unknown = null;
+  if (n.data) {
+    // Stored as a String because SQLite has no Json type. A row written by an
+    // older or hand-edited path could be unparseable, and one bad row must not
+    // take down the whole inbox - the notification still has a title and body,
+    // which is the part the worker actually needs.
+    try {
+      data = JSON.parse(n.data);
+    } catch {
+      data = null;
+    }
+  }
+  return {
+    id: n.id,
+    title: n.title,
+    body: n.body,
+    data,
+    read: n.readAt !== null,
+    readAt: n.readAt,
+    createdAt: n.createdAt,
+  };
+}
+
+// GET /api/me/notifications → newest-first page of this worker's notifications,
+// plus the unread count for the badge.
+router.get("/notifications", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const [items, unreadCount] = await Promise.all([
+    prisma.notification.findMany({
+      where: { userId: req.user!.id },
+      orderBy: { createdAt: "desc" },
+      take: INBOX_PAGE_SIZE,
+    }),
+    prisma.notification.count({ where: { userId: req.user!.id, readAt: null } }),
+  ]);
+  res.json({ items: items.map(formatNotification), unreadCount });
+});
+
+// GET /api/me/notifications/unread-count → just the badge number.
+// Separate from the list because the badge is polled far more often than the
+// inbox is opened, and this is answered from an index without reading rows.
+router.get("/notifications/unread-count", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const unreadCount = await prisma.notification.count({
+    where: { userId: req.user!.id, readAt: null },
+  });
+  res.json({ unreadCount });
+});
+
+// POST /api/me/notifications/:id/read → mark one as read. Idempotent.
+router.post("/notifications/:id/read", requireAuth, async (req: AuthedRequest, res: Response) => {
+  // Scoped by userId in the WHERE rather than fetched-then-checked, so one
+  // worker cannot mark another's notification read - and an id belonging to
+  // someone else is indistinguishable from one that does not exist.
+  const result = await prisma.notification.updateMany({
+    where: { id: req.params.id, userId: req.user!.id, readAt: null },
+    data: { readAt: new Date() },
+  });
+  if (result.count === 0) {
+    // Either already read, or not theirs. Confirm the row is genuinely theirs
+    // before answering 200, so a foreign id still gets a 404.
+    const exists = await prisma.notification.findFirst({
+      where: { id: req.params.id, userId: req.user!.id },
+      select: { id: true },
+    });
+    if (!exists) return res.status(404).json({ error: "Not found" });
+  }
+  const unreadCount = await prisma.notification.count({
+    where: { userId: req.user!.id, readAt: null },
+  });
+  res.json({ ok: true, unreadCount });
+});
+
+// POST /api/me/notifications/read-all → clear the badge.
+router.post("/notifications/read-all", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const result = await prisma.notification.updateMany({
+    where: { userId: req.user!.id, readAt: null },
+    data: { readAt: new Date() },
+  });
+  res.json({ ok: true, marked: result.count, unreadCount: 0 });
+});
+
 // PATCH /api/me/push-token → body {pushToken}. Upserts the Expo push token for this worker.
 router.patch("/push-token", requireAuth, async (req: AuthedRequest, res: Response) => {
   const { pushToken } = req.body || {};

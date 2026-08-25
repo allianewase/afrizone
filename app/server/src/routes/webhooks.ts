@@ -115,7 +115,7 @@ router.post("/smile", async (req: Request, res: Response) => {
       },
     });
 
-    void notifyWorker(
+    await notifyWorker(
       prisma,
       verification.workerId,
       approved ? "Identity verified ✅" : "Verification not approved",

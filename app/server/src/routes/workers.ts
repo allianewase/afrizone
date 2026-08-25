@@ -104,7 +104,7 @@ router.post(
     });
     await writeAudit(userActor(req.user!.id), "KYC_DECISION", "User", worker.id, { decision });
 
-    void notifyWorker(
+    await notifyWorker(
       prisma,
       worker.id,
       decision === "TIER_APPROVED" ? "Identity verified ✅" : "Verification not approved",

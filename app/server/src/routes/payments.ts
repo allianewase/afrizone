@@ -49,7 +49,7 @@ router.post("/:id/release", requireAuth, requireRole("SUPER_ADMIN"), async (req:
     workerId: payment.workerId,
   });
 
-  void notifyWorker(
+  await notifyWorker(
     prisma,
     payment.workerId,
     "Payment released 💰",
@@ -84,7 +84,7 @@ router.post("/release-all", requireAuth, requireRole("SUPER_ADMIN"), async (req:
 
   // Notify each worker whose payment was released
   const workerIds = [...new Set(approved.map((p) => p.workerId))];
-  void notifyWorkers(
+  await notifyWorkers(
     prisma,
     workerIds,
     "Payments released 💰",

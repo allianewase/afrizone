@@ -97,7 +97,7 @@ router.post("/:id/approve", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGE
   }
 
   // Notify worker: approved + contract ready
-  void notifyWorker(
+  await notifyWorker(
     prisma,
     app.workerId,
     "Application approved 🎉",
@@ -127,7 +127,7 @@ router.post("/:id/reject", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGER
 
   // Notify worker: not selected this time
   if (appWithTask) {
-    void notifyWorker(
+    await notifyWorker(
       prisma,
       app.workerId,
       "Application update",
