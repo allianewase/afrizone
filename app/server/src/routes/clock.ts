@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import { prisma } from "../prisma";
 import { requireAuth, AuthedRequest } from "../auth";
 import { ClockType, CLOCK_TYPES } from "../types";
+import { requireAssignedTask } from "../util/assignment";
 
 const router = Router();
 
@@ -35,8 +36,10 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
     return res.status(400).json({ error: 'type must be "IN" or "OUT"' });
   }
 
-  const task = await prisma.task.findUnique({ where: { id: String(taskId) } });
-  if (!task) return res.status(404).json({ error: "Task not found" });
+  // Clocking in is only meaningful on a task this worker was actually given.
+  const assignment = await requireAssignedTask(workerId, taskId);
+  if (!assignment.ok) return res.status(assignment.status).json({ error: assignment.error });
+  const { task } = assignment;
 
   const hasWorkerCoords = lat != null && lng != null;
   const hasTaskCoords = task.lat != null && task.lng != null;

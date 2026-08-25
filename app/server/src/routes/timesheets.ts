@@ -1,6 +1,7 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest } from "../auth";
+import { requireAssignedTask } from "../util/assignment";
 import { tiersToArray } from "../types";
 import { computeWht } from "../util/tax";
 
@@ -58,8 +59,12 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
   if (!Number.isFinite(hoursNum) || hoursNum <= 0) {
     return res.status(400).json({ error: "hours must be a positive number" });
   }
-  const task = await prisma.task.findUnique({ where: { id: String(taskId) } });
-  if (!task) return res.status(404).json({ error: "Task not found" });
+  // Hours can only be billed against a task this worker was actually given.
+  // Approving a timesheet mints a Payment, so an unassigned row reaching the
+  // admin queue is a payout request that looks exactly like a real one.
+  const assignment = await requireAssignedTask(workerId, taskId);
+  if (!assignment.ok) return res.status(assignment.status).json({ error: assignment.error });
+  const { task } = assignment;
 
   const created = await prisma.timesheet.create({
     data: {
