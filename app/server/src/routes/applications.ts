@@ -3,6 +3,15 @@ import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest } from "../auth";
 import { tiersToArray } from "../types";
 import { notifyWorker } from "../services/push";
+import { userActor, writeAudit } from "../util/audit";
+import {
+  blockingBlockers,
+  decide,
+  isEnforcing,
+  loadTaskRequirements,
+  loadWorkerProfile,
+  snapshot,
+} from "../services/eligibility";
 
 const router = Router();
 
@@ -36,8 +45,17 @@ router.get("/", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGER"), async (
   );
 });
 
-// POST /api/applications → worker apply for a task. Acting worker = req.user.id.
-// Guards: task exists & OPEN, deadline not passed, worker tier matches, no duplicate.
+/**
+ * POST /api/applications - worker applies for a task. Acting worker = req.user.id.
+ *
+ * Guards: task exists and is OPEN, deadline not passed, no duplicate, and the
+ * worker meets the task requirements.
+ *
+ * The hand-rolled tier check that used to live here is gone. It is now one
+ * blocker among several, produced by services/eligibility, so this endpoint and
+ * the card the worker tapped cannot drift apart. A card promising "you qualify"
+ * and a server that then refuses is the one failure this feature must not have.
+ */
 router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
   const workerId = req.user!.id;
   const { taskId, pitch } = req.body || {};
@@ -50,15 +68,32 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
     return res.status(400).json({ error: "Application deadline has passed" });
   }
 
-  const worker = await prisma.user.findUnique({ where: { id: workerId } });
-  if (!worker) return res.status(404).json({ error: "Worker not found" });
-  const workerTiers = tiersToArray(worker.tiers);
-  if (!workerTiers.includes(task.tier as any)) {
-    return res.status(400).json({ error: `Your tiers do not include ${task.tier}` });
-  }
-
+  // Duplicate check BEFORE the requirements check. A worker who already applied
+  // and has since let a credential lapse should be told they already applied,
+  // not handed a list of things to fix for an application they cannot make a
+  // second time anyway.
   const duplicate = await prisma.application.findFirst({ where: { taskId: task.id, workerId } });
   if (duplicate) return res.status(409).json({ error: "You have already applied to this task" });
+
+  const [profile, requirements, enforcing] = await Promise.all([
+    loadWorkerProfile(prisma, workerId),
+    loadTaskRequirements(prisma, [task]),
+    isEnforcing(prisma),
+  ]);
+  if (!profile) return res.status(404).json({ error: "Worker not found" });
+
+  const reqs = requirements.get(task.id)!;
+  const eligibility = decide(profile, reqs);
+  const blocking = blockingBlockers(eligibility.blockers, enforcing);
+  if (blocking.length > 0) {
+    return res.status(400).json({
+      // The first blocker is the headline the app shows; the array is what it
+      // renders as a checklist, each row carrying a route to fix that one.
+      error: blocking[0].message,
+      blockers: blocking,
+      eligibility,
+    });
+  }
 
   const created = await prisma.application.create({
     data: { taskId: task.id, workerId, pitch: pitch ? String(pitch) : null, status: "APPLIED" },
@@ -75,10 +110,55 @@ router.post("/:id/approve", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGE
   if (!app) return res.status(404).json({ error: "Application not found" });
   if (app.status === "APPROVED") return res.status(400).json({ error: "Application already approved" });
 
+  // Re-checked at approval, not only at application. Days pass between the two,
+  // and a licence that expires in between is exactly the case this gate exists
+  // for: the worker was eligible when they applied and is not now.
+  const now = new Date();
+  const [profile, requirements, enforcing] = await Promise.all([
+    loadWorkerProfile(prisma, app.workerId, now),
+    loadTaskRequirements(prisma, [app.task]),
+    isEnforcing(prisma),
+  ]);
+  if (!profile) return res.status(404).json({ error: "Worker not found" });
+  const reqs = requirements.get(app.taskId)!;
+  const eligibility = decide(profile, reqs);
+  const blocking = blockingBlockers(eligibility.blockers, enforcing);
+
+  // An admin may still approve someone the gate refuses. They can see context
+  // the rules cannot, and a platform where a human can never override is a
+  // platform that strands people. But they have to say so explicitly, and the
+  // override is audited: refusing silently and refusing unoverridably are both
+  // worse than refusing loudly.
+  const override = req.body?.override === true;
+  if (blocking.length > 0 && !override) {
+    return res.status(400).json({
+      error: `${profile.name} no longer meets the requirements for this task`,
+      blockers: blocking,
+      eligibility,
+      requiresOverride: true,
+    });
+  }
+
   const updated = await prisma.application.update({
     where: { id: app.id },
-    data: { status: "APPROVED", reason: null },
+    data: {
+      status: "APPROVED",
+      reason: null,
+      // What was true at approval, frozen. Credentials expire and skills can be
+      // un-declared, so "were they eligible at the time?" is unanswerable from
+      // current state later - and that is exactly the question asked when
+      // something goes wrong on a job weeks afterwards.
+      eligibilitySnapshot: snapshot(profile, reqs, eligibility, now),
+    },
   });
+
+  if (blocking.length > 0) {
+    await writeAudit(userActor(req.user!.id), "application.approved.override", "Application", app.id, {
+      workerId: app.workerId,
+      taskId: app.taskId,
+      blockers: blocking.map((b) => ({ code: b.code, ref: b.ref })),
+    });
+  }
 
   // Recompute filled count and flip task to FILLED when slots are full.
   const filledCount = await prisma.application.count({ where: { taskId: app.taskId, status: "APPROVED" } });

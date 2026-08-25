@@ -136,6 +136,10 @@ describe("real routes write to the inbox", () => {
   it("approving an application leaves the worker a record of it", async () => {
     const { token: adminToken } = await createUserWithToken("SUPER_ADMIN");
     const { user: worker, token: workerToken } = await createUserWithToken("WORKER");
+    // In the STUDENT tier, because approval re-checks eligibility. The
+    // application below is created straight through Prisma, so it never passed
+    // the apply gate and this is the only place the fixture can be made honest.
+    await prisma().user.update({ where: { id: worker.id }, data: { tiers: "STUDENT" } });
 
     const task = await apiPost(
       "/api/tasks",
