@@ -46,7 +46,16 @@
     // calls the phone-OTP endpoints (removed in the dove-design rebuild), so
     // this has no visible effect yet either way - wired for whenever that
     // screen comes back.
-    "SMS_PROVIDER": "termii"
+    "SMS_PROVIDER": "termii",
+    // The sender ID Termii sends from. Not a secret - it is the name that
+    // appears on the recipient's handset, and Termii must have approved the
+    // exact string or it rejects the send.
+    //
+    // sms.ts already falls back to this same value, so setting it changes no
+    // behaviour today. It is here to be VISIBLE: the fallback is buried in a
+    // service file, and the next person to get a different sender ID approved
+    // would have had no reason to look there.
+    "TERMII_FROM": "Afrizone"
   },
   "d1_databases": [
     {
