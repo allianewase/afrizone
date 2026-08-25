@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api, ApiError } from '../api/client'
+import type { Blocker } from '../api/types'
 import { useApi } from '../lib/useApi'
 import { TIER_COLORS, TIER_LABELS, appPill, avatarGradient, initials, kycPill } from '../lib/format'
 import PageHeader from '../components/PageHeader'
@@ -30,17 +31,40 @@ export default function Applications() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [rejectId, setRejectId] = useState<string | null>(null)
   const [reason, setReason] = useState('')
+  // Set when the server refuses an approval on requirements. Holds what the
+  // admin needs to decide with, not just that something went wrong.
+  const [override, setOverride] = useState<
+    { id: string; name: string; message: string; blockers: Blocker[] } | null
+  >(null)
 
   const apps = data ?? []
 
-  async function approve(id: string) {
+  async function approve(id: string, force = false) {
     setBusy(id)
     setActionError(null)
     try {
-      const updated = await api.approveApplication(id)
+      const updated = await api.approveApplication(id, force)
       setData((prev) => (prev ?? []).map((a) => (a.id === id ? { ...a, ...updated } : a)))
+      setOverride(null)
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : 'Approve failed')
+      const body =
+        err instanceof ApiError && err.body && typeof err.body === 'object'
+          ? (err.body as { requiresOverride?: boolean; blockers?: Blocker[] })
+          : null
+      // A refusal the admin can answer, rather than an error they can only
+      // read. They see which requirements are unmet and decide; the server
+      // audits the override either way.
+      if (body?.requiresOverride) {
+        const app = apps.find((a) => a.id === id)
+        setOverride({
+          id,
+          name: app?.worker?.name ?? 'This worker',
+          message: err instanceof ApiError ? err.message : 'Requirements not met',
+          blockers: body.blockers ?? [],
+        })
+      } else {
+        setActionError(err instanceof ApiError ? err.message : 'Approve failed')
+      }
     } finally {
       setBusy(null)
     }
@@ -197,6 +221,60 @@ export default function Applications() {
             onClick={confirmReject}
           >
             Reject application
+          </Button>
+        </div>
+      </Modal>
+
+      {/* The gate refused, and the admin gets to answer it rather than just
+          read it. They can see context the rules cannot - a licence renewed
+          this morning, a document sent by WhatsApp - and a platform where a
+          human can never override is one that strands people. The override is
+          audited server-side, so it is a decision on the record, not a
+          loophole. */}
+      <Modal
+        open={override !== null}
+        title="Requirements not met"
+        subtitle={override?.message ?? ''}
+        onClose={() => setOverride(null)}
+      >
+        <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 14px', lineHeight: 1.6 }}>
+          {override?.name} does not currently meet:
+        </p>
+        <ul style={{ listStyle: 'none', margin: '0 0 18px', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {(override?.blockers ?? []).map((b, i) => (
+            <li
+              key={`${b.code}-${b.ref ?? i}`}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+                fontSize: 13,
+                color: 'var(--text)',
+                padding: '10px 12px',
+                border: '1px solid var(--line)',
+                borderRadius: 10,
+                background: 'var(--glass-2)',
+              }}
+            >
+              <Icon name="alert" size={14} />
+              <span>{b.message}</span>
+            </li>
+          ))}
+        </ul>
+        <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 18px', lineHeight: 1.6 }}>
+          You can still approve them. The override is recorded against your account.
+        </p>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <Button variant="glass" onClick={() => setOverride(null)}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            icon="check"
+            loading={busy === override?.id}
+            onClick={() => override && approve(override.id, true)}
+          >
+            Approve anyway
           </Button>
         </div>
       </Modal>

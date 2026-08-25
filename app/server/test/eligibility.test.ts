@@ -513,6 +513,13 @@ describe("admin task authoring", () => {
     expect(after.body.qualifying).toBeLessThan(before.body.qualifying);
     expect(after.body.qualifying).toBeGreaterThanOrEqual(1);
     expect(after.body.blockedBy.some((b: any) => b.label === "Rare Skill")).toBe(true);
+    // Every exclusion count is scoped to the tier being counted. A line reading
+    // "6 excluded" beside a pool of 2 is the panel contradicting itself, and an
+    // admin cannot tell which of the two numbers to trust.
+    for (const b of after.body.blockedBy) {
+      expect(b.count).toBeLessThanOrEqual(after.body.inTier);
+    }
+    expect(after.body.blockedBy.some((b: any) => b.label === "Not in this tier")).toBe(false);
     // inTier is the honest denominator: tier is who the task is for, not a
     // requirement being weighed in this form.
     expect(after.body.inTier).toBe(before.body.inTier);

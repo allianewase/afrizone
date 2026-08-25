@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type PointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import { useApi } from '../lib/useApi'
@@ -9,7 +9,17 @@ import {
   taskPay,
   taskPill,
 } from '../lib/format'
-import type { LocationType, PayModel, Task, Tier } from '../api/types'
+import type {
+  CreateTaskBody,
+  CredentialType,
+  LocationType,
+  PayModel,
+  QualifyingCount,
+  Skill,
+  Task,
+  Tier,
+} from '../api/types'
+import Switch from '../components/ui/Switch'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -76,12 +86,170 @@ function TaskCard({ task, delay }: { task: Task; delay: string }) {
         className="fillbar"
         aria-label={`${filled} of ${task.slots} slots filled`}
       />
+      {task.requirementsSummary ? (
+        <div className="tc-reqs" title={task.requirementsSummary}>
+          <Icon name="shield" size={12} />
+          <span>{task.requirementsSummary}</span>
+        </div>
+      ) : null}
       <div className="tc-foot">
         <span>
           {filled} of {task.slots} filled
         </span>
         <StatusPill variant={pill.variant} label={pill.label} />
       </div>
+    </div>
+  )
+}
+
+/**
+ * How many workers could actually take this task, refreshed as the form is
+ * edited.
+ *
+ * This panel is the whole reason requirements are a separate step rather than
+ * four more fields in the details form. An admin adding "Forklift Ticket"
+ * without it finds out what it cost a week later, as an applicant list that
+ * never filled; here they see the pool drop from 38 to 3 while their finger is
+ * still on the toggle, and which line did it.
+ */
+function QualifyingPanel({
+  tier,
+  requiresIdentityVerified,
+  skillIds,
+  credentialTypeIds,
+}: {
+  tier: Tier
+  requiresIdentityVerified: boolean
+  skillIds: string[]
+  credentialTypeIds: string[]
+}) {
+  const [count, setCount] = useState<QualifyingCount | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  // Keeps the LAST result on screen while the next one is in flight. Blanking
+  // the number on every keystroke makes the panel flicker, and a flickering
+  // number is one nobody reads.
+  const seen = useRef(false)
+
+  const key = `${tier}|${requiresIdentityVerified}|${[...skillIds].sort().join(',')}|${[...credentialTypeIds].sort().join(',')}`
+
+  useEffect(() => {
+    const ctrl = new AbortController()
+    setLoading(true)
+    // Debounced: the toggles fire fast, and each call scans every worker.
+    const timer = setTimeout(() => {
+      api
+        .qualifyingCount(
+          { tier, requiresIdentityVerified, skillIds, credentialTypeIds },
+          ctrl.signal,
+        )
+        .then((r) => {
+          setCount(r)
+          setError(null)
+          seen.current = true
+        })
+        .catch((e) => {
+          if (ctrl.signal.aborted) return
+          setError(e instanceof ApiError ? e.message : 'Could not count workers')
+        })
+        .finally(() => {
+          if (!ctrl.signal.aborted) setLoading(false)
+        })
+    }, 350)
+    return () => {
+      clearTimeout(timer)
+      ctrl.abort()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
+
+  if (error) {
+    return (
+      <div className="reqpanel">
+        <span className="rp-err">{error}</span>
+      </div>
+    )
+  }
+
+  const q = count?.qualifying ?? 0
+  const pool = count?.inTier ?? 0
+  const pct = pool > 0 ? Math.round((q / pool) * 100) : 0
+  // Nobody qualifying is not a styling nuance - it is a task that will sit
+  // empty, and it should look like a problem before it is published.
+  const tone = !count ? 'idle' : q === 0 ? 'bad' : pct < 25 ? 'warn' : 'ok'
+
+  return (
+    <div className={`reqpanel ${tone} ${loading && !seen.current ? 'rp-loading' : ''}`}>
+      <div className="rp-head">
+        <Icon name="users" size={13} />
+        <b>Who can take this</b>
+      </div>
+      {!count ? (
+        <span className="rp-sub">Counting…</span>
+      ) : (
+        <>
+          <div className="rp-num">
+            <strong>{q}</strong>
+            <span>
+              of {pool} {TIER_LABELS[tier]} worker{pool === 1 ? '' : 's'}
+            </span>
+          </div>
+          {q === 0 && (
+            <p className="rp-warn">
+              No one qualifies right now. This task can be published, but nobody will be
+              able to apply until a worker meets these requirements.
+            </p>
+          )}
+          {count.blockedBy.length > 0 && (
+            <ul className="rp-list">
+              {count.blockedBy
+                .filter((b) => b.label !== 'Not in this tier')
+                .slice(0, 5)
+                .map((b) => (
+                  <li key={b.label}>
+                    <span>{b.label}</span>
+                    <em>{b.count} excluded</em>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+/** Multi-select chips over a catalogue. Same shape for skills and documents. */
+function ChipPicker<T extends { id: string; name: string }>({
+  items,
+  selected,
+  onToggle,
+  empty,
+}: {
+  items: T[]
+  selected: string[]
+  onToggle: (id: string) => void
+  empty: string
+}) {
+  if (items.length === 0) return <p className="req-empty">{empty}</p>
+  return (
+    <div className="chiprow">
+      {items.map((it) => {
+        const on = selected.includes(it.id)
+        return (
+          <button
+            key={it.id}
+            type="button"
+            role="checkbox"
+            aria-checked={on}
+            className={`chip ${on ? 'on' : ''}`}
+            onClick={() => onToggle(it.id)}
+          >
+            {on && <Icon name="check" size={13} />}
+            {it.name}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -103,6 +271,9 @@ interface FormState {
   geofenceRadius: string
   slots: string
   deadline: string
+  requiresIdentityVerified: boolean
+  skillIds: string[]
+  credentialTypeIds: string[]
 }
 
 const EMPTY_FORM: FormState = {
@@ -122,6 +293,14 @@ const EMPTY_FORM: FormState = {
   geofenceRadius: '100',
   slots: '1',
   deadline: '',
+  // Defaults ON for a NEW task, while migration 0008 defaults the column false
+  // for existing ones. Those are different decisions and both are deliberate:
+  // a person is choosing it here, on a task nobody has applied to yet, whereas
+  // defaulting the column true would have silently gated every task already
+  // live in the pilot with no admin having decided anything.
+  requiresIdentityVerified: true,
+  skillIds: [],
+  credentialTypeIds: [],
 }
 
 function NewTaskModal({
@@ -136,16 +315,56 @@ function NewTaskModal({
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // Two steps, not one long form. Requirements decide who can ever see the
+  // task, which is a different kind of decision from what it pays - and it is
+  // the only one that needs its consequence shown back (see QualifyingPanel).
+  const [step, setStep] = useState<1 | 2>(1)
+
+  const skills = useApi((signal) => api.skills(false, signal))
+  const credTypes = useApi((signal) => api.credentialTypes(false, signal))
+
+  const skillGroups = useMemo(() => {
+    const map = new Map<string, Skill[]>()
+    for (const sk of skills.data ?? []) {
+      const arr = map.get(sk.group) ?? []
+      arr.push(sk)
+      map.set(sk.group, arr)
+    }
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  }, [skills.data])
+
+  const docs: CredentialType[] = credTypes.data ?? []
 
   function set<K extends keyof FormState>(key: K, val: FormState[K]) {
     setForm((f) => ({ ...f, [key]: val }))
   }
 
+  function toggleId(key: 'skillIds' | 'credentialTypeIds', id: string) {
+    setForm((f) => ({
+      ...f,
+      [key]: f[key].includes(id) ? f[key].filter((x) => x !== id) : [...f[key], id],
+    }))
+  }
+
+  function close() {
+    setForm(EMPTY_FORM)
+    setStep(1)
+    setError(null)
+    onClose()
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault()
+    // Step 1 submits by advancing, so the browser still runs its own required-
+    // field validation on the details before requirements are chosen.
+    if (step === 1) {
+      setError(null)
+      setStep(2)
+      return
+    }
     setError(null)
     setSubmitting(true)
-    const body: Partial<Task> = {
+    const body: CreateTaskBody = {
       title: form.title.trim(),
       description: form.description.trim(),
       category: form.category.trim() || TIER_LABELS[form.tier],
@@ -162,14 +381,21 @@ function NewTaskModal({
       geofenceRadius: Number(form.geofenceRadius) || 100,
       slots: Number(form.slots) || 1,
       deadline: form.deadline || new Date().toISOString(),
+      requiresIdentityVerified: form.requiresIdentityVerified,
+      skillIds: form.skillIds,
+      credentialTypeIds: form.credentialTypeIds,
     }
     try {
       const created = await api.createTask(body)
       onCreated(created)
       setForm(EMPTY_FORM)
+      setStep(1)
       onClose()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to create task')
+      // Back to the step that can actually be corrected: every field the
+      // server rejects on lives in the details.
+      setStep(1)
     } finally {
       setSubmitting(false)
     }
@@ -179,10 +405,12 @@ function NewTaskModal({
     <Modal
       open={open}
       title="Post a new task"
-      subtitle="Hourly or fixed · with geofence"
-      onClose={onClose}
+      subtitle={step === 1 ? 'Step 1 of 2 · The work' : 'Step 2 of 2 · Who can take it'}
+      onClose={close}
+      size={step === 2 ? 'wide' : 'default'}
     >
       <form onSubmit={submit}>
+        {step === 1 && (
         <div className="formgrid">
           <div className="field span2">
             <Label htmlFor="t-title">Title</Label>
@@ -362,6 +590,83 @@ function NewTaskModal({
             />
           </div>
         </div>
+        )}
+
+        {step === 2 && (
+          <div className="reqstep">
+            <div className="reqcol">
+              <div className="reqblock">
+                <div className="reqhead">
+                  <div>
+                    <b>Confirmed ID</b>
+                    <span>
+                      Only workers whose ID we have checked can apply.
+                    </span>
+                  </div>
+                  <Switch
+                    checked={form.requiresIdentityVerified}
+                    onChange={(v) => set('requiresIdentityVerified', v)}
+                    label="Require confirmed ID"
+                  />
+                </div>
+              </div>
+
+              <div className="reqblock">
+                <div className="reqhead">
+                  <div>
+                    <b>Documents</b>
+                    <span>
+                      Checked by us before they count. A worker who has uploaded one but
+                      is still waiting on our review cannot apply yet.
+                    </span>
+                  </div>
+                </div>
+                <ChipPicker
+                  items={docs}
+                  selected={form.credentialTypeIds}
+                  onToggle={(id) => toggleId('credentialTypeIds', id)}
+                  empty="No document types set up yet. Add them in Settings."
+                />
+              </div>
+
+              <div className="reqblock">
+                <div className="reqhead">
+                  <div>
+                    <b>Skills</b>
+                    <span>
+                      Self-declared. Useful for matching, but a worker only has to say
+                      they have these - nobody checks them.
+                    </span>
+                  </div>
+                </div>
+                {skillGroups.length === 0 ? (
+                  <p className="req-empty">No skills set up yet. Add them in Settings.</p>
+                ) : (
+                  skillGroups.map(([group, items]) => (
+                    <div key={group} className="reqgroup">
+                      <span className="reqgroup-t">{group}</span>
+                      <ChipPicker
+                        items={items}
+                        selected={form.skillIds}
+                        onToggle={(id) => toggleId('skillIds', id)}
+                        empty=""
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="reqaside">
+              <QualifyingPanel
+                tier={form.tier}
+                requiresIdentityVerified={form.requiresIdentityVerified}
+                skillIds={form.skillIds}
+                credentialTypeIds={form.credentialTypeIds}
+              />
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="login-error" role="alert" style={{ marginTop: 16 }}>
@@ -371,11 +676,20 @@ function NewTaskModal({
         )}
 
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 22 }}>
-          <Button type="button" variant="glass" onClick={onClose}>
-            Cancel
+          <Button
+            type="button"
+            variant="glass"
+            onClick={() => (step === 2 ? setStep(1) : close())}
+          >
+            {step === 2 ? 'Back' : 'Cancel'}
           </Button>
-          <Button type="submit" variant="primary" icon="check" loading={submitting}>
-            Publish task
+          <Button
+            type="submit"
+            variant="primary"
+            icon={step === 1 ? undefined : 'check'}
+            loading={submitting}
+          >
+            {step === 1 ? 'Next: requirements' : 'Publish task'}
           </Button>
         </div>
       </form>

@@ -25,7 +25,10 @@ import type {
   ReportsSummary,
   SearchResults,
   Stage,
+  Tier,
   Task,
+  CreateTaskBody,
+  QualifyingCount,
   TaxRate,
   Template,
   Timesheet,
@@ -60,10 +63,21 @@ export function clearToken(): void {
 
 export class ApiError extends Error {
   status: number
-  constructor(message: string, status: number) {
+  /**
+   * The parsed error body, when there was one.
+   *
+   * `message` is the headline and is enough for almost every call site. Some
+   * refusals carry structure the caller has to act on rather than print - the
+   * requirements gate returns the list of blockers and a requiresOverride flag,
+   * and an admin cannot be offered "approve anyway" for reasons that were
+   * flattened into a sentence on the way here.
+   */
+  body: unknown
+  constructor(message: string, status: number, body: unknown = null) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.body = body
   }
 }
 
@@ -118,7 +132,7 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
       (data && typeof data === 'object' && 'error' in data
         ? String((data as { error: unknown }).error)
         : null) ?? `Request failed (${res.status})`
-    throw new ApiError(msg, res.status)
+    throw new ApiError(msg, res.status, data)
   }
 
   return data as T
@@ -197,8 +211,25 @@ export const api = {
 
   // Tasks
   tasks: (signal?: AbortSignal) => request<Task[]>('/tasks', { signal }),
-  createTask: (body: Partial<Task>) =>
+  createTask: (body: CreateTaskBody) =>
     request<Task>('/tasks', { method: 'POST', body }),
+  updateTask: (id: string, body: CreateTaskBody) =>
+    request<Task>(`/tasks/${id}`, { method: 'PATCH', body }),
+  /**
+   * How many workers a set of requirements would leave, for a task that does
+   * not exist yet. Called as the form is edited, so the trade-off is visible at
+   * the moment it is being made rather than a week later as an empty applicant
+   * list.
+   */
+  qualifyingCount: (
+    body: {
+      tier: Tier
+      requiresIdentityVerified?: boolean
+      skillIds?: string[]
+      credentialTypeIds?: string[]
+    },
+    signal?: AbortSignal,
+  ) => request<QualifyingCount>('/tasks/qualifying-count', { method: 'POST', body, signal }),
   task: (id: string, signal?: AbortSignal) =>
     request<Task & { applications: Application[] }>(`/tasks/${id}`, { signal }),
 
@@ -208,8 +239,16 @@ export const api = {
       `/applications${status ? `?status=${status}` : ''}`,
       { signal },
     ),
-  approveApplication: (id: string) =>
-    request<Application>(`/applications/${id}/approve`, { method: 'POST' }),
+  /**
+   * `override` is how an admin approves someone the requirements gate refuses.
+   * Sent only after they confirm: the server audits the override, and an
+   * override nobody chose would be an audit entry nobody can explain.
+   */
+  approveApplication: (id: string, override = false) =>
+    request<Application>(`/applications/${id}/approve`, {
+      method: 'POST',
+      body: override ? { override: true } : undefined,
+    }),
   rejectApplication: (id: string, reason: string) =>
     request<Application>(`/applications/${id}/reject`, {
       method: 'POST',

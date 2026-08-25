@@ -312,7 +312,12 @@ router.post(
     for (const p of profiles) {
       const el = decide(p, hypothetical);
       if (el.eligible) qualifying += 1;
-      if (!el.blockers.some((x) => x.code === "TIER")) inTier += 1;
+      const outOfTier = el.blockers.some((x) => x.code === "TIER");
+      if (outOfTier) continue;
+      inTier += 1;
+      // Only workers in the tier are tallied. A line reading "6 excluded"
+      // beside a pool of 2 is not a detail - it is the panel contradicting
+      // itself, and the admin cannot tell which of the two numbers to trust.
       for (const blocker of el.blockers) {
         const key = `${blocker.code}:${blocker.ref ?? ""}`;
         const label = labelForBlocker(blocker.code, blocker.ref, hypothetical);

@@ -52,6 +52,64 @@ export interface Task {
   // augmented by GET /api/tasks
   filledCount?: number
   applicantCount?: number
+  requiresIdentityVerified?: boolean
+  /**
+   * Denormalised one-line summary for cards. Display only - it is never used to
+   * decide anything, because a stale string on a card is harmless and a wrong
+   * reason shown to a worker is not.
+   */
+  requirementsSummary?: string | null
+  requirements?: TaskRequirements
+  /** Always null for an admin: a verdict computed against an admin account is noise. */
+  eligibility?: Eligibility | null
+}
+
+export interface TaskRequirements {
+  requiresIdentityVerified: boolean
+  skills: { id: string; name: string }[]
+  credentialTypes: { id: string; name: string }[]
+  version: number
+}
+
+export type BlockerCode =
+  | 'TIER'
+  | 'IDENTITY'
+  | 'SKILL'
+  | 'CREDENTIAL_MISSING'
+  | 'CREDENTIAL_PENDING'
+  | 'CREDENTIAL_EXPIRED'
+
+export interface Blocker {
+  code: BlockerCode
+  ref: string | null
+  /** Already worker-facing. Render it as-is; do not re-word it here. */
+  message: string
+  fix: 'skills' | 'credentials' | 'kyc' | null
+}
+
+export interface Eligibility {
+  eligible: boolean
+  blockers: Blocker[]
+  met: string[]
+  checks: number
+}
+
+/** What POST /api/tasks accepts, which is a Task plus the requirement ids. */
+export interface CreateTaskBody extends Partial<Task> {
+  skillIds?: string[]
+  credentialTypeIds?: string[]
+}
+
+/**
+ * The answer to "how many workers could actually take this?", asked while the
+ * task is still being written.
+ */
+export interface QualifyingCount {
+  total: number
+  /** Workers in the chosen tier. The honest denominator for the requirements. */
+  inTier: number
+  qualifying: number
+  blockedBy: { label: string; count: number }[]
 }
 
 export interface WorkerSummary {
