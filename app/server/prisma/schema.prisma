@@ -102,6 +102,21 @@ model Task {
   createdById    String
   createdAt      DateTime @default(now())
 
+  // ── Requirements (Phase 4) ──
+  //
+  // DEFAULTS FALSE, deliberately. Defaulting true would silently gate every
+  // task already live in the pilot the moment this ships. The admin form
+  // defaults the toggle ON for NEW tasks, which is a different thing and is
+  // safe: a person is choosing it, on a task nobody has applied to yet.
+  requiresIdentityVerified Boolean @default(false)
+  // Denormalised one-line summary for list cards. NEVER used to decide
+  // anything - a stale string on a card is harmless, telling a worker the
+  // wrong reason they are blocked is not.
+  requirementsSummary      String?
+  // Bumped whenever requirements change, so a cached summary or a stored
+  // eligibility snapshot can be recognised as belonging to an older shape.
+  requirementsVersion      Int     @default(0)
+
   createdBy    User          @relation("TaskCreatedBy", fields: [createdById], references: [id])
   applications Application[]
   timesheets   Timesheet[]
@@ -110,17 +125,57 @@ model Task {
   contracts    Contract[]
   ratings      Rating[]
 
+  skillRequirements      TaskSkillRequirement[]
+  credentialRequirements TaskCredentialRequirement[]
+
   @@index([status])
 }
 
+// Requirements are two narrow join tables rather than one polymorphic table or
+// a JSON column. Two reasons, both practical rather than aesthetic:
+//
+//  - the live qualifying-count an admin sees while building a task has to be
+//    index-usable, and a JSON blob is not;
+//  - "which open tasks require this skill?" has to be answerable when an admin
+//    retires a skill, and a polymorphic table makes that a scan with a type
+//    discriminator instead of a plain indexed lookup.
+model TaskSkillRequirement {
+  id      String @id @default(cuid())
+  taskId  String
+  skillId String
+
+  task  Task  @relation(fields: [taskId], references: [id])
+  skill Skill @relation(fields: [skillId], references: [id])
+
+  @@unique([taskId, skillId])
+  @@index([skillId])
+}
+
+model TaskCredentialRequirement {
+  id               String @id @default(cuid())
+  taskId           String
+  credentialTypeId String
+
+  task           Task           @relation(fields: [taskId], references: [id])
+  credentialType CredentialType @relation(fields: [credentialTypeId], references: [id])
+
+  @@unique([taskId, credentialTypeId])
+  @@index([credentialTypeId])
+}
+
 model Application {
-  id        String   @id @default(cuid())
-  taskId    String
-  workerId  String
-  pitch     String?
-  status    String   @default("APPLIED") // AppStatus enum
-  reason    String?
-  createdAt DateTime @default(now())
+  id                  String   @id @default(cuid())
+  taskId              String
+  workerId            String
+  pitch               String?
+  status              String   @default("APPLIED") // AppStatus enum
+  reason              String?
+  // What was true about this worker when the application was accepted, as
+  // JSON. Credentials expire, so "were they eligible at the time?" cannot be
+  // reconstructed later from current state - and that is exactly the question
+  // asked when something goes wrong on a job.
+  eligibilitySnapshot String?
+  createdAt           DateTime @default(now())
 
   task   Task @relation(fields: [taskId], references: [id])
   worker User @relation(fields: [workerId], references: [id])
@@ -484,7 +539,8 @@ model Skill {
 
   createdAt DateTime @default(now())
 
-  workers WorkerSkill[]
+  workers    WorkerSkill[]
+  requiredBy TaskSkillRequirement[]
 }
 
 model WorkerSkill {
@@ -526,6 +582,7 @@ model CredentialType {
   createdAt DateTime @default(now())
 
   credentials Credential[]
+  requiredBy  TaskCredentialRequirement[]
 }
 
 model Credential {

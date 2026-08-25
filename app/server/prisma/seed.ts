@@ -13,6 +13,9 @@ const prisma = new PrismaClient();
 // parents before children, so FK references always exist by insert time.
 const TABLES_CHILD_TO_PARENT = [
   "AuditLog",
+  // Task requirements, before Task and before the two catalogues they point at.
+  "TaskSkillRequirement",
+  "TaskCredentialRequirement",
   // Talent profile. Credential references User, CredentialType AND KycDocument,
   // so it has to be cleared before all three.
   "Credential",
@@ -116,6 +119,10 @@ async function main() {
   // auth tables (PasswordReset FKs User; OtpCode is standalone but clear too)
   await prisma.passwordReset.deleteMany();
   await prisma.otpCode.deleteMany();
+  // task requirements: FK Task, Skill and CredentialType with RESTRICT, so
+  // they have to be cleared before any of the three
+  await prisma.taskSkillRequirement.deleteMany();
+  await prisma.taskCredentialRequirement.deleteMany();
   // talent profile: both FK User, so they must go first
   await prisma.credential.deleteMany();
   await prisma.workerSkill.deleteMany();
