@@ -15,6 +15,7 @@ import { KpiCard } from '../../src/components/KpiCard';
 import { Button } from '../../src/components/Button';
 import { Banner, LoadingState, ErrorState, EmptyState } from '../../src/components/Feedback';
 import { Icon } from '../../src/components/Icon';
+import { NotificationBell } from '../../src/components/NotificationBell';
 import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
 import { api } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
@@ -161,6 +162,7 @@ export default function HomeScreen() {
     <Screen
       title={`Hi, ${firstName}`}
       subtitle="Let's find you work today"
+      right={<NotificationBell />}
       onRefresh={() => { tasks.reload(); walletQ.reload(); }}
       refreshing={tasks.loading && !!tasks.data}
     >

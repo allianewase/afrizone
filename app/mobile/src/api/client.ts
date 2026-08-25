@@ -26,6 +26,8 @@ import type {
   TwoFactorStatus,
   PasswordForgotResponse,
   PasswordResetResponse,
+
+  NotificationPage,
 } from './types';
 
 export class ApiError extends Error {
@@ -458,6 +460,38 @@ export const api = {
       method: 'PATCH',
       body: { pushToken },
     });
+  },
+
+  /**
+   * GET /api/me/notifications: the worker's inbox, newest first, with the
+   * unread count for the badge.
+   */
+  notifications(signal?: AbortSignal): Promise<NotificationPage> {
+    return request<NotificationPage>('/me/notifications', { signal });
+  },
+
+  /**
+   * GET /api/me/notifications/unread-count: just the badge number.
+   * Separate from the list because it is polled far more often, and the
+   * server answers it from an index without reading any rows.
+   */
+  unreadNotificationCount(signal?: AbortSignal): Promise<{ unreadCount: number }> {
+    return request<{ unreadCount: number }>('/me/notifications/unread-count', { signal });
+  },
+
+  /** POST /api/me/notifications/:id/read: mark one read. Idempotent. */
+  markNotificationRead(id: string): Promise<{ ok: true; unreadCount: number }> {
+    return request<{ ok: true; unreadCount: number }>(`/me/notifications/${id}/read`, {
+      method: 'POST',
+    });
+  },
+
+  /** POST /api/me/notifications/read-all: clear the badge. */
+  markAllNotificationsRead(): Promise<{ ok: true; marked: number; unreadCount: number }> {
+    return request<{ ok: true; marked: number; unreadCount: number }>(
+      '/me/notifications/read-all',
+      { method: 'POST' }
+    );
   },
 
   /**

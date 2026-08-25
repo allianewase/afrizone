@@ -346,3 +346,27 @@ export interface ContractDetail {
   task: Pick<Task, 'id' | 'title' | 'category' | 'tier'>;
   sections: ContractSection[];
 }
+
+/**
+ * One entry in the worker's notification inbox: GET /api/me/notifications
+ *
+ * The inbox is the DURABLE record of everything the platform tells a worker.
+ * Push is best-effort on top of it and silently fails for anyone who declined
+ * the permission, so this - not the push - is what a worker can rely on.
+ */
+export interface Notification {
+  id: string;
+  title: string;
+  body: string;
+  /** Deep-link payload, e.g. `{ screen: 'wallet' }`. Null if none was sent. */
+  data: { screen?: string } | null;
+  read: boolean;
+  readAt?: string | null;
+  createdAt: string;
+}
+
+/** GET /api/me/notifications */
+export interface NotificationPage {
+  items: Notification[];
+  unreadCount: number;
+}
