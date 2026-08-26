@@ -195,7 +195,7 @@ migration touching them anyway.
 
 Both blocking parameters are answered, so the money layer is no longer frozen.
 
-1. **The task state machine** (§4.2). Eleven states against today'''s four, and
+1. **The task state machine** (§4.2). Eleven states against today's four, and
    everything downstream — payment, disputes, analytics — is meant to hang off
    clean transitions. Cheapest now, before production task data exists.
 2. **Settle D10** — whether Mart or PartTime owns the store record. It is a
@@ -207,5 +207,5 @@ Both blocking parameters are answered, so the money layer is no longer frozen.
    task, so it exercises the state machine on something real.
 6. **Event bus and auto-task generation** (§5), once Mart is ready.
 
-Still needed from the Mart team before 6: agreement on , a staging
+Still needed from the Mart team before 6: agreement on `stockSource`, a staging
 environment, two shared secrets, and answers to D1–D10.
