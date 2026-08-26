@@ -1,0 +1,32 @@
+/* ===== AfriZoneMart integration ===== */
+
+.mart-counts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.mart-count {
+  padding: 18px 20px;
+}
+
+/* Rule cards hold five labelled controls each, so they need real width - below
+   about 300px the fee input and its caption start wrapping onto three lines. */
+.mart-rules {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.mart-rule {
+  padding: 20px;
+}
+
+@media (max-width: 1100px) {
+  .mart-counts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .mart-counts {
+    grid-template-columns: 1fr;
+  }
+}

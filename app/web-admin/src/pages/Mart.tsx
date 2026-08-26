@@ -1,0 +1,432 @@
+import { useState } from 'react'
+import { api, ApiError } from '../api/client'
+import { useApi } from '../lib/useApi'
+import { useAuth } from '../auth/AuthContext'
+import { formatDateTime, formatNaira, martEventPill } from '../lib/format'
+import type { MartEventStatus, TaskRule, TaskRules } from '../api/types'
+import PageHeader from '../components/PageHeader'
+import Glass from '../components/ui/Glass'
+import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import Select from '../components/ui/Select'
+import Switch from '../components/ui/Switch'
+import StatusPill from '../components/ui/StatusPill'
+import Icon from '../components/Icon'
+import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
+import { Label } from '@/components/shadcn/label'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shadcn/table'
+import './Mart.css'
+
+/**
+ * What AfriZoneMart has told us, and what the generators will do with the next
+ * thing it tells us (Blueprint §5).
+ *
+ * This is the screen somebody opens when a task they expected does not exist.
+ * The whole value of it is separating three answers that look identical from
+ * the outside: Mart never sent it, we de-duplicated it, or nothing is built to
+ * handle it yet.
+ */
+
+type StatusFilter = MartEventStatus | 'ALL'
+
+const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
+  { key: 'ALL', label: 'All' },
+  { key: 'PROCESSED', label: 'Task created' },
+  { key: 'DEFERRED', label: 'Held for replay' },
+  { key: 'IGNORED', label: 'No new work' },
+  { key: 'FAILED', label: 'Failed' },
+]
+
+/** Plain English for each status, shown under its count. */
+const STATUS_MEANING: Record<MartEventStatus, string> = {
+  PROCESSED: 'A task was created',
+  DEFERRED: 'Understood and kept, waiting on work that is not built',
+  IGNORED: 'A duplicate, or no rule matched',
+  FAILED: 'Could not be processed — these need a person',
+}
+
+const EVENT_TYPES: { key: string; label: string; makes: string }[] = [
+  { key: 'ALL', label: 'All events', makes: '' },
+  { key: 'order.confirmed', label: 'order.confirmed', makes: 'Delivery' },
+  { key: 'stock.low', label: 'stock.low', makes: 'Sourcing' },
+  { key: 'store.applied', label: 'store.applied', makes: 'Store audit' },
+  { key: 'listing.needs_media', label: 'listing.needs_media', makes: 'Photography' },
+]
+
+/**
+ * The rules, in the order an operator thinks about them: by the Mart event that
+ * triggers each one. GENERAL is last because nothing from Mart uses it — it is
+ * the fallback for a kind of work with no rule of its own.
+ */
+const RULE_KINDS: { kind: string; label: string; from: string }[] = [
+  { kind: 'SOURCING', label: 'Sourcing', from: 'stock.low' },
+  { kind: 'STORE_AUDIT', label: 'Store audit', from: 'store.applied' },
+  { kind: 'MEDIA', label: 'Photography', from: 'listing.needs_media' },
+  { kind: 'DELIVERY', label: 'Delivery', from: 'order.confirmed — not generated yet' },
+  { kind: 'GENERAL', label: 'General', from: 'fallback' },
+]
+
+const TIER_OPTIONS = [
+  { value: 'STUDENT', label: 'Student' },
+  { value: 'DISPATCH', label: 'Dispatch' },
+  { value: 'REMOTE', label: 'Remote' },
+  { value: 'PROMO', label: 'Promo' },
+  { value: 'TRADE', label: 'Trade' },
+]
+
+export default function Mart() {
+  const { user } = useAuth()
+  const canEdit = user?.role === 'SUPER_ADMIN'
+
+  const [status, setStatus] = useState<StatusFilter>('ALL')
+  const [type, setType] = useState<string>('ALL')
+
+  const { data, loading, error, reload } = useApi(
+    (signal) => api.martEvents({ status, type }, signal),
+    [status, type],
+  )
+  const rules = useApi((signal) => api.martRules(signal))
+
+  const events = data?.events ?? []
+  const counts = data?.counts ?? {}
+  const total = Object.values(counts).reduce((a, b) => a + (b ?? 0), 0)
+  const filtered = status !== 'ALL' || type !== 'ALL'
+
+  return (
+    <>
+      <PageHeader
+        crumb="Operations / Mart"
+        title="AfriZoneMart integration"
+        sub="Mart sends facts. These are the facts it sent, what each one created, and the rules that decide what the next one creates."
+        actions={
+          <Button variant="glass" size="sm" icon="check" onClick={reload}>
+            Refresh
+          </Button>
+        }
+      />
+
+      {/* Counts are tallied across every event, not the 200 shown below: the
+          number that matters — how much is sitting deferred — is rarely on the
+          first page. */}
+      <div className="mart-counts" style={{ marginBottom: 18 }}>
+        {(['PROCESSED', 'DEFERRED', 'IGNORED', 'FAILED'] as MartEventStatus[]).map((s) => (
+          <Glass key={s} reveal className="mart-count">
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>
+              {STATUS_FILTERS.find((f) => f.key === s)?.label}
+            </div>
+            <div className="tnum" style={{ fontSize: 26, fontWeight: 700 }}>
+              {counts[s] ?? 0}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, lineHeight: 1.4 }}>
+              {STATUS_MEANING[s]}
+            </div>
+          </Glass>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        {STATUS_FILTERS.map((f) => (
+          <button
+            key={f.key}
+            className={`btn btn-sm ${status === f.key ? 'btn-primary' : 'btn-glass'}`}
+            onClick={() => setStatus(f.key)}
+          >
+            {f.label}
+            {f.key !== 'ALL' && (counts[f.key as MartEventStatus] ?? 0) > 0 && (
+              <span className="badge" style={{ marginLeft: 6 }}>
+                {counts[f.key as MartEventStatus]}
+              </span>
+            )}
+          </button>
+        ))}
+        <div style={{ minWidth: 200, marginLeft: 'auto' }}>
+          <Select
+            value={type}
+            onChange={setType}
+            options={EVENT_TYPES.map((t) => ({ value: t.key, label: t.label }))}
+            ariaLabel="Filter by event type"
+          />
+        </div>
+      </div>
+
+      {loading ? (
+        <LoadingState label="Loading events…" />
+      ) : error ? (
+        <ErrorState message={error} onRetry={reload} />
+      ) : events.length === 0 ? (
+        <Glass>
+          <EmptyState
+            icon="inbox"
+            title={filtered ? 'Nothing matches that filter' : 'Mart has not sent anything yet'}
+            sub={
+              filtered
+                ? `${total} event${total === 1 ? '' : 's'} received in total.`
+                : 'Events appear the moment Mart posts its first one. Until then this being empty is expected, not a fault.'
+            }
+          />
+        </Glass>
+      ) : (
+        <Glass reveal delay="d1" className="tablewrap">
+          <Table className="dt">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Event</TableHead>
+                <TableHead>What happened</TableHead>
+                <TableHead>Outcome</TableHead>
+                <TableHead>Occurred</TableHead>
+                <TableHead>Received</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {events.map((e) => {
+                const pill = martEventPill(e.status)
+                return (
+                  <TableRow key={e.id}>
+                    <TableCell>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{e.type}</div>
+                      {/* Mart's own id, and the only thing to quote when asking
+                          them about a specific delivery. */}
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--muted)',
+                          fontFamily: 'monospace',
+                          maxWidth: 200,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                        title={e.eventId}
+                      >
+                        {e.eventId}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span style={{ fontSize: 13, color: 'var(--text)' }}>
+                        {e.note ?? (e.taskId ? 'Task created' : '—')}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+                        <StatusPill variant={pill.variant} label={pill.label} />
+                        {e.taskId && (
+                          <a
+                            href={`/tasks?task=${e.taskId}`}
+                            style={{ fontSize: 11, color: 'var(--clay-deep)', fontWeight: 600 }}
+                          >
+                            View task
+                          </a>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell style={{ color: 'var(--muted)', fontSize: 12 }}>
+                      {formatDateTime(e.occurredAt)}
+                    </TableCell>
+                    <TableCell style={{ color: 'var(--muted)', fontSize: 12 }}>
+                      {formatDateTime(e.receivedAt)}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </Glass>
+      )}
+
+      <div style={{ marginTop: 28 }}>
+        <h2 style={{ fontSize: 18, marginBottom: 4 }}>Generation rules</h2>
+        <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16, maxWidth: 620 }}>
+          Mart sends facts, never task parameters — so raising a sourcing fee is a change here, not a
+          change to Mart&apos;s code. These apply to the next event of each kind; tasks already created
+          keep the terms they were created with.
+        </p>
+
+        {rules.loading ? (
+          <LoadingState label="Loading rules…" />
+        ) : rules.error ? (
+          <ErrorState message={rules.error} onRetry={rules.reload} />
+        ) : (
+          <div className="mart-rules">
+            {RULE_KINDS.map((k) => (
+              <RuleCard
+                key={k.kind}
+                kind={k.kind}
+                label={k.label}
+                from={k.from}
+                rule={(rules.data as TaskRules)[k.kind]}
+                canEdit={canEdit}
+                onSaved={rules.reload}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
+function RuleCard({
+  kind,
+  label,
+  from,
+  rule,
+  canEdit,
+  onSaved,
+}: {
+  kind: string
+  label: string
+  from: string
+  rule?: TaskRule
+  canEdit: boolean
+  onSaved: () => void
+}) {
+  const [draft, setDraft] = useState<TaskRule | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  if (!rule) return null
+  const value = draft ?? rule
+  const dirty = draft !== null && JSON.stringify(draft) !== JSON.stringify(rule)
+
+  function set<K extends keyof TaskRule>(key: K, v: TaskRule[K]) {
+    setDraft({ ...value, [key]: v })
+  }
+
+  async function save() {
+    if (!draft) return
+    setBusy(true)
+    setErr(null)
+    try {
+      // Only what actually changed is written. A rule left alone must keep
+      // falling back to its code default rather than being frozen into a
+      // Setting row by the act of saving a neighbouring field.
+      const writes: Promise<unknown>[] = []
+      if (draft.fee !== rule!.fee) writes.push(api.putRule(kind, 'fee', String(draft.fee)))
+      if (draft.tier !== rule!.tier) writes.push(api.putRule(kind, 'tier', draft.tier))
+      if (draft.credentialSlug !== rule!.credentialSlug)
+        writes.push(api.putRule(kind, 'credentialSlug', draft.credentialSlug))
+      if (draft.windowDays !== rule!.windowDays)
+        writes.push(api.putRule(kind, 'windowDays', String(draft.windowDays)))
+      if (draft.requiresIdentityVerified !== rule!.requiresIdentityVerified)
+        writes.push(
+          api.putRule(kind, 'requiresIdentityVerified', String(draft.requiresIdentityVerified)),
+        )
+      await Promise.all(writes)
+      setDraft(null)
+      onSaved()
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Could not save')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Glass reveal className="mart-rule">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+        <h3 style={{ fontSize: 15, margin: 0 }}>{label}</h3>
+        <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace' }}>{from}</span>
+      </div>
+
+      <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
+        <div>
+          <Label htmlFor={`${kind}-fee`}>Fee</Label>
+          <Input
+            id={`${kind}-fee`}
+            type="number"
+            min={0}
+            value={String(value.fee)}
+            disabled={!canEdit}
+            onChange={(ev) => set('fee', Number(ev.target.value))}
+          />
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+            {formatNaira(value.fee)} per task
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor={`${kind}-tier`}>Tier</Label>
+          <Select
+            id={`${kind}-tier`}
+            value={value.tier}
+            onChange={(v) => set('tier', v)}
+            options={TIER_OPTIONS}
+            disabled={!canEdit}
+            ariaLabel={`${label} tier`}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor={`${kind}-cred`}>Required credential</Label>
+          <Input
+            id={`${kind}-cred`}
+            value={value.credentialSlug}
+            placeholder="none"
+            disabled={!canEdit}
+            onChange={(ev) => set('credentialSlug', ev.target.value.trim())}
+          />
+          {/* Empty is a real answer, not a missing one: it is how the gate is
+              turned off. Saying so stops it reading as unconfigured. */}
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+            {value.credentialSlug ? `Slug: ${value.credentialSlug}` : 'No credential gate'}
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor={`${kind}-window`}>Deadline</Label>
+          <Input
+            id={`${kind}-window`}
+            type="number"
+            min={1}
+            value={String(value.windowDays)}
+            disabled={!canEdit}
+            onChange={(ev) => set('windowDays', Number(ev.target.value))}
+          />
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+            {value.windowDays} day{value.windowDays === 1 ? '' : 's'} from creation
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Switch
+            checked={value.requiresIdentityVerified}
+            onChange={(v) => set('requiresIdentityVerified', v)}
+            disabled={!canEdit}
+            label={`${label}: require verified identity`}
+          />
+          <span style={{ fontSize: 13 }}>Require verified identity</span>
+        </div>
+      </div>
+
+      {err && (
+        <div style={{ color: 'var(--danger)', fontSize: 12, marginTop: 10 }}>
+          <Icon name="alert" size={14} /> {err}
+        </div>
+      )}
+
+      {canEdit ? (
+        <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <Button variant="primary" size="sm" onClick={save} loading={busy} disabled={!dirty}>
+            Save
+          </Button>
+          {dirty && (
+            <Button variant="glass" size="sm" onClick={() => setDraft(null)} disabled={busy}>
+              Discard
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 14 }}>
+          Only a super admin can change these.
+        </div>
+      )}
+    </Glass>
+  )
+}

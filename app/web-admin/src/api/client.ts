@@ -49,6 +49,9 @@ import type {
   CredentialFilter,
   RejectionReasonCode,
   CredentialCorrections,
+  MartEventsResponse,
+  MartEventStatus,
+  TaskRules,
 } from './types'
 
 const TOKEN_KEY = 'afz_token'
@@ -419,6 +422,26 @@ export const api = {
     request<Template[]>('/settings/templates', { signal }),
   putTemplate: (key: string, value: string) =>
     request<Template>(`/settings/templates/${encodeURIComponent(key)}`, {
+      method: 'PUT',
+      body: { value },
+    }),
+
+  // ===== AfriZoneMart integration =====
+  martEvents: (
+    filter: { status?: MartEventStatus | 'ALL'; type?: string | 'ALL' },
+    signal?: AbortSignal,
+  ) => {
+    const q = new URLSearchParams()
+    if (filter.status && filter.status !== 'ALL') q.set('status', filter.status)
+    if (filter.type && filter.type !== 'ALL') q.set('type', filter.type)
+    const qs = q.toString()
+    return request<MartEventsResponse>(`/admin/mart/events${qs ? `?${qs}` : ''}`, { signal })
+  },
+  martRules: (signal?: AbortSignal) => request<TaskRules>('/admin/mart/rules', { signal }),
+  // Generation rules are Settings rows, so they are written through the same
+  // endpoint every other setting uses rather than a second write path.
+  putRule: (kind: string, param: string, value: string) =>
+    request<Template>(`/settings/templates/${encodeURIComponent(`rules.${kind}.${param}`)}`, {
       method: 'PUT',
       body: { value },
     }),

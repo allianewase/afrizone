@@ -1,6 +1,17 @@
 # AfriZoneMart ↔ PartTime integration
 
-**Status: proposal. Not implemented. Nothing in this document is built yet.**
+**Status: the inbound half is built on the PartTime side; everything Mart has to
+do, and everything outbound, is still proposal.**
+
+Live today: `POST /api/integrations/mart/events` with the signature scheme in §2,
+the event ledger, per-type de-duplication, task generation for `stock.low`,
+`store.applied` and `listing.needs_media`, and an operations screen at
+Operations → Mart. `order.confirmed` is accepted and recorded DEFERRED, because
+delivery does not exist for it to generate; every one of those events replays the
+day it does.
+
+Not built: the outbound reporting in §4, the customer OTP in §5, and the
+settlement endpoint in §7. Sections marked **OPEN** are still open.
 
 The contract two systems have to agree before either writes code against the
 other. Deliberately specific — an integration agreed in prose and discovered in

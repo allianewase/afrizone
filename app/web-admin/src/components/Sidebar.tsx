@@ -23,6 +23,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { to: '/timesheets', label: 'Timesheets', icon: 'clock' },
       { to: '/payments', label: 'Payments', icon: 'card' },
       { to: '/disputes', label: 'Disputes', icon: 'alert' },
+      { to: '/mart', label: 'Mart', icon: 'inbox' },
     ],
   },
   {

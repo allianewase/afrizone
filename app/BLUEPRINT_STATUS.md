@@ -4,10 +4,10 @@ The blueprint is the governing specification. This file reconciles it against
 what exists, so nobody has to read 16 sections and 30 tables side by side to find
 out what is done.
 
-**Headline: of the ten things Blueprint §15 lists for Phase 1, three are
-finished, four are partial, and three have not started.** The pieces that are
-finished are not the easy ones — KYC, the wallet, and qualification gating are
-all live.
+**Headline: of the ten things Blueprint §15 lists for Phase 1, seven are
+finished and three are partial. Nothing is untouched.** The three that remain
+are each blocked on something outside the codebase — a verification provider, a
+courier onboarding decision, and a screen for data the API already returns.
 
 Living document. When it stops matching the code, the code is right.
 
@@ -23,14 +23,14 @@ approved stores; two-way ratings.*
 |---|---|---|
 | Tasker sign-up & KYC | **Built** | Phone-OTP and email sign-up, an 8-step KYC stepper, document upload to R2, Smile Identity when configured, manual admin review otherwise |
 | Courier sign-up & KYC | **Partial** | `accountType: COURIER` exists; `Driver's licence` and `Vehicle registration` exist as credential types. No courier-specific onboarding flow, no insurance field |
-| Store sign-up & KYC | **Partial** | `Organization`, membership, admin approval and a `tin` field are live. No CAC verification, and **no premises audit task** (Blueprint §8) |
+| Store sign-up & KYC | **Partial** | `Organization`, membership, admin approval, a `tin` field, and a premises audit raised as gated paid work (§8) are live. No CAC verification — the one remaining gap, and it needs a provider |
 | Manual task creation | **Built** | Two-step admin form with a live qualifying-worker count |
-| Basic auto task creation | **Not started** | Requires the AZM event bus (§5). Nothing subscribes to anything yet |
-| Contract lifecycle | **Partial** | `Contract` exists with a typed-name signature and a tamper hash — but **two states**, against the blueprint's eleven |
+| Basic auto task creation | **Built** | One signed inbound endpoint, an event ledger, per-type de-duplication, and admin-editable generation rules. `order.confirmed` records DEFERRED — delivery does not exist to generate |
+| Contract lifecycle | **Built** | An explicit state machine — nine states and a table of legal moves, against the two it had. The blueprint names eleven; the two absent are stages this build reaches through the task, not the contract |
 | Wallet | **Built** | Derived balance, withdrawals, Paystack transfers, webhook settlement |
-| Escrow | **Not started** | Design settled (state, not custody). No model yet — see §4 |
-| Map of approved stores | **Not started** | `lat`/`lng` are stored on every `Organization`; nothing renders them |
-| Two-way ratings | **Partial** | `Rating` runs one way only — `workerId` is always the subject. A Tasker cannot rate the experience |
+| Escrow | **Built** | `Commitment` records the ring-fence — COMMITTED on a live contract, RELEASED on verified acceptance. Mart holds the money throughout; see §4 |
+| Map of approved stores | **Partial** | `GET /api/organizations/map` returns approved stores by distance, filtered by kind. No screen renders it yet — the gap is a view, not data |
+| Two-way ratings | **Built** | `Rating.direction` splits OF_WORKER from OF_EXPERIENCE, so a Tasker rates the job back and the two averages never mix |
 
 ---
 
@@ -46,7 +46,7 @@ are checked by a person and do gate work, requirements are set per task, and the
 worker is shown every unmet reason with a route to fix it. 24 tests.
 
 Also live: the admin console (§3.4) with task control, KYC review, store
-approvals and disputes; wallet and payout rails (§10, minus escrow); audit
+approvals and disputes; wallet and payout rails (§10, escrow included); audit
 logging on money movement (§16); geofenced clock-in (§11); the
 `Organization` model for AZM Stores (§3.3); and the `Job`/`Candidate` module,
 which is the beginning of §7's hire-through-applications.
@@ -120,10 +120,13 @@ Specified in `MART_INTEGRATION.md` §7.
 
 ---
 
-## 5. Mart integration spec — now covers all four events
+## 5. Mart integration — specified, and now built
 
 `MART_INTEGRATION.md` was written before this blueprint and covered only
-`order.confirmed`. It has been rewritten around the event bus §5 asks for:
+`order.confirmed`. It has been rewritten around the event bus §5 asks for, and
+that bus is now live on the PartTime side — one signed endpoint at
+`POST /api/integrations/mart/events`, an event ledger, and an admin screen at
+Operations → Mart. Mart itself is not sending yet.
 
 | Blueprint event | Creates | De-duplicated on |
 |---|---|---|
@@ -144,18 +147,24 @@ delivery being processed twice; a per-type de-duplication rule stops duplicate
 *work*. `stock.low` firing hourly while a shelf stays empty is the case that
 makes the distinction obvious, and neither mechanism substitutes for the other.
 
-One new conflict surfaced (D10 in that spec): **PartTime already owns
-`Organization` and approves stores, but §5 has store applications originating at
-Mart.** Both cannot own the store record, and picking late means reconciling two
-store lists.
+D10 in that spec — who owns the store record — **is settled: PartTime owns it.**
+A `store.applied` event is Mart forwarding a lead, so the handler creates the
+`Organization` itself, PENDING, and raises the audit. Mart is not handing over a
+business.
+
+**Every event is recorded, including the ones nothing can act on yet.**
+`order.confirmed` is answered 202 and stored DEFERRED, because delivery has no
+assignment path, no pickup and drop-off and no customer OTP — there is nothing
+correct to create. Answering 200 and dropping it would lose real orders; the
+ledger means they can be replayed the day delivery ships. That distinction —
+between "Mart never sent it", "we de-duplicated it" and "nothing is built to
+handle it" — is the whole reason the ledger exists rather than a bare
+idempotency key, and it is what the admin screen shows.
 
 ---
 
 ## 6. Substantial features not started
 
-- **The task state machine** (§4.2). Eleven states with defined transitions
-  against today's four. Payment, disputes and analytics are all meant to hang off
-  clean transitions, so this is foundational rather than cosmetic.
 - **Ranked matching** (§11). The build gates *qualified / not qualified*; the
   blueprint wants candidates **scored** on skill, proximity, reliability and
   current load. Different problem.
@@ -165,7 +174,7 @@ store lists.
   in the project — bronze/silver/gold reputation standing, distinct from both the
   work-category tiers (`STUDENT`, `DISPATCH`…) and any store tier from §14.
   Naming needs settling before it is built.
-- **Escrow, surge pay, crew contracts, referral loop** (§10, §14).
+- **Surge pay, crew contracts, referral loop** (§10, §14).
 - **CallyValley** as the certification feeder and **VOLTRON** as a labour
   consumer (§2). Neither system has been discussed before.
 - **Offline-tolerant mobile flows** (§16). The app currently assumes
@@ -191,21 +200,28 @@ migration touching them anyway.
 
 ---
 
-## 8. Suggested order
+## 8. What is next
 
-Both blocking parameters are answered, so the money layer is no longer frozen.
+Items 1-6 of the previous ordering are done: the contract state machine, D10,
+two-way ratings and the store map API, commitment states, the store premises
+audit, and the event bus with auto-task generation.
 
-1. **The task state machine** (§4.2). Eleven states against today's four, and
-   everything downstream — payment, disputes, analytics — is meant to hang off
-   clean transitions. Cheapest now, before production task data exists.
-2. **Settle D10** — whether Mart or PartTime owns the store record. It is a
-   one-word answer that decides whether store onboarding gets rebuilt.
-3. **Two-way ratings and the store map.** Both small, both close Phase 1 items.
-4. **Commitment states for escrow-as-state** (§4). Small, and it unblocks
-   anything that talks about money being ring-fenced.
-5. **Store premises audit** (§8) — completes store onboarding, and is itself a
-   task, so it exercises the state machine on something real.
-6. **Event bus and auto-task generation** (§5), once Mart is ready.
+What remains, in the order it is worth doing:
 
-Still needed from the Mart team before 6: agreement on `stockSource`, a staging
-environment, two shared secrets, and answers to D1–D10.
+1. **A screen for the store map.** The API returns approved stores by distance
+   already; nothing renders them. It is the last Phase 1 item that needs no
+   decision from anybody.
+2. **Delivery**, which is the only reason `order.confirmed` sits DEFERRED. It
+   needs pickup and drop-off on a task that has one location today, a work-progress
+   axis distinct from the posting's status, and a customer OTP for somebody who
+   has no PartTime account. Every deferred order replays the day it lands.
+3. **Courier onboarding** (§3.2) — blocked on the open question of whether
+   couriers are a peer account type or a Tasker sub-family.
+4. **CAC verification** for stores — blocked on a provider.
+5. **Ranked matching** (§11), **proof-of-work evidence** (§14), **reputation
+   tiers** (§9).
+
+Still needed from the Mart team before any of this carries real traffic:
+agreement on `stockSource`, a staging environment, and the shared secret for
+`MART_INBOUND_SECRET`. The endpoint refuses every request until that secret is
+set, which is the intended behaviour rather than a fault to debug.

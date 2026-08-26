@@ -59,6 +59,30 @@ export function formatDate(iso?: string | null): string {
   return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })
 }
 
+/**
+ * Date AND time, for logs where the gap between two timestamps is the point.
+ *
+ * formatDate is right for a due date; it is wrong for an event ledger, where
+ * "Mart sent it, we received it four minutes later" is invisible without the
+ * clock. The year appears only when it is not the current one - carrying it on
+ * every row costs width that the time needs, but dropping it entirely is how a
+ * two-year-old event reads as todays.
+ */
+export function formatDateTime(iso?: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  const sameYear = d.getFullYear() === new Date().getFullYear()
+  return d.toLocaleString('en-NG', {
+    day: 'numeric',
+    month: 'short',
+    ...(sameYear ? {} : { year: 'numeric' }),
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
 // status -> pill variant + canonical word
 export type PillVariant = 'pending' | 'active' | 'review' | 'ready' | 'paid' | 'danger'
 
@@ -152,6 +176,28 @@ export function orgPill(s: string): { variant: PillVariant; label: string } {
       return { variant: 'danger', label: 'Suspended' }
     case 'PENDING':
       return { variant: 'pending', label: 'Awaiting approval' }
+    default:
+      return { variant: 'pending', label: s }
+  }
+}
+
+/**
+ * What became of a fact Mart sent us.
+ *
+ * DEFERRED is deliberately not styled as a failure. Nothing went wrong: the
+ * event was understood and kept, and the work it would create does not exist
+ * yet. Colouring it red would send somebody looking for a bug.
+ */
+export function martEventPill(s: string): { variant: PillVariant; label: string } {
+  switch (s) {
+    case 'PROCESSED':
+      return { variant: 'ready', label: 'Task created' }
+    case 'DEFERRED':
+      return { variant: 'pending', label: 'Held for replay' }
+    case 'IGNORED':
+      return { variant: 'review', label: 'No new work' }
+    case 'FAILED':
+      return { variant: 'danger', label: 'Failed' }
     default:
       return { variant: 'pending', label: s }
   }

@@ -570,3 +570,36 @@ export interface CredentialCorrections {
   issuedAt?: string | null
   expiresAt?: string | null
 }
+
+/* ===== AfriZoneMart integration (Blueprint §5) ===== */
+
+export type MartEventStatus = 'PROCESSED' | 'DEFERRED' | 'IGNORED' | 'FAILED'
+
+/** One fact Mart told us, and what we did about it. */
+export interface MartEvent {
+  id: string
+  eventId: string
+  type: string
+  status: MartEventStatus
+  taskId: string | null
+  note: string | null
+  occurredAt: string
+  receivedAt: string
+}
+
+export interface MartEventsResponse {
+  /** Tallied across every row, not the returned page - the deferred backlog is the number that matters and it is rarely on page one. */
+  counts: Partial<Record<MartEventStatus, number>>
+  events: MartEvent[]
+}
+
+/** What a generator will do with the next event of a given kind. */
+export interface TaskRule {
+  fee: number
+  tier: string
+  credentialSlug: string
+  windowDays: number
+  requiresIdentityVerified: boolean
+}
+
+export type TaskRules = Record<string, TaskRule>
