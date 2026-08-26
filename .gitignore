@@ -20,6 +20,8 @@ app/server/prisma/test.db-shm
 
 # ── Web admin (Vite) ──────────────────────────────────────────────────────────
 app/web-admin/dist/
+app/web-portal/dist/
+app/web-portal/tsconfig.tsbuildinfo
 app/web-admin/.env
 
 # ── Mobile (Expo) ─────────────────────────────────────────────────────────────

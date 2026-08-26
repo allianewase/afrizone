@@ -1,0 +1,184 @@
+.lp {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(1100px 460px at 50% -180px, rgba(251, 172, 52, 0.16), transparent 70%),
+    var(--bg);
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
+.lp-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px clamp(20px, 5vw, 56px);
+}
+.lp-brand { display: flex; align-items: center; gap: 11px; }
+.lp-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border-top-right-radius: var(--cut);
+  background: var(--navy);
+  color: var(--gold);
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 19px;
+  display: grid;
+  place-items: center;
+}
+.lp-word {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.lp-word b { font-weight: 800; }
+.lp-signin {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  padding: 9px 16px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  border-top-right-radius: var(--cut);
+  background: var(--surface);
+  transition: border-color 0.16s var(--ease), transform 0.16s var(--ease);
+}
+.lp-signin:hover { border-color: var(--gold); transform: translateY(-1px); }
+
+/* ── Intro ───────────────────────────────────────────────────────────────── */
+.lp-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: clamp(28px, 6vw, 64px) clamp(20px, 5vw, 56px) 64px;
+}
+.lp-intro { max-width: 640px; margin-bottom: clamp(28px, 4vw, 44px); }
+.lp-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-ink);
+  margin: 0 0 12px;
+}
+.lp-intro h1 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(1.9rem, 4.4vw, 2.9rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  margin: 0 0 14px;
+  color: var(--text);
+}
+.lp-sub {
+  margin: 0;
+  font-size: 16.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 56ch;
+}
+
+/* ── The three cards ─────────────────────────────────────────────────────── */
+.lp-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.lp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 26px 24px 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  border-top-right-radius: var(--cut);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.18s var(--ease), transform 0.18s var(--ease),
+    box-shadow 0.18s var(--ease);
+}
+.lp-card:hover {
+  border-color: var(--gold);
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px -18px rgba(28, 25, 23, 0.35);
+}
+.lp-glyph {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  border-top-right-radius: var(--cut);
+  background: var(--gold-soft);
+  color: var(--gold-ink);
+  display: grid;
+  place-items: center;
+}
+.lp-glyph svg { width: 24px; height: 24px; }
+.lp-card h2 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.16rem;
+  letter-spacing: -0.012em;
+  margin: 2px 0 0;
+  color: var(--text);
+}
+.lp-blurb { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--muted); }
+
+.lp-bullets {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 1;
+}
+.lp-bullets li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 13.5px;
+  color: var(--faint);
+}
+.lp-bullets li::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.lp-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gold-ink);
+}
+.lp-cta svg { width: 17px; height: 17px; transition: transform 0.18s var(--ease); }
+.lp-card:hover .lp-cta svg { transform: translateX(3px); }
+
+.lp-staff {
+  margin: clamp(30px, 5vw, 46px) 0 0;
+  font-size: 13.5px;
+  color: var(--faint);
+}
+.lp-staff span { color: var(--muted); font-weight: 600; }
+
+@media (max-width: 900px) {
+  .lp-cards { grid-template-columns: 1fr; }
+}

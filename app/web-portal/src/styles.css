@@ -1,0 +1,58 @@
+/* Brand values mirrored from web-admin's tokens.css so the portal and the staff
+   console read as one platform. Only the subset the portal actually uses is
+   copied - a full duplicate would drift silently. */
+:root {
+  --gold: #fbac34;
+  --gold-soft: #fdd9a0;
+  --gold-ink: #8a5a0f;
+  --navy: #000066;
+  --rail: #0a1140;
+  --rail-text: #faf9f6;
+  --rail-muted: #a1a5c4;
+
+  --money: #1f9d6b;
+  --money-ink: #15794f;
+  --money-soft: #e1f1e9;
+  --amber: #e08a1e;
+  --danger: #c8453a;
+  --danger-ink: #a6362c;
+  --danger-soft: #fbe9e7;
+
+  --bg: #faf9f6;
+  --bg2: #f4f2ec;
+  --surface: #ffffff;
+  --text: #1c1917;
+  --muted: #57534e;
+  --faint: #706963;
+  --line: rgba(28, 25, 23, 0.1);
+  --line-2: rgba(28, 25, 23, 0.18);
+
+  --r: 16px;
+  --cut: 4px; /* the "Sunrise Cut": one sharp corner, top-right */
+  --r-sm: 12px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --body: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; }
+button { font-family: inherit; }
+
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

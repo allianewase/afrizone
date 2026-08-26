@@ -1,0 +1,102 @@
+/* Shared chrome for every screen after the landing page. */
+.sh { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+.sh-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 16px clamp(20px, 5vw, 40px);
+  border-bottom: 1px solid var(--line); background: var(--surface);
+}
+.sh-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+.sh-mark {
+  width: 30px; height: 30px; border-radius: 9px; border-top-right-radius: var(--cut);
+  background: var(--navy); color: var(--gold);
+  font-family: var(--display); font-weight: 800; font-size: 16px;
+  display: grid; place-items: center;
+}
+.sh-word { font-family: var(--display); font-size: 15px; font-weight: 500; }
+.sh-word b { font-weight: 800; }
+.sh-who { display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: var(--muted); }
+.sh-body { flex: 1; width: 100%; max-width: 980px; margin: 0 auto; padding: clamp(26px,5vw,48px) clamp(20px,5vw,40px) 72px; }
+
+/* ── Forms ───────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r); border-top-right-radius: var(--cut); padding: 28px;
+}
+.form-narrow { max-width: 430px; margin: 0 auto; }
+.eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--gold-ink); margin: 0 0 10px;
+}
+h1.pt {
+  font-family: var(--display); font-weight: 800; font-size: clamp(1.6rem,3.4vw,2.1rem);
+  line-height: 1.1; letter-spacing: -.022em; margin: 0 0 10px; text-wrap: balance;
+}
+.lede { margin: 0 0 22px; color: var(--muted); font-size: 15px; line-height: 1.55; }
+
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
+.field label { font-size: 13px; font-weight: 600; color: var(--text); }
+.field input {
+  height: 44px; padding: 0 13px; font-size: 15px; font-family: inherit; color: var(--text);
+  background: var(--surface); border: 1px solid var(--line-2);
+  border-radius: var(--r-sm); border-top-right-radius: var(--cut);
+}
+.field input:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-color: var(--gold); }
+.hint { font-size: 12.5px; color: var(--faint); }
+
+.btn {
+  width: 100%; height: 46px; border: 0; cursor: pointer;
+  border-radius: var(--r-sm); border-top-right-radius: var(--cut);
+  font-size: 15px; font-weight: 700; color: var(--text);
+  background: linear-gradient(180deg, var(--gold), var(--gold-deep, #e09420));
+  transition: transform .16s var(--ease), filter .16s var(--ease);
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.04); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn.ghost { background: transparent; border: 1px solid var(--line-2); font-weight: 600; }
+
+.alt { margin: 16px 0 0; text-align: center; font-size: 13.5px; color: var(--muted); }
+.alt a { color: var(--gold-ink); font-weight: 700; }
+
+.err {
+  display: flex; gap: 9px; align-items: flex-start;
+  background: var(--danger-soft); border: 1px solid var(--danger);
+  color: var(--danger-ink); border-radius: var(--r-sm);
+  padding: 11px 13px; font-size: 13.5px; margin-bottom: 16px;
+}
+
+/* ── Chosen-type banner, so the form says what it is setting up ──────────── */
+.typebar {
+  display: flex; align-items: center; gap: 11px; margin-bottom: 20px;
+  padding: 11px 14px; background: var(--bg2);
+  border: 1px solid var(--line); border-radius: var(--r-sm); border-top-right-radius: var(--cut);
+  font-size: 13.5px;
+}
+.typebar b { font-weight: 700; }
+.typebar a { margin-left: auto; color: var(--gold-ink); font-weight: 700; font-size: 13px; }
+
+/* ── Status pills + info blocks ──────────────────────────────────────────── */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+  border-radius: 100px; font-size: 12px; font-weight: 700;
+}
+.pill.ok { background: var(--money-soft); color: var(--money-ink); }
+.pill.wait { background: #fdf2e0; color: var(--gold-ink); }
+.pill.bad { background: var(--danger-soft); color: var(--danger-ink); }
+
+.note {
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: var(--r-sm); border-top-right-radius: var(--cut);
+  padding: 16px 18px; margin-bottom: 18px; font-size: 14px; line-height: 1.6; color: var(--muted);
+}
+.note b { color: var(--text); }
+
+.rows { display: flex; flex-direction: column; }
+.row { display: flex; gap: 14px; padding: 11px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.row:first-child { border-top: 0; }
+.row-l { width: 130px; flex: none; color: var(--faint); }
+.row-v { flex: 1; }
+.sectitle {
+  font-family: var(--display); font-weight: 700; font-size: 1.05rem;
+  margin: 30px 0 12px; letter-spacing: -.01em;
+}
+.muted { color: var(--muted); }
