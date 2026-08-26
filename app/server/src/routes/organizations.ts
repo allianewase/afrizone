@@ -28,6 +28,7 @@ import { Router, Response } from "express";
 import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest } from "../auth";
 import { slugify } from "../types";
+import { formatDistance, haversineMetres, isValidCoord } from "../util/geo";
 import { userActor, writeAudit } from "../util/audit";
 import {
   kindLabel,
@@ -95,6 +96,82 @@ function readKind(raw: unknown): OrgKind | undefined {
 router.get("/", requireAuth, async (req: AuthedRequest, res: Response) => {
   const orgs = await listOrganizationsForUser(req.user!.id, readKind(req.query.kind));
   res.json(orgs.map(({ org, role }) => ({ ...publicOrg(org, role), myRole: role })));
+});
+
+// DECLARED BEFORE /:id ON PURPOSE. Express matches in declaration order, so with
+// these the other way round a request for /map is read as an organization whose
+// id is "map" - and answers 404, because nobody is a member of it. The symptom
+// is "the map endpoint does not exist" and the cause is invisible.
+/**
+ * GET /api/organizations/map?kind=STORE&lat=&lng=&radius=
+ *
+ * The live network of approved nodes (Blueprint §8). This is what lets a Courier
+ * find the nearest shop holding an order, and what a Sourcing Agent uses to see
+ * where they can drop stock.
+ *
+ * OPEN TO ANY SIGNED-IN USER, WHICH IS DELIBERATE AND IS ALSO WHY THE PAYLOAD IS
+ * NARROW. Every Tasker and Courier needs this, and gating it on membership would
+ * mean only a store's own staff could see it - the opposite of a network map. So
+ * it returns exactly what somebody needs to travel to a place: name, address,
+ * coordinates, and how far away it is. No payout details, no members, no contact
+ * for a shop you have no business phoning.
+ *
+ * ONLY ACTIVE ORGANIZATIONS APPEAR. A store that is still awaiting approval, or
+ * has been suspended, is not part of the network, and putting it on the map
+ * would send a courier to a shop that cannot hand anything over.
+ */
+router.get("/map", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const kind = readKind(req.query.kind) ?? "STORE";
+
+  const orgs = await prisma.organization.findMany({
+    where: { kind, status: "ACTIVE" },
+    select: { id: true, name: true, slug: true, address: true, lat: true, lng: true, kind: true },
+    orderBy: { name: "asc" },
+  });
+
+  // A node with no coordinates cannot be navigated to, so it is not on a map.
+  // It is still a real approved store - it just needs its location set, which is
+  // a gap an admin can see on the Organizations screen rather than a courier
+  // discovering it at a junction.
+  const placed = orgs.filter((o) => isValidCoord(o.lat, o.lng));
+
+  const from = isValidCoord(req.query.lat, req.query.lng)
+    ? { lat: Number(req.query.lat), lng: Number(req.query.lng) }
+    : null;
+
+  let out = placed.map((o) => {
+    const metres = from ? haversineMetres(from.lat, from.lng, o.lat!, o.lng!) : null;
+    return {
+      id: o.id,
+      kind: o.kind,
+      name: o.name,
+      slug: o.slug,
+      address: o.address,
+      lat: o.lat,
+      lng: o.lng,
+      distanceMetres: metres === null ? null : Math.round(metres),
+      distance: metres === null ? null : formatDistance(metres),
+    };
+  });
+
+  if (from) {
+    const radius = Number(req.query.radius);
+    if (Number.isFinite(radius) && radius > 0) {
+      out = out.filter((o) => (o.distanceMetres ?? Infinity) <= radius);
+    }
+    // Nearest first. Without a reference point the list stays alphabetical,
+    // because "nearest to nowhere" is not an order.
+    out.sort((a, b) => (a.distanceMetres ?? 0) - (b.distanceMetres ?? 0));
+  }
+
+  res.json({
+    count: out.length,
+    // Named so the difference is visible rather than inferred: an admin looking
+    // at a short map should be able to tell "not approved yet" from "nobody set
+    // the address".
+    unplaced: orgs.length - placed.length,
+    nodes: out,
+  });
 });
 
 // GET /api/organizations/:id → one business, if the caller belongs to it.

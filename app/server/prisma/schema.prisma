@@ -429,10 +429,23 @@ model PasswordReset {
   @@index([userId])
 }
 
+/// A rating on one engagement. Blueprint §9 wants these two-way: Afrizone or the
+/// store rates the Tasker, and the Tasker rates the experience back.
 model Rating {
-  id          String   @id @default(cuid())
-  workerId    String
-  taskId      String
+  id        String @id @default(cuid())
+  /// The worker involved in this engagement - the SAME person in both
+  /// directions. They are the subject when direction is OF_WORKER and the
+  /// author when it is OF_EXPERIENCE, which is why this is not called
+  /// `subjectId`.
+  workerId  String
+  taskId    String
+  /// OF_WORKER: Afrizone or the store rating the Tasker.
+  /// OF_EXPERIENCE: the Tasker rating the job back.
+  ///
+  /// Defaults OF_WORKER, which is not merely convenient - every row that
+  /// existed before this column was exactly that.
+  direction String @default("OF_WORKER")
+
   score       Int // 1–5 stars
   note        String?
   createdById String
@@ -442,7 +455,10 @@ model Rating {
   task      Task @relation(fields: [taskId], references: [id])
   createdBy User @relation("RatingsGiven", fields: [createdById], references: [id])
 
-  @@unique([workerId, taskId]) // one rating per worker per task
+  /// One rating each way per engagement. The old constraint was
+  /// (workerId, taskId), which allowed only one rating full stop and is what
+  /// made two-way impossible.
+  @@unique([workerId, taskId, direction])
   @@index([workerId])
 }
 

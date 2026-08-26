@@ -1,6 +1,8 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest } from "../auth";
+import { closeIfBothSidesRated, recomputeWorkerRating } from "../services/ratings";
+import { userActor } from "../util/audit";
 
 const router = Router();
 
@@ -30,33 +32,37 @@ router.post(
     const task = await prisma.task.findUnique({ where: { id: taskId } });
     if (!task) return res.status(404).json({ error: "Task not found" });
 
-    // Upsert: update existing rating for this worker+task, or create new.
+    // direction is explicit rather than left to the column default: this route
+    // is one of two that write here, and a rating whose direction was implied
+    // is one nobody can audit later.
     await prisma.rating.upsert({
-      where: { workerId_taskId: { workerId: worker.id, taskId: task.id } },
+      where: {
+        workerId_taskId_direction: {
+          workerId: worker.id,
+          taskId: task.id,
+          direction: "OF_WORKER",
+        },
+      },
       update: { score: scoreNum, note: note ? String(note).trim() : null },
       create: {
         workerId: worker.id,
         taskId: task.id,
+        direction: "OF_WORKER",
         score: scoreNum,
         note: note ? String(note).trim() : null,
         createdById: req.user!.id,
       },
     });
 
-    // Recalculate aggregate rating and completedCount.
-    const allRatings = await prisma.rating.findMany({ where: { workerId: worker.id } });
-    const avg =
-      allRatings.length > 0
-        ? allRatings.reduce((s, r) => s + r.score, 0) / allRatings.length
-        : null;
+    // Counts only ratings OF this worker. The average used to be taken over
+    // every row matching workerId, which now also matches the ratings they
+    // WROTE - a Tasker who rated three jobs one star would have dragged their
+    // own profile to one star.
+    const updated = await recomputeWorkerRating(worker.id);
 
-    const updated = await prisma.user.update({
-      where: { id: worker.id },
-      data: {
-        rating: avg !== null ? Math.round(avg * 10) / 10 : null,
-        completedCount: allRatings.length,
-      },
-    });
+    // Blueprint §4.2: Closed means "ratings exchanged". So the second rating is
+    // what closes the engagement, rather than an admin remembering to.
+    await closeIfBothSidesRated(task.id, worker.id, userActor(req.user!.id));
 
     res.json({
       id: updated.id,

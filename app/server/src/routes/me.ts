@@ -4,6 +4,9 @@ import { requireAuth, AuthedRequest } from "../auth";
 import { tiersToArray, tiersToString, Tier, TIERS } from "../types";
 import { isSmileConfigured, submitDocumentVerification, NgIdType, NG_ID_TYPES } from "../services/smileIdentity";
 import { getFileBuffer } from "../services/storage";
+import { requireAssignedTask } from "../util/assignment";
+import { closeIfBothSidesRated, isRateable } from "../services/ratings";
+import { userActor } from "../util/audit";
 
 const router = Router();
 
@@ -265,7 +268,10 @@ router.get("/timesheets", requireAuth, async (req: AuthedRequest, res: Response)
 // GET /api/me/ratings → worker's individual ratings, newest-first.
 router.get("/ratings", requireAuth, async (req: AuthedRequest, res: Response) => {
   const ratings = await prisma.rating.findMany({
-    where: { workerId: req.user!.id },
+    // Ratings OF this worker only. Without the direction filter this would also
+    // return the ones they wrote about their own jobs, which is not what "your
+    // ratings" means to anybody.
+    where: { workerId: req.user!.id, direction: "OF_WORKER" },
     orderBy: { createdAt: "desc" },
     include: { task: true },
   });
@@ -279,6 +285,68 @@ router.get("/ratings", requireAuth, async (req: AuthedRequest, res: Response) =>
       task: { id: r.task.id, title: r.task.title },
     }))
   );
+});
+
+/**
+ * POST /api/me/ratings → the Tasker rates the job back. Body {taskId, score, note?}.
+ *
+ * The other half of Blueprint §9. Guarded on two things, both of which matter:
+ *
+ *   They must have actually been given the task. Otherwise anyone could rate any
+ *   job they had merely seen, and the resulting scores would describe nothing.
+ *
+ *   The work must be far enough along to have an opinion about. Rating a job on
+ *   the morning you claimed it is not feedback about the job.
+ */
+router.post("/ratings", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const workerId = req.user!.id;
+  const { taskId, score, note } = req.body || {};
+
+  const scoreNum = Number(score);
+  if (!Number.isInteger(scoreNum) || scoreNum < 1 || scoreNum > 5) {
+    return res.status(400).json({ error: "Give a score between 1 and 5" });
+  }
+
+  const assignment = await requireAssignedTask(workerId, taskId);
+  if (!assignment.ok) return res.status(assignment.status).json({ error: assignment.error });
+  const { task } = assignment;
+
+  const contract = await prisma.contract.findFirst({
+    where: { taskId: task.id, workerId },
+    select: { id: true, status: true },
+  });
+  if (!contract || !isRateable(contract.status)) {
+    return res.status(400).json({ error: "You can rate this once the work has been approved" });
+  }
+
+  const rating = await prisma.rating.upsert({
+    where: {
+      workerId_taskId_direction: { workerId, taskId: task.id, direction: "OF_EXPERIENCE" },
+    },
+    update: { score: scoreNum, note: note ? String(note).trim() : null },
+    create: {
+      workerId,
+      taskId: task.id,
+      direction: "OF_EXPERIENCE",
+      score: scoreNum,
+      note: note ? String(note).trim() : null,
+      // The Tasker is the author here, which is the whole difference between
+      // the two directions.
+      createdById: workerId,
+    },
+  });
+
+  // Blueprint §4.2: Closed means "ratings exchanged".
+  const closed = await closeIfBothSidesRated(task.id, workerId, userActor(workerId));
+
+  res.status(201).json({
+    id: rating.id,
+    taskId: rating.taskId,
+    score: rating.score,
+    note: rating.note,
+    createdAt: rating.createdAt,
+    contractClosed: closed,
+  });
 });
 
 // GET /api/me/contracts → worker's contracts joined with task summary.
