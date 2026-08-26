@@ -17,35 +17,21 @@
  */
 import { prisma } from "../prisma";
 import { userActor, writeAudit, type AuditActor } from "../util/audit";
+import { ruleFor } from "./taskRules";
 
 export type AuditOutcome = "PASS" | "FAIL";
 export const AUDIT_OUTCOMES: AuditOutcome[] = ["PASS", "FAIL"];
 
-/** Settings keys, with the defaults used when nobody has set them. */
-export const AUDIT_SETTINGS = {
-  fee: { key: "audit.fee", fallback: 15000 },
-  /**
-   * Which tier auditors are drawn from.
-   *
-   * A STOPGAP, and worth understanding before someone "fixes" it. The blueprint
-   * describes Auditor as a SKILL ROLE, and the platform has no skill roles yet -
-   * only tiers, none of which means "auditor". What actually gates the work is
-   * the credential requirement below; the tier just has to be one real workers
-   * hold, so it is configurable rather than invented in code.
-   */
-  tier: { key: "audit.tier", fallback: "TRADE" },
-  /** The credential that makes somebody an auditor. */
-  credentialSlug: { key: "audit.credential", fallback: "auditor-accreditation" },
-  /** At or above this score, the premises pass. */
-  passMark: { key: "audit.passMark", fallback: 70 },
-  /** Days an auditor has to claim and complete it. */
-  windowDays: { key: "audit.windowDays", fallback: 7 },
-};
+/**
+ * The pass mark. Every other parameter an audit task needs - fee, tier,
+ * credential, window - now comes from services/taskRules.ts, which is the one
+ * convention for every generator. The store audit had its own `audit.*` keys
+ * when it was the only one; leaving them would have meant two ways to configure
+ * the same kind of thing, which is how a third gets invented.
+ */
+export const AUDIT_PASS_MARK = { key: "rules.STORE_AUDIT.passMark", fallback: 70 };
 
-async function setting<T extends string | number>(
-  key: string,
-  fallback: T
-): Promise<T> {
+async function setting<T extends string | number>(key: string, fallback: T): Promise<T> {
   const row = await prisma.setting.findUnique({ where: { key } });
   if (!row) return fallback;
   if (typeof fallback === "number") {
@@ -57,7 +43,7 @@ async function setting<T extends string | number>(
 
 /** PASS or FAIL, decided against the configured mark at the time of the audit. */
 export async function outcomeFor(score: number): Promise<AuditOutcome> {
-  const mark = await setting(AUDIT_SETTINGS.passMark.key, AUDIT_SETTINGS.passMark.fallback);
+  const mark = await setting(AUDIT_PASS_MARK.key, AUDIT_PASS_MARK.fallback);
   return score >= mark ? "PASS" : "FAIL";
 }
 
@@ -95,12 +81,7 @@ export async function requestStoreAudit(
   });
   if (existing) return { taskId: existing.id, created: false };
 
-  const [fee, tier, credentialSlug, windowDays] = await Promise.all([
-    setting(AUDIT_SETTINGS.fee.key, AUDIT_SETTINGS.fee.fallback),
-    setting(AUDIT_SETTINGS.tier.key, AUDIT_SETTINGS.tier.fallback),
-    setting(AUDIT_SETTINGS.credentialSlug.key, AUDIT_SETTINGS.credentialSlug.fallback),
-    setting(AUDIT_SETTINGS.windowDays.key, AUDIT_SETTINGS.windowDays.fallback),
-  ]);
+  const { fee, tier, credentialSlug, windowDays } = await ruleFor("STORE_AUDIT");
 
   const deadline = new Date(Date.now() + windowDays * 24 * 60 * 60 * 1000);
   const admin = await prisma.user.findFirst({

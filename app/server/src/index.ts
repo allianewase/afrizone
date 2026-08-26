@@ -21,6 +21,7 @@ import walletRouter from "./routes/wallet";
 import contractsRouter from "./routes/contracts";
 import disputesRouter, { adminRouter as adminDisputesRouter } from "./routes/disputes";
 import organizationsRouter, { adminRouter as adminOrganizationsRouter } from "./routes/organizations";
+import martRouter, { adminRouter as adminMartRouter } from "./routes/martIntegration";
 import ratingsRouter from "./routes/ratings";
 import webhooksRouter from "./routes/webhooks";
 import kycDocumentsRouter, { handleKycUpload, handleKycFileGet } from "./routes/kycDocuments";
@@ -82,7 +83,10 @@ app.use(
 );
 // Paystack webhook needs the RAW body for HMAC signature verification:
 // mount the raw parser on this path BEFORE the global JSON parser.
+// Both of these authenticate with an HMAC over the RAW body, so the raw
+// parser is mounted on their paths BEFORE the global JSON parser.
 app.use("/api/webhooks/paystack", express.raw({ type: "*/*" }));
+app.use("/api/integrations/mart/events", express.raw({ type: "*/*" }));
 app.use(express.json());
 
 // Rate limiting is disabled under the automated test suite (NODE_ENV=test):
@@ -209,6 +213,11 @@ app.use("/api/contracts", contractsRouter);
 // (gated on membership, see routes/organizations.ts), while
 // /api/admin/organizations is Afrizone staff and is the only path that can
 // approve or suspend one.
+// AfriZoneMart tells us what happened; we decide what work it creates.
+// The inbound route is signature-authenticated rather than session
+// authenticated - Mart is a system, not a user.
+app.use("/api/integrations/mart", martRouter);
+app.use("/api/admin/mart", adminMartRouter);
 app.use("/api/organizations", organizationsRouter);
 app.use("/api/admin/organizations", adminOrganizationsRouter);
 app.use("/api/disputes", adminDisputesRouter);

@@ -17,6 +17,7 @@ export default defineConfig(async () => {
             TEST_MIGRATIONS: migrations,
             JWT_SECRET: "test-secret-for-automated-tests-only",
             NODE_ENV: "test",
+            MART_INBOUND_SECRET: "local-dev-mart-inbound-secret",
           },
         },
       }),

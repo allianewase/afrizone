@@ -875,3 +875,51 @@ model StoreAudit {
   /// approval screen asks every time it loads.
   @@index([organizationId, createdAt])
 }
+
+/// Every fact AfriZoneMart has told us, and what we did about it.
+///
+/// Blueprint §5: Mart emits events, PartTime subscribes and runs task-generation
+/// rules. This is the ledger of that subscription, and it exists for three
+/// separate reasons - only the first is obvious:
+///
+///   IDEMPOTENCY. Mart retries on a timeout or a 500, and a retry must be free.
+///   `eventId` is unique, so a repeat is recognised rather than re-processed.
+///
+///   NOTHING IS LOST WHILE DOWNSTREAM WORK IS UNBUILT. An order.confirmed today
+///   creates no dispatch task, because delivery does not exist yet. Recording it
+///   as DEFERRED means those orders can be replayed the day it does, instead of
+///   having been dropped on the floor with a 200.
+///
+///   ANSWERING "WHY IS THERE NO TASK FOR THIS?". Without a row per event, the
+///   difference between "Mart never sent it", "we de-duplicated it" and "no rule
+///   matched" is invisible, and every one of those is a different bug.
+model MartEvent {
+  id String @id @default(cuid())
+
+  /// Mart's own idempotency key for this delivery.
+  eventId String @unique
+  /// order.confirmed | stock.low | store.applied | listing.needs_media
+  type    String
+
+  occurredAt DateTime
+  receivedAt DateTime @default(now())
+
+  /// The raw payload as sent. Kept verbatim rather than parsed into columns: a
+  /// replay has to see exactly what arrived, and a schema that has since moved
+  /// on must not silently reinterpret an old event.
+  payload String
+
+  /// PROCESSED - work was created.
+  /// DEFERRED  - understood, but the thing that would handle it is not built.
+  /// IGNORED   - de-duplicated, or no rule matched.
+  /// FAILED    - could not be processed.
+  status       String  @default("PROCESSED")
+  /// The task this event produced, when it produced one.
+  resultTaskId String?
+  note         String?
+
+  /// "What has Mart sent that we did nothing with?" is the question an operator
+  /// asks when something is missing, and it filters on exactly this pair.
+  @@index([type, status])
+  @@index([receivedAt])
+}
