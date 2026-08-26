@@ -4,7 +4,38 @@ import { requireAuth, AuthedRequest } from "../auth";
 import { ClockType, CLOCK_TYPES } from "../types";
 import { requireAssignedTask } from "../util/assignment";
 
+import { transitionContract, type ContractState } from "../services/contractState";
+import { userActor, type AuditActor } from "../util/audit";
+
 const router = Router();
+
+/**
+ * Advance the contract that binds this worker to this task, if there is one.
+ *
+ * Best-effort and deliberately silent on failure. These calls sit alongside the
+ * action that already succeeded - a clock-in has happened, a timesheet is
+ * approved - and refusing that action because a lifecycle row would not move
+ * would be trading a real outcome for a bookkeeping one. An illegal transition
+ * here means the contract was already further along, which is not an error the
+ * person in front of us can do anything about.
+ *
+ * The transition itself is still audited; only the failure is swallowed.
+ */
+async function advanceContract(
+  taskId: string,
+  workerId: string,
+  to: ContractState,
+  actor: AuditActor,
+  meta: Record<string, unknown> = {}
+): Promise<void> {
+  const contract = await prisma.contract.findFirst({
+    where: { taskId, workerId },
+    select: { id: true },
+  });
+  if (!contract) return;
+  await transitionContract(prisma, contract.id, to, actor, meta);
+}
+
 
 /** Great-circle distance in metres between two WGS-84 points (Haversine). */
 function haversineMetres(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -55,6 +86,10 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
     withinFence = dist <= task.geofenceRadius;
   }
 
+  // Clocking IN is what actually starts the work, so it is the transition out of
+  // CLAIMED. Clocking OUT does not end anything - a worker clocks out for the
+  // day and back in tomorrow, and it is submitting the timesheet that says the
+  // job is done.
   const event = await prisma.clockEvent.create({
     data: {
       workerId,
@@ -66,6 +101,13 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
       note: note != null ? String(note) : null,
     },
   });
+
+  if (event.type === "IN") {
+    await advanceContract(task.id, workerId, "IN_PROGRESS", userActor(workerId), {
+      via: "clock-in",
+      clockEventId: event.id,
+    });
+  }
 
   // clockedIn reflects the latest event for this task by this worker.
   const clockedIn = event.type === "IN";

@@ -567,7 +567,8 @@ function SheetField({ label, hint, children }: { label: string; hint?: string; c
 
 function ContractRow({ contract }: { contract: Contract }) {
   const router = useRouter();
-  const signed = contract.status === 'SIGNED';
+  // Signature comes from signedAt, not status - status is the work lifecycle.
+  const signed = contract.signedAt != null;
 
   return (
     <Pressable

@@ -122,6 +122,16 @@ async function main() {
   await prisma.funding.deleteMany();
   await prisma.timesheet.deleteMany();
   await prisma.application.deleteMany();
+  // Task requirements FK Task, Skill AND CredentialType, all with RESTRICT, so
+  // they clear before any of the three.
+  //
+  // These used to sit further down, after task.deleteMany(). That was latent
+  // until the seed began gating a task on a licence and a skill: with no
+  // requirement rows the ordering never mattered, and the first re-seed after
+  // they appeared failed with a foreign-key error on Task. A delete order is
+  // only exercised by the SECOND run.
+  await prisma.taskSkillRequirement.deleteMany();
+  await prisma.taskCredentialRequirement.deleteMany();
   await prisma.task.deleteMany();
   // organizations: OrganizationMember FKs BOTH Organization and User, so it
   // clears before either
@@ -130,10 +140,6 @@ async function main() {
   // auth tables (PasswordReset FKs User; OtpCode is standalone but clear too)
   await prisma.passwordReset.deleteMany();
   await prisma.otpCode.deleteMany();
-  // task requirements: FK Task, Skill and CredentialType with RESTRICT, so
-  // they have to be cleared before any of the three
-  await prisma.taskSkillRequirement.deleteMany();
-  await prisma.taskCredentialRequirement.deleteMany();
   // talent profile: both FK User, so they must go first
   await prisma.credential.deleteMany();
   await prisma.workerSkill.deleteMany();
@@ -453,9 +459,9 @@ async function main() {
 
   // ── v3: Amaka's worker journey (mobile app demo data) ─────────────────────
   // Amaka already has: APPROVED application on tPromo + ₦18,000 APPROVED Payment.
-  // PENDING_SIGNATURE Contract for the approved mall activation.
+  // An assigned but not-yet-started contract for the approved mall activation.
   await prisma.contract.create({
-    data: { taskId: tPromo.id, workerId: amaka.id, status: "PENDING_SIGNATURE" },
+    data: { taskId: tPromo.id, workerId: amaka.id, status: "CLAIMED" },
   });
   // A second PROMO task so Amaka has a tier-matching "Applied" item.
   const tPromo2 = await prisma.task.create({

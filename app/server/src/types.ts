@@ -42,11 +42,41 @@ export const ACCOUNT_TYPES: AccountType[] = ["INDIVIDUAL", "STORE", "COURIER"];
 // ── v3 enums (worker-facing mobile app) ────────────────────────────────────────
 export type ClockType = "IN" | "OUT";
 export type WithdrawalStatus = "PROCESSING" | "PAID" | "FAILED";
-export type ContractStatus = "PENDING_SIGNATURE" | "SIGNED";
+/**
+ * The work lifecycle for one Tasker on one Task (Blueprint §4.2).
+ *
+ * This used to hold the SIGNATURE state. It no longer does - whether somebody
+ * signed is read from Contract.signedAt, because "has it been signed" and "how
+ * far has the work got" are different questions and conflating them meant a
+ * signed contract could not say whether anyone had started.
+ *
+ * The transitions live in services/contractState.ts, which is the only thing
+ * allowed to move a contract between them.
+ */
+export type ContractStatus =
+  | "CLAIMED"
+  | "IN_PROGRESS"
+  | "SUBMITTED"
+  | "VERIFIED"
+  | "PAID"
+  | "CLOSED"
+  | "REWORK"
+  | "CANCELLED"
+  | "DISPUTED";
 
 export const CLOCK_TYPES: ClockType[] = ["IN", "OUT"];
 export const WITHDRAWAL_STATUSES: WithdrawalStatus[] = ["PROCESSING", "PAID", "FAILED"];
-export const CONTRACT_STATUSES: ContractStatus[] = ["PENDING_SIGNATURE", "SIGNED"];
+export const CONTRACT_STATUSES: ContractStatus[] = [
+  "CLAIMED",
+  "IN_PROGRESS",
+  "SUBMITTED",
+  "VERIFIED",
+  "PAID",
+  "CLOSED",
+  "REWORK",
+  "CANCELLED",
+  "DISPUTED",
+];
 
 // ── auth enums ──────────────────────────────────────────────────────────────
 export type OtpPurpose = "login";

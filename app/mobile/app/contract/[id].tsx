@@ -48,7 +48,8 @@ export default function ContractDetailScreen() {
     }
   }
 
-  const signed = c?.status === 'SIGNED';
+  // Signature comes from signedAt, not status - status is the work lifecycle.
+  const signed = c?.signedAt != null;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>

@@ -1,10 +1,39 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest } from "../auth";
-import { writeAudit, userActor, auditData } from "../util/audit";
+import { writeAudit, userActor, auditData, type AuditActor } from "../util/audit";
 import { notifyWorker, notifyWorkers } from "../services/push";
 
+import { transitionContract, type ContractState } from "../services/contractState";
+
 const router = Router();
+
+/**
+ * Advance the contract binding this worker to this task, if there is one.
+ *
+ * Best-effort and deliberately silent on failure. These calls sit alongside an
+ * action that already succeeded - a timesheet is approved, a payment released -
+ * and refusing that action because a lifecycle row would not move would trade a
+ * real outcome for a bookkeeping one. An illegal transition here means the
+ * contract was already further along, which is not something the person in
+ * front of us can act on. The transition itself is still audited; only the
+ * failure is swallowed.
+ */
+async function advanceContract(
+  taskId: string,
+  workerId: string,
+  to: ContractState,
+  actor: AuditActor,
+  meta: Record<string, unknown> = {}
+): Promise<void> {
+  const contract = await prisma.contract.findFirst({
+    where: { taskId, workerId },
+    select: { id: true },
+  });
+  if (!contract) return;
+  await transitionContract(prisma, contract.id, to, actor, meta);
+}
+
 
 // GET /api/payments?status= → joined with worker {id,name} and task {id,title}
 // Admin-only: the worker's own view is GET /api/me/transactions and
@@ -42,6 +71,10 @@ router.post("/:id/release", requireAuth, requireRole("SUPER_ADMIN"), async (req:
   const updated = await prisma.payment.update({
     where: { id: payment.id },
     data: { status: "RELEASED" },
+  });
+  await advanceContract(payment.taskId, payment.workerId, "PAID", userActor(req.user!.id), {
+    via: "payment-released",
+    paymentId: payment.id,
   });
   await writeAudit(userActor(req.user!.id), "PAYMENT_RELEASED", "Payment", payment.id, {
     net: payment.net,

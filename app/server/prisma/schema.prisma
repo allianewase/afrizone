@@ -375,7 +375,12 @@ model Contract {
   id            String    @id @default(cuid())
   taskId        String
   workerId      String
-  status        String    @default("PENDING_SIGNATURE") // ContractStatus enum (PENDING_SIGNATURE | SIGNED)
+  /// The WORK lifecycle for this Tasker on this Task - Blueprint §4.2, and see
+  /// services/contractState.ts for the legal transitions. NOT the signature
+  /// state: whether somebody signed is read from signedAt below, because how far
+  /// the work has got is a different question and holding both here meant a
+  /// signed contract could not say whether anyone had started.
+  status        String    @default("CLAIMED")
   signedAt      DateTime?
   signerName    String? // typed full-name signature, captured at sign time (record of intent)
   signerIp      String? // requesting IP at sign time

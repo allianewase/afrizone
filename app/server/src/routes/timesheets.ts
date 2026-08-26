@@ -5,7 +5,37 @@ import { requireAssignedTask } from "../util/assignment";
 import { tiersToArray } from "../types";
 import { computeWht } from "../util/tax";
 
+import { transitionContract, type ContractState } from "../services/contractState";
+import { userActor, type AuditActor } from "../util/audit";
+
 const router = Router();
+
+/**
+ * Advance the contract binding this worker to this task, if there is one.
+ *
+ * Best-effort and deliberately silent on failure. These calls sit alongside an
+ * action that already succeeded - a timesheet is approved, a payment released -
+ * and refusing that action because a lifecycle row would not move would trade a
+ * real outcome for a bookkeeping one. An illegal transition here means the
+ * contract was already further along, which is not something the person in
+ * front of us can act on. The transition itself is still audited; only the
+ * failure is swallowed.
+ */
+async function advanceContract(
+  taskId: string,
+  workerId: string,
+  to: ContractState,
+  actor: AuditActor,
+  meta: Record<string, unknown> = {}
+): Promise<void> {
+  const contract = await prisma.contract.findFirst({
+    where: { taskId, workerId },
+    select: { id: true },
+  });
+  if (!contract) return;
+  await transitionContract(prisma, contract.id, to, actor, meta);
+}
+
 
 const SLA_HOURS = 48; // 24–48h SLA per design spec; use 48h ceiling.
 
@@ -76,6 +106,15 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
       status: "SUBMITTED",
     },
   });
+
+  // Handing in a timesheet is the Tasker saying the work is done - Blueprint
+  // §4.2's Submitted. Clocking out does not mean this: a worker clocks out for
+  // the day and back in tomorrow.
+  await advanceContract(task.id, workerId, "SUBMITTED", userActor(workerId), {
+    via: "timesheet-submitted",
+    timesheetId: created.id,
+  });
+
   res.status(201).json(created);
 });
 
@@ -116,6 +155,14 @@ router.post("/:id/approve", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGE
       },
     });
     return { updatedSheet, payment };
+  });
+
+  // Acceptance criteria met, so money becomes owed. VERIFIED is the state the
+  // Payment hangs off - it is created in the same transaction above.
+  await advanceContract(sheet.taskId, sheet.workerId, "VERIFIED", userActor(req.user!.id), {
+    via: "timesheet-approved",
+    timesheetId: sheet.id,
+    paymentId: result.payment.id,
   });
 
   res.json({ ...result.updatedSheet, payment: result.payment });

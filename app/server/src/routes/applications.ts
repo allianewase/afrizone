@@ -166,13 +166,15 @@ router.post("/:id/approve", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGE
     await prisma.task.update({ where: { id: app.taskId }, data: { status: "FILLED" } });
   }
 
-  // v3 tie-in: auto-create a PENDING_SIGNATURE contract for this worker+task if none exists.
+  // Approval is what assigns the work, so it mints the contract - the record
+  // that binds this Tasker to this Task (Blueprint §12) and carries the work
+  // lifecycle from here on. It starts CLAIMED: assigned, not yet started.
   const existingContract = await prisma.contract.findFirst({
     where: { taskId: app.taskId, workerId: app.workerId },
   });
   if (!existingContract) {
     await prisma.contract.create({
-      data: { taskId: app.taskId, workerId: app.workerId, status: "PENDING_SIGNATURE" },
+      data: { taskId: app.taskId, workerId: app.workerId, status: "CLAIMED" },
     });
   }
 

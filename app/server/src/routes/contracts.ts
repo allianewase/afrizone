@@ -20,7 +20,7 @@ router.post("/:id/sign", requireAuth, async (req: AuthedRequest, res: Response) 
   if (contract.workerId !== req.user!.id) {
     return res.status(403).json({ error: "Not your contract" });
   }
-  if (contract.status === "SIGNED") {
+  if (contract.signedAt) {
     return res.status(400).json({ error: "Contract already signed" });
   }
 
@@ -33,7 +33,10 @@ router.post("/:id/sign", requireAuth, async (req: AuthedRequest, res: Response) 
 
   const updated = await prisma.contract.update({
     where: { id: contract.id },
-    data: { status: "SIGNED", signedAt, signerName, signerIp, signatureHash },
+    // Signing records that it was signed. It deliberately does NOT advance the
+    // work lifecycle: a signature is consent, not progress, and clocking in is
+    // what actually starts the work.
+    data: { signedAt, signerName, signerIp, signatureHash },
   });
   res.json(updated);
 });

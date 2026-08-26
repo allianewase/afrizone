@@ -14,7 +14,24 @@ export type JobStatus = 'OPEN' | 'CLOSED';
 // v3 (worker-facing)
 export type ClockType = 'IN' | 'OUT';
 export type WithdrawalStatus = 'PROCESSING' | 'PAID';
-export type ContractStatus = 'PENDING_SIGNATURE' | 'SIGNED';
+/**
+ * The WORK lifecycle for one worker on one task, not the signature state.
+ *
+ * Whether a contract has been signed is read from `signedAt`, never from here.
+ * The two were the same field once and are not any more: how far the work has
+ * got and whether somebody put their name to it are different questions, and a
+ * signed contract used to be unable to say whether anyone had started.
+ */
+export type ContractStatus =
+  | 'CLAIMED'
+  | 'IN_PROGRESS'
+  | 'SUBMITTED'
+  | 'VERIFIED'
+  | 'PAID'
+  | 'CLOSED'
+  | 'REWORK'
+  | 'CANCELLED'
+  | 'DISPUTED';
 
 export interface User {
   id: string;
