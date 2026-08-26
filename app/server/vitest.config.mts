@@ -30,6 +30,16 @@ export default defineConfig(async () => {
       // dozen tests), so serial file execution costs a few seconds and buys
       // reliability.
       fileParallelism: false,
+      // 5s is a unit-test default and these are integration tests: each file
+      // boots its own Miniflare D1 and applies EVERY migration in setup before
+      // its first test runs, so the first test in a file pays part of that
+      // warm-up. That cost grows with the migration count - it has gone from 11
+      // to 14 in a single session - and it began tipping individual tests over
+      // 5s at random, which read as a flaky suite rather than as a clock
+      // running out. Raising the ceiling removes the false signal without
+      // hiding a real hang: 20s is still far below anything a genuinely stuck
+      // test would take.
+      testTimeout: 20_000,
     },
   };
 });
