@@ -7,6 +7,7 @@ import * as Notifications from 'expo-notifications';
 import * as Linking from 'expo-linking';
 import { useFonts, Raleway_500Medium, Raleway_700Bold, Raleway_800ExtraBold } from '@expo-google-fonts/raleway';
 import { AuthProvider, useAuth } from '../src/auth/AuthContext';
+import { homeRouteFor } from '../src/lib/accountType';
 import { colors } from '../src/theme';
 import Splash from '../src/components/Splash';
 import {
@@ -143,7 +144,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       // Front door for signed-out users → welcome carousel (→ Sign in).
       router.replace('/(auth)/welcome');
     } else if (user && inAuthGroup && !onKyc) {
-      router.replace('/(tabs)/home');
+      // Decided by the account type the SERVER returned, never by whatever was
+      // tapped on the front-door picker. Someone who chose the wrong card there
+      // lands where their account actually belongs rather than being stranded
+      // or told off about it.
+      router.replace(homeRouteFor(user.accountType) as never);
     }
   }, [user, booting, segments, router]);
 

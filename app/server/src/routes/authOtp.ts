@@ -12,7 +12,7 @@ import { Router } from "express";
 import crypto from "crypto";
 import { prisma } from "../prisma";
 import { signToken, publicUser, hashPassword } from "../auth";
-import { Role } from "../types";
+import { AccountType, ACCOUNT_TYPES, Role } from "../types";
 import { sms } from "../services/sms";
 import { devAuthShortcutsEnabled } from "../env";
 
@@ -121,10 +121,33 @@ function normalisePhone(raw: string): string {
   return String(raw).trim().replace(/[\s-]/g, "");
 }
 
-// POST /api/auth/register: email/password self-serve signup. Creates a WORKER
-// (kycStatus PENDING) and returns a normal token. 409 if the email is taken.
+/**
+ * POST /api/auth/register: email/password self-serve signup. Creates a WORKER
+ * (kycStatus PENDING) and returns a normal token. 409 if the email is taken.
+ *
+ * `accountType` is the one place a person declares which of the three kinds of
+ * account they are opening. It is validated against ACCOUNT_TYPES rather than
+ * written through, because it is a client-supplied string that route guards
+ * will later trust - an unrecognised value would sit in the column and quietly
+ * fail every requireAccountType check with no way to tell why.
+ *
+ * `role` stays WORKER for all three. That is not an oversight: role is about
+ * Afrizone staff, accountType is about what kind of outside party this is, and
+ * self-serve signup can never mint anything but an outside party. Letting the
+ * client influence `role` here is exactly the privilege-escalation shape this
+ * codebase has already been bitten by elsewhere.
+ *
+ * Note the asymmetry with phone OTP, which is deliberate. Phone OTP is the
+ * individual worker's path and its auto-created accounts stay INDIVIDUAL by
+ * column default; stores and couriers sign up with an email and a password.
+ * That mirrors the split the platform already had - workers passwordless,
+ * everyone else credentialed - rather than inventing a second one.
+ */
 router.post("/register", async (req, res) => {
   const { name, email, password } = req.body || {};
+  const accountType: AccountType = ACCOUNT_TYPES.includes(req.body?.accountType)
+    ? req.body.accountType
+    : "INDIVIDUAL";
   if (!name || !email || !password) {
     return res.status(400).json({ error: "name, email and password are required" });
   }
@@ -151,6 +174,7 @@ router.post("/register", async (req, res) => {
       email: normEmail,
       passwordHash,
       role: "WORKER",
+      accountType,
       tiers: "",
       kycStatus: "PENDING",
     },

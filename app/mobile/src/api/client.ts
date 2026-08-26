@@ -3,6 +3,9 @@ import { getItem } from '../lib/storage';
 import type {
   OtpRequestResponse,
   VerifyOtpResponse,
+  AccountType,
+  Store,
+  StoreMember,
   Task,
   TaskEligibility,
   WorkerDetail,
@@ -152,11 +155,23 @@ export const api = {
     });
   },
 
-  /** POST /api/auth/register: create a WORKER; returns {token, user, isNewUser:true}. */
-  register(name: string, email: string, password: string): Promise<AuthSuccess> {
+  /**
+   * POST /api/auth/register: create an account; returns {token, user, isNewUser:true}.
+   *
+   * accountType is what the person chose at the front door. The server
+   * validates it against its own list and falls back to INDIVIDUAL, so a stale
+   * or tampered value here cannot put an account into a state the guards do not
+   * recognise.
+   */
+  register(
+    name: string,
+    email: string,
+    password: string,
+    accountType: AccountType = 'INDIVIDUAL',
+  ): Promise<AuthSuccess> {
     return request<AuthSuccess>('/auth/register', {
       method: 'POST',
-      body: { name, email, password },
+      body: { name, email, password, accountType },
       auth: false,
     });
   },
@@ -256,6 +271,27 @@ export const api = {
       method: 'POST',
       body: { code },
     });
+  },
+
+  /**
+   * GET /api/stores: every store this person may act for.
+   *
+   * Returns [] rather than an error for someone who belongs to none - which is
+   * the normal state for a brand-new STORE account, not a failure. The store
+   * screen has to render that case rather than treat it as broken.
+   */
+  myStores(signal?: AbortSignal): Promise<Store[]> {
+    return request<Store[]>('/stores', { signal });
+  },
+
+  /** GET /api/stores/:id */
+  store(id: string, signal?: AbortSignal): Promise<Store> {
+    return request<Store>(`/stores/${id}`, { signal });
+  },
+
+  /** GET /api/stores/:id/members */
+  storeMembers(id: string, signal?: AbortSignal): Promise<StoreMember[]> {
+    return request<StoreMember[]>(`/stores/${id}/members`, { signal });
   },
 
   /** GET /api/tasks: task feed (augmented with filledCount/applicantCount). */

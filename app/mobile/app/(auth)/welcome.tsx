@@ -21,7 +21,10 @@ export default function WelcomeScreen() {
         <AuthFooterLink
           text="Don't have an account?"
           linkText="Create account"
-          onPress={() => router.push('/(auth)/register')}
+          // Through the account-type picker, not straight to the form: the
+          // three kinds of account sign up differently, and asking after the
+          // fact would mean throwing away whatever they had already typed.
+          onPress={() => router.push('/(auth)/account-type')}
         />
       }
     >

@@ -37,10 +37,56 @@ export interface User {
   tin?: string | null;
   /** Whether the user has TOTP 2FA enabled. */
   totpEnabled?: boolean;
+  accountType?: AccountType;
   notifTasks?: boolean;
   notifPay?: boolean;
   notifEmail?: boolean;
   createdAt?: string;
+}
+
+/**
+ * What kind of outside party this account is. Decides which dashboard the app
+ * lands on after sign-in.
+ *
+ * NOT the same as being a member of a store. Someone can be an INDIVIDUAL and
+ * still work at their family's shop - accountType is how they primarily use the
+ * platform, StoreMember is what they may actually touch. The server enforces
+ * the second; this only chooses a starting screen.
+ */
+export type AccountType = 'INDIVIDUAL' | 'STORE' | 'COURIER';
+
+export type StoreRole = 'OWNER' | 'STAFF';
+export type StoreStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED';
+
+export interface Store {
+  id: string;
+  name: string;
+  slug: string;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  /** Last four digits only. The full number is returned to OWNERs alone. */
+  bankMasked?: string | null;
+  bankAccountNumber?: string | null;
+  bankCode?: string | null;
+  bankName?: string | null;
+  tin?: string | null;
+  status: StoreStatus;
+  createdAt?: string;
+  /** This viewer's standing in this store, added by GET /api/stores. */
+  myRole?: StoreRole;
+}
+
+export interface StoreMember {
+  id: string;
+  userId: string;
+  role: StoreRole;
+  createdAt?: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
 }
 
 export interface Task {

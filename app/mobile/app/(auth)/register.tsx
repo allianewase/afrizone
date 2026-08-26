@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
 import { GoogleButton } from '../../src/components/GoogleButton';
 import { Banner } from '../../src/components/Feedback';
@@ -10,6 +10,7 @@ import { PatternDivider } from '../../src/components/Motif';
 import { AuthScreen, AuthFooterLink } from '../../src/components/AuthShell';
 import { colors, spacing, type, motif } from '../../src/theme';
 import { useAuth } from '../../src/auth/AuthContext';
+import { ACCOUNT_COPY, readAccountType } from '../../src/lib/accountType';
 
 const MIN_PASSWORD = 8;
 const emailValid = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
@@ -21,6 +22,11 @@ const emailValid = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
 export default function RegisterScreen() {
   const router = useRouter();
   const { register } = useAuth();
+  // Chosen at the front door. Falls back to INDIVIDUAL when this screen is
+  // reached directly - a deep link or a back-navigation should not leave the
+  // account type undefined.
+  const accountType = readAccountType(useLocalSearchParams().accountType);
+  const copy = ACCOUNT_COPY[accountType];
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -44,7 +50,7 @@ export default function RegisterScreen() {
     setBusy(true);
     setError(null);
     try {
-      const isNewUser = await register(name, email, password);
+      const isNewUser = await register(name, email, password, accountType);
       routeAfterAuth(isNewUser);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create your account.');
@@ -56,8 +62,8 @@ export default function RegisterScreen() {
   return (
     <AuthScreen
       onBack={() => router.back()}
-      title="Create Account"
-      subtitle="Join Afrizone as a worker. You'll verify your identity (KYC) right after."
+      title={copy.registerTitle}
+      subtitle={copy.registerSubtitle}
       footer={
         <AuthFooterLink text="Have an account?" linkText="Sign in" onPress={() => router.back()} />
       }

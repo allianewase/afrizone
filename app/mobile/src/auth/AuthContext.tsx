@@ -11,6 +11,7 @@ import { SECURE_TOKEN_KEY, SECURE_USER_KEY } from '../api/config';
 import { getItem, setItem, deleteItem } from '../lib/storage';
 import {
   isTwoFactorRequired,
+  type AccountType,
   type User,
   type OtpRequestResponse,
   type AuthSuccess,
@@ -41,8 +42,13 @@ interface AuthState {
   loginPassword: (email: string, password: string) => Promise<LoginResult>;
   /** POST /api/auth/2fa/verify: exchange a challenge+code; stores the session. */
   verifyTwoFactor: (challenge: string, code: string) => Promise<boolean>;
-  /** POST /api/auth/register: create a WORKER; stores session, returns isNewUser. */
-  register: (name: string, email: string, password: string) => Promise<boolean>;
+  /** POST /api/auth/register: create an account; stores session, returns isNewUser. */
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    accountType?: AccountType,
+  ) => Promise<boolean>;
   /** PATCH /api/me: persist name/email to the backend AND the cached user. */
   updateProfile: (patch: { name?: string; email?: string }) => Promise<void>;
   /** POST /api/auth/google (context:"worker"): stores session, returns isNewUser. */
@@ -137,8 +143,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const register = useCallback(
-    async (name: string, email: string, password: string) => {
-      const res = await api.register(name.trim(), email.trim(), password);
+    async (name: string, email: string, password: string, accountType: AccountType = 'INDIVIDUAL') => {
+      const res = await api.register(name.trim(), email.trim(), password, accountType);
       await applySession(res);
       return res.isNewUser ?? true;
     },
