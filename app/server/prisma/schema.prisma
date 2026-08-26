@@ -95,6 +95,7 @@ model User {
   credentialsReviewed Credential[]         @relation("CredentialsReviewed")
   orgMemberships      OrganizationMember[]
   commitments         Commitment[]         @relation("WorkerCommitments")
+  auditsCarriedOut    StoreAudit[]         @relation("AuditorAudits")
 }
 
 model Task {
@@ -118,6 +119,21 @@ model Task {
   deadline       DateTime
   createdById    String
   createdAt      DateTime @default(now())
+
+  /// GENERAL | STORE_AUDIT | DELIVERY | SOURCING | MEDIA - Blueprint §12's
+  /// `type`. Defaults GENERAL, which is what every task that existed before
+  /// this column was.
+  ///
+  /// This is deliberately NOT `category`, which is a free-text label an admin
+  /// types and which drives nothing. `kind` is what code branches on, and the
+  /// two must not be conflated: renaming a category should never change
+  /// behaviour.
+  kind String @default("GENERAL")
+
+  /// The business this task is ABOUT, when it is about one - the store being
+  /// audited, or later the store an order is collected from. Not who created
+  /// it and not who is paid for it.
+  organizationId String?
 
   // ── Requirements (Phase 4) ──
   //
@@ -144,8 +160,13 @@ model Task {
 
   skillRequirements      TaskSkillRequirement[]
   credentialRequirements TaskCredentialRequirement[]
+  organization           Organization?               @relation(fields: [organizationId], references: [id])
+  storeAudits            StoreAudit[]
 
   @@index([status])
+  /// "Which audit tasks are open?" and "what is this store's task?" are both
+  /// lookups the admin approval screen makes.
+  @@index([kind, organizationId])
 }
 
 // Requirements are two narrow join tables rather than one polymorphic table or
@@ -716,6 +737,8 @@ model Organization {
 
   members     OrganizationMember[]
   commitments Commitment[]
+  tasks       Task[]
+  audits      StoreAudit[]
 
   /// "Which stores are live?" and "which courier companies are waiting for
   /// approval?" are both list screens, and both filter on exactly this pair.
@@ -814,4 +837,41 @@ model Commitment {
   /// "What is ring-fenced for me?" - the wallet asks this on every load.
   @@index([workerId, status])
   @@index([organizationId, status])
+}
+
+/// The result of somebody physically visiting a store (Blueprint §8).
+///
+/// A store goes apply -> audit -> approve -> live on the map, and this is the
+/// middle step made durable: a qualified Auditor visits, scores the premises,
+/// and their finding is what an admin approves or refuses on. Without a row like
+/// this, "why was this store approved?" is answerable only by whoever clicked.
+///
+/// The audit is itself a Task - it is paid work that has to be claimed by
+/// somebody carrying an auditor credential - so this row records the OUTCOME and
+/// the Task records the work.
+model StoreAudit {
+  id             String  @id @default(cuid())
+  organizationId String
+  /// The inspection task an Auditor claimed. Nullable because an admin may
+  /// record an audit they carried out themselves without generating one.
+  taskId         String?
+  auditorId      String?
+
+  /// 0-100. Blueprint §8 asks the premises to be "verified and scored".
+  score   Int
+  /// PASS | FAIL. Kept separate from the score on purpose: the threshold is a
+  /// policy that will move, and a stored outcome means an old audit still says
+  /// what it meant when it was made.
+  outcome String
+  notes   String?
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  task         Task?        @relation(fields: [taskId], references: [id])
+  auditor      User?        @relation("AuditorAudits", fields: [auditorId], references: [id])
+
+  /// "What is the latest finding for this store?" - the question the admin
+  /// approval screen asks every time it loads.
+  @@index([organizationId, createdAt])
 }

@@ -7,6 +7,7 @@ import { getFileBuffer } from "../services/storage";
 import { requireAssignedTask } from "../util/assignment";
 import { closeIfBothSidesRated, isRateable } from "../services/ratings";
 import { commitmentLabel, commitmentSummary } from "../services/commitments";
+import { recordAudit } from "../services/storeAudit";
 import { userActor } from "../util/audit";
 
 const router = Router();
@@ -382,6 +383,46 @@ router.get("/commitments", requireAuth, async (req: AuthedRequest, res: Response
       paidAt: c.paidAt,
       task: c.contract?.task ? { id: c.contract.task.id, title: c.contract.task.title } : null,
     })),
+  });
+});
+
+/**
+ * POST /api/me/audits -> the Auditor records what they found. Body {taskId, score, notes?}.
+ *
+ * Guarded on being assigned the task, like every other piece of work: an
+ * inspection report from somebody who was never sent is not evidence of
+ * anything. The task also has to be a STORE_AUDIT and know which store it is
+ * about, or there is nothing to file the finding against.
+ */
+router.post("/audits", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const workerId = req.user!.id;
+  const score = Number(req.body?.score);
+  if (!Number.isInteger(score) || score < 0 || score > 100) {
+    return res.status(400).json({ error: "Give a score between 0 and 100" });
+  }
+
+  const assignment = await requireAssignedTask(workerId, req.body?.taskId);
+  if (!assignment.ok) return res.status(assignment.status).json({ error: assignment.error });
+  const { task } = assignment;
+
+  if (task.kind !== "STORE_AUDIT" || !task.organizationId) {
+    return res.status(400).json({ error: "That task is not a store audit" });
+  }
+
+  const row = await recordAudit({
+    organizationId: task.organizationId,
+    taskId: task.id,
+    auditorId: workerId,
+    score,
+    notes: req.body?.notes ? String(req.body.notes) : null,
+    actor: userActor(workerId),
+  });
+
+  res.status(201).json({
+    id: row.id,
+    score: row.score,
+    outcome: row.outcome,
+    createdAt: row.createdAt,
   });
 });
 

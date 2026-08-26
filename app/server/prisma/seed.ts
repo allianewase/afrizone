@@ -21,6 +21,8 @@ const TABLES_CHILD_TO_PARENT = [
   // but D1 does NOT honour it - a row inserted before its parent fails with a
   // plain FOREIGN KEY constraint error and takes the whole seed down.
   "Commitment",
+  // StoreAudit FKs Organization, Task AND User, so it clears before all three.
+  "StoreAudit",
   // Task requirements, before Task and before the two catalogues they point at.
   "TaskSkillRequirement",
   "TaskCredentialRequirement",
@@ -120,6 +122,7 @@ async function main() {
   await prisma.auditLog.deleteMany();
   // v3 tables (delete before payments/tasks/users they reference)
   // Commitment FKs Contract, Organization AND User, so it clears before all three.
+  await prisma.storeAudit.deleteMany();
   await prisma.commitment.deleteMany();
   await prisma.clockEvent.deleteMany();
   await prisma.withdrawal.deleteMany();
@@ -873,6 +876,25 @@ async function main() {
   for (const ct of credentialTypes) {
     await prisma.credentialType.create({ data: { ...ct, active: true } });
   }
+
+  // The credential that makes somebody an Auditor (Blueprint §3.1: "a store
+  // audit requires a verified auditor credential"). Seeded because
+  // services/storeAudit.ts looks it up by slug when generating an inspection
+  // task - without it the task is created ungated, which is worse than not
+  // creating one, and the service says so loudly in the audit trail.
+  await prisma.credentialType.create({
+    data: {
+      name: "Auditor accreditation",
+      slug: "auditor-accreditation",
+      reviewMode: "ADMIN_REVIEW",
+      issuerMode: "AFRIZONE",
+      requiresExpiry: true,
+      requiresReference: false,
+      requiresFile: false,
+      active: true,
+      sortOrder: 7,
+    },
+  });
 
   // ── One gated task, so a fresh seed actually shows the requirements gate ──
   //

@@ -29,6 +29,7 @@ import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest } from "../auth";
 import { slugify } from "../types";
 import { formatDistance, haversineMetres, isValidCoord } from "../util/geo";
+import { latestAudit, recordAudit, requestStoreAudit } from "../services/storeAudit";
 import { userActor, writeAudit } from "../util/audit";
 import {
   kindLabel,
@@ -358,6 +359,62 @@ router.delete("/:id/members/:memberId", requireAuth, async (req: AuthedRequest, 
   res.json({ ok: true });
 });
 
+/**
+ * POST /api/admin/organizations/:id/audit -> generate the inspection task.
+ *
+ * Blueprint §8's middle step. Idempotent: an audit already open for this store
+ * is returned rather than a second one raised, because two auditors dispatched
+ * to the same shop is a real cost to two people.
+ */
+adminRouter.post(
+  "/:id/audit",
+  requireAuth,
+  requireRole("SUPER_ADMIN", "TASK_MANAGER"),
+  async (req: AuthedRequest, res: Response) => {
+    const org = await prisma.organization.findUnique({ where: { id: req.params.id } });
+    if (!org) return res.status(404).json({ error: "Not found" });
+    if (org.status === "ACTIVE") {
+      return res.status(400).json({ error: "This one is already approved" });
+    }
+    if (!org.address && (org.lat == null || org.lng == null)) {
+      return res.status(400).json({ error: "Add an address before requesting an audit" });
+    }
+
+    const result = await requestStoreAudit(org.id, userActor(req.user!.id));
+    if (!result) return res.status(400).json({ error: "Could not raise an audit for this one" });
+    res.status(result.created ? 201 : 200).json(result);
+  }
+);
+
+/**
+ * POST /api/admin/organizations/:id/audit-result -> record a finding directly.
+ *
+ * For an audit an admin carried out themselves, or one that came in off the
+ * platform. The auditor-facing route is POST /api/me/audits.
+ */
+adminRouter.post(
+  "/:id/audit-result",
+  requireAuth,
+  requireRole("SUPER_ADMIN", "TASK_MANAGER"),
+  async (req: AuthedRequest, res: Response) => {
+    const org = await prisma.organization.findUnique({ where: { id: req.params.id } });
+    if (!org) return res.status(404).json({ error: "Not found" });
+
+    const score = Number(req.body?.score);
+    if (!Number.isInteger(score) || score < 0 || score > 100) {
+      return res.status(400).json({ error: "Score must be a whole number between 0 and 100" });
+    }
+
+    const row = await recordAudit({
+      organizationId: org.id,
+      score,
+      notes: req.body?.notes ? String(req.body.notes) : null,
+      actor: userActor(req.user!.id),
+    });
+    res.status(201).json(row);
+  }
+);
+
 // ── Afrizone staff ───────────────────────────────────────────────────────────
 
 // GET /api/admin/organizations?kind=&status= → all of them, with a member count.
@@ -394,7 +451,24 @@ adminRouter.get(
     });
     if (!org) return res.status(404).json({ error: "Not found" });
     const { members, ...rest } = org as any;
-    res.json({ ...publicOrg(rest, "ADMIN"), members: members.map(memberShape) });
+    // The latest finding travels with the record, because approving a store is
+    // a decision made ON it - having to go and look it up elsewhere is how it
+    // ends up not being looked at.
+    const audit = await latestAudit(org.id);
+    res.json({
+      ...publicOrg(rest, "ADMIN"),
+      members: members.map(memberShape),
+      latestAudit: audit
+        ? {
+            id: audit.id,
+            score: audit.score,
+            outcome: audit.outcome,
+            notes: audit.notes,
+            createdAt: audit.createdAt,
+            auditorName: audit.auditor?.name ?? null,
+          }
+        : null,
+    });
   }
 );
 
