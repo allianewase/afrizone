@@ -1,0 +1,29 @@
+-- What kind of outside party an account is: INDIVIDUAL, STORE or COURIER.
+--
+-- One ALTER TABLE ... ADD COLUMN with a default. Additive, nothing rewritten,
+-- nothing to backfill, and no existing code reads it - inert on arrival, like
+-- 0008 and 0009. Applied to production BEFORE the code that reads it.
+--
+-- A SEPARATE AXIS FROM `role`, and that is the point of the column rather than
+-- an incidental detail. `role` currently mixes Afrizone staff roles
+-- (SUPER_ADMIN, TASK_MANAGER, HR_ADMIN) with a single participant role
+-- (WORKER). Adding STORE and COURIER to that same field would merge "who works
+-- at Afrizone" with "what kind of outside party you are", and every existing
+-- requireRole guard in the codebase would have to be re-reasoned against the
+-- new values. A second column leaves all of them untouched.
+--
+-- DEFAULTS 'INDIVIDUAL' AND IS NOT NULL. This is a trade made deliberately, and
+-- it will look wrong to someone reading only the schema: admin rows will carry
+-- INDIVIDUAL, which is not true of them. It is inert there - admin routes are
+-- gated on `role` and never read this - and the alternative costs more than it
+-- returns. A nullable column means NULL handling at every read site, and it
+-- also means accounts created in the window between this migration and the code
+-- that sets the field would have no account type at all. A default closes that
+-- window by construction.
+--
+-- Every existing worker really is an INDIVIDUAL, so for the rows that matter
+-- the default is not merely safe, it is correct.
+--
+-- Column DDL copied verbatim from `prisma migrate diff --from-empty`.
+
+ALTER TABLE "User" ADD COLUMN "accountType" TEXT NOT NULL DEFAULT 'INDIVIDUAL';

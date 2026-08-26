@@ -22,6 +22,23 @@ export const STAGES: Stage[] = ["SCREENING", "INTERVIEW", "OFFER", "HIRED", "REJ
 export const ROLES: Role[] = ["SUPER_ADMIN", "TASK_MANAGER", "HR_ADMIN", "WORKER"];
 export const TIERS: Tier[] = ["STUDENT", "DISPATCH", "REMOTE", "PROMO", "TRADE"];
 
+/**
+ * What kind of outside party an account is. A DIFFERENT AXIS FROM `Role`.
+ *
+ * `Role` mixes Afrizone staff (SUPER_ADMIN, TASK_MANAGER, HR_ADMIN) with one
+ * participant value (WORKER). Putting STORE and COURIER in there too would
+ * merge "who works at Afrizone" with "what kind of outside party you are", and
+ * every requireRole guard already written would have to be re-reasoned against
+ * the new values.
+ *
+ * NOTE THE TRAP: `DISPATCH` already exists as a Tier, and it is NOT this.
+ * A tier answers "what work can you take"; an account type answers "what kind
+ * of entity are you". An Individual User may well take dispatch work without
+ * being a registered courier business. Do not collapse the two.
+ */
+export type AccountType = "INDIVIDUAL" | "STORE" | "COURIER";
+export const ACCOUNT_TYPES: AccountType[] = ["INDIVIDUAL", "STORE", "COURIER"];
+
 // ── v3 enums (worker-facing mobile app) ────────────────────────────────────────
 export type ClockType = "IN" | "OUT";
 export type WithdrawalStatus = "PROCESSING" | "PAID" | "FAILED";

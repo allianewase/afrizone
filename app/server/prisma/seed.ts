@@ -37,6 +37,12 @@ const TABLES_CHILD_TO_PARENT = [
   "Timesheet",
   "Application",
   "Task",
+  // StoreMember references BOTH Store and User, so it clears before either.
+  // Store itself has no FK out, but must still precede User here only because
+  // this list doubles as the dump order in reverse - Store rows have to be
+  // restored before the memberships that point at them.
+  "StoreMember",
+  "Store",
   "PasswordReset",
   "OtpCode",
   "User",
@@ -116,6 +122,9 @@ async function main() {
   await prisma.timesheet.deleteMany();
   await prisma.application.deleteMany();
   await prisma.task.deleteMany();
+  // stores: StoreMember FKs BOTH Store and User, so it clears before either
+  await prisma.storeMember.deleteMany();
+  await prisma.store.deleteMany();
   // auth tables (PasswordReset FKs User; OtpCode is standalone but clear too)
   await prisma.passwordReset.deleteMany();
   await prisma.otpCode.deleteMany();
@@ -634,6 +643,64 @@ async function main() {
     await prisma.skill.create({ data: { ...sk, active: true } });
   }
 
+  // ── A demo AfriZoneMart store ─────────────────────────────────────────────
+  //
+  // Two members on purpose, an OWNER and a STAFF. One member would demo just as
+  // well and would prove nothing: the reason Store exists as its own table
+  // rather than as a User row is precisely that a store has several people and
+  // one bank account, and a fixture with a single member is indistinguishable
+  // from the shape this replaces.
+  //
+  // ACTIVE so it is usable straight after a seed. Real stores default PENDING
+  // and are approved by Afrizone.
+  const demoStore = await prisma.store.create({
+    data: {
+      name: "Ikeja City Mart",
+      slug: "ikeja-city-mart",
+      phone: "+2348030000101",
+      email: "ikeja@afrizonemart.com",
+      address: "Ikeja City Mall, Alausa, Lagos",
+      lat: 6.6018,
+      lng: 3.3515,
+      // On the STORE, not on either member. This is the whole point.
+      bankAccountNumber: "0123456789",
+      bankCode: "058",
+      bankName: "GTBank",
+      bankMasked: "****6789",
+      status: "ACTIVE",
+    },
+  });
+  const storeOwner = await prisma.user.create({
+    data: {
+      name: "Chidi Nwosu",
+      email: "chidi.nwosu@afrizonemart.com",
+      passwordHash: workerHash,
+      role: "WORKER",
+      accountType: "STORE",
+      tiers: "",
+      kycStatus: "VERIFIED",
+      location: "Lagos, NG",
+    },
+  });
+  const storeStaff = await prisma.user.create({
+    data: {
+      name: "Blessing Adeyemi",
+      email: "blessing.adeyemi@afrizonemart.com",
+      passwordHash: workerHash,
+      role: "WORKER",
+      accountType: "STORE",
+      tiers: "",
+      kycStatus: "VERIFIED",
+      location: "Lagos, NG",
+    },
+  });
+  await prisma.storeMember.create({
+    data: { storeId: demoStore.id, userId: storeOwner.id, role: "OWNER" },
+  });
+  await prisma.storeMember.create({
+    data: { storeId: demoStore.id, userId: storeStaff.id, role: "STAFF" },
+  });
+
   const credentialTypes: Array<{
     name: string;
     slug: string;
@@ -735,6 +802,8 @@ async function main() {
     candidates: await prisma.jobApplication.count(),
     taxRates: await prisma.taxRate.count(),
     categories: await prisma.category.count(),
+    stores: await prisma.store.count(),
+    storeMembers: await prisma.storeMember.count(),
     settings: await prisma.setting.count(),
     clockEvents: await prisma.clockEvent.count(),
     withdrawals: await prisma.withdrawal.count(),

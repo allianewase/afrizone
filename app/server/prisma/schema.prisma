@@ -42,6 +42,21 @@ model User {
   totpEnabled       Boolean  @default(false)
   googleId          String?  @unique // Google SSO subject (admin)
   role              String   @default("WORKER") // Role enum
+  /// INDIVIDUAL | STORE | COURIER - what kind of outside party this account is.
+  ///
+  /// A SEPARATE AXIS FROM `role`, deliberately. `role` mixes Afrizone staff
+  /// (SUPER_ADMIN, TASK_MANAGER, HR_ADMIN) with one participant value (WORKER);
+  /// adding STORE and COURIER to that enum would merge "who works at Afrizone"
+  /// with "what kind of outside party you are", and every existing requireRole
+  /// guard would have to be re-reasoned. Two fields leaves all of them alone.
+  ///
+  /// Defaults INDIVIDUAL and is NOT NULL, which is a trade made with open eyes:
+  /// an admin row will carry INDIVIDUAL, which is not true of them. Nothing
+  /// reads accountType for admin routes - those are gated on `role` - so the
+  /// value is inert there, and the alternative (nullable) costs NULL handling
+  /// at every read plus a window where accounts created between this migration
+  /// and the code that sets the field would have no type at all.
+  accountType       String   @default("INDIVIDUAL")
   tiers             String   @default("") // comma-separated Tier[]: see note above
   kycStatus         String   @default("PENDING") // KycStatus enum
   kycNote           String? // latest verification note (auto-reject reason from Smile ID, or admin note)
@@ -78,6 +93,7 @@ model User {
   skills              WorkerSkill[]
   credentials         Credential[]      @relation("WorkerCredentials")
   credentialsReviewed Credential[]      @relation("CredentialsReviewed")
+  storeMemberships    StoreMember[]
 }
 
 model Task {
@@ -619,4 +635,87 @@ model Credential {
   @@index([credentialTypeId, status, expiresAt])
   // One worker's credentials, and the eligibility check in Phase 4.
   @@index([workerId, status])
+}
+
+// ── AfriZoneMart Stores ──────────────────────────────────────────────────────
+
+/// A store that fulfils AfriZoneMart orders.
+///
+/// WHY THIS IS NOT A USER ROW, WHICH IS THE ENTIRE POINT OF THE MODEL:
+///
+/// A store is not a person. It has several staff who each log in as themselves,
+/// one bank account that is the store's rather than any individual's, one
+/// physical location, and a lifecycle (approved, suspended) that has nothing to
+/// do with any employee. Every one of those breaks the moment the store IS a
+/// User: two staff means two accounts means two payout destinations, and
+/// suspending the store means finding every person attached to it.
+///
+/// It works for exactly as long as one person runs one store, and every foreign
+/// key added in the meantime points at the wrong table.
+model Store {
+  id   String @id @default(cuid())
+  name String
+  /// Stable identifier for code, imports and the AfriZoneMart side of the
+  /// integration. `name` is deliberately NOT unique - renaming a store must
+  /// never orphan the rows pointing at it (same rule as Skill.slug).
+  slug String @unique
+
+  phone   String?
+  email   String?
+  address String?
+  lat     Float?
+  lng     Float?
+
+  /// Payout details live HERE, not on any member's User row. Money owed for an
+  /// order goes to the store regardless of which staff member happened to touch
+  /// it, and a member leaving must not take the payout account with them.
+  bankAccountNumber String?
+  bankCode          String?
+  bankName          String?
+  bankMasked        String?
+  tin               String?
+
+  /// PENDING | ACTIVE | SUSPENDED.
+  ///
+  /// Defaults PENDING: a store must be approved by Afrizone before it can
+  /// receive orders. A store that could receive orders the moment somebody
+  /// typed its name in would be a hole, not a convenience.
+  status String @default("PENDING")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members StoreMember[]
+}
+
+/// Which people may act for which store.
+///
+/// A join table rather than `User.storeId` because the relationship is
+/// genuinely many-to-many: a store has several staff, and one person can run
+/// more than one branch. Modelling it as a column on User would force a
+/// migration the first time somebody manages two stores - and would make
+/// "which store am I acting as?" unanswerable rather than merely awkward.
+///
+/// The unique pair is what makes the row-level guard cheap: "is this user a
+/// member of THIS store" is one indexed lookup, which is the question every
+/// store-scoped endpoint has to ask (see util/store.ts).
+model StoreMember {
+  id      String @id @default(cuid())
+  storeId String
+  userId  String
+
+  /// OWNER | STAFF. OWNER may manage members and the payout account; STAFF
+  /// works orders. Deliberately separate from User.role, which is about
+  /// Afrizone staff, and from User.accountType, which is about what kind of
+  /// party the person is. This one is about standing WITHIN one store.
+  role String @default("STAFF")
+
+  createdAt DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([storeId, userId])
+  /// "Which stores can this person act for?" - the sign-in store picker.
+  @@index([userId])
 }

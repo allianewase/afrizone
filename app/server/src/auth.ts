@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
-import { Role, ROLES, tiersToArray } from "./types";
+import { AccountType, Role, ROLES, tiersToArray } from "./types";
 import { devAuthShortcutsEnabled } from "./env";
 
 const DEFAULT_DEV_SECRET = "dev-secret-change-me";
@@ -155,6 +155,40 @@ export function requireRole(...roles: Role[]) {
     if (!req.user) return res.status(401).json({ error: "Not authenticated" });
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({ error: "Insufficient permissions" });
+    }
+    return next();
+  };
+}
+
+/**
+ * Gate a route on what kind of outside party the caller is: INDIVIDUAL, STORE
+ * or COURIER. Orthogonal to requireRole, which is about Afrizone staff.
+ *
+ * READS THE DATABASE RATHER THAN THE TOKEN, on purpose. Putting accountType in
+ * the JWT would make this free, but tokens live for seven days (TOKEN_TTL), so
+ * a type changed today would keep being enforced as the old one for a week -
+ * and adding a required claim would invalidate every session already issued.
+ * One indexed primary-key lookup per guarded request buys correctness that is
+ * always current; if it ever shows up in a profile, cache it, do not trust a
+ * week-old claim.
+ *
+ * This is only ever half of the protection. It answers "is the caller a store
+ * account?", which every store account answers the same way. "May the caller
+ * touch THIS store's rows?" is ownership and lives in util/store.ts - a route
+ * that uses this guard alone is one store away from reading another's orders.
+ */
+export function requireAccountType(...types: AccountType[]) {
+  return async (req: AuthedRequest, res: Response, next: NextFunction) => {
+    if (!req.user) return res.status(401).json({ error: "Not authenticated" });
+    const row = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { accountType: true },
+    });
+    // A token whose user has since been deleted is not authenticated, whatever
+    // the signature says.
+    if (!row) return res.status(401).json({ error: "Not authenticated" });
+    if (!types.includes(row.accountType as AccountType)) {
+      return res.status(403).json({ error: "Not available for this kind of account" });
     }
     return next();
   };
