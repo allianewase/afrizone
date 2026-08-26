@@ -841,6 +841,41 @@ async function main() {
     await prisma.credentialType.create({ data: { ...ct, active: true } });
   }
 
+  // ── One gated task, so a fresh seed actually shows the requirements gate ──
+  //
+  // Without this, every seeded task has no requirements, requirementsSummary is
+  // null, and the whole of Phase 4 is invisible after a re-seed: no strip on the
+  // admin card, no locked state in the worker app, nothing for anyone to look at
+  // or test against. A feature that only appears once somebody hand-builds a
+  // task is a feature that gets reported as missing.
+  //
+  // The dispatch task is the right one to gate: riding parcels around Lagos is
+  // exactly the work that should need a licence, so the fixture reads as
+  // plausible rather than as a demo prop.
+  //
+  // Requirements are attached HERE rather than at task creation because the
+  // catalogues they point at are only created further down this file.
+  const licence = await prisma.credentialType.findUnique({ where: { slug: "drivers-licence" } });
+  const riding = await prisma.skill.findUnique({ where: { slug: "motorcycle-riding" } });
+  if (licence && riding) {
+    await prisma.taskCredentialRequirement.create({
+      data: { taskId: tDispatch.id, credentialTypeId: licence.id },
+    });
+    await prisma.taskSkillRequirement.create({
+      data: { taskId: tDispatch.id, skillId: riding.id },
+    });
+    await prisma.task.update({
+      where: { id: tDispatch.id },
+      data: {
+        requiresIdentityVerified: true,
+        // Same string services/eligibility.ts summarise() would produce. Kept in
+        // sync by hand only because the seed cannot import from src/.
+        requirementsSummary: "ID confirmed · Driver's licence · Motorcycle riding",
+        requirementsVersion: 1,
+      },
+    });
+  }
+
   // ── v2: Settings, templates ───────────────────────────────────────────────
   const templates: Array<{ key: string; value: string }> = [
     { key: "contract.default", value: "This agreement is between Afrizone and {{worker}} for {{task}}." },
