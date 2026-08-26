@@ -27,6 +27,10 @@ import type {
   Stage,
   Tier,
   Task,
+  Organization,
+  OrgKind,
+  OrgStatus,
+  CreateOrgBody,
   CreateTaskBody,
   QualifyingCount,
   TaxRate,
@@ -232,6 +236,27 @@ export const api = {
   ) => request<QualifyingCount>('/tasks/qualifying-count', { method: 'POST', body, signal }),
   task: (id: string, signal?: AbortSignal) =>
     request<Task & { applications: Application[] }>(`/tasks/${id}`, { signal }),
+
+  // Organizations (stores and courier companies)
+  //
+  // Admin-only endpoints. The member-facing /api/organizations is the mobile
+  // app's, and deliberately returns only what the caller belongs to.
+  organizations: (
+    filter: { kind?: OrgKind; status?: OrgStatus } = {},
+    signal?: AbortSignal,
+  ) => {
+    const q = new URLSearchParams()
+    if (filter.kind) q.set('kind', filter.kind)
+    if (filter.status) q.set('status', filter.status)
+    const qs = q.toString()
+    return request<Organization[]>(`/admin/organizations${qs ? `?${qs}` : ''}`, { signal })
+  },
+  organization: (id: string, signal?: AbortSignal) =>
+    request<Organization>(`/admin/organizations/${id}`, { signal }),
+  createOrganization: (body: CreateOrgBody) =>
+    request<Organization>('/admin/organizations', { method: 'POST', body }),
+  updateOrganization: (id: string, body: Partial<CreateOrgBody> & { status?: OrgStatus }) =>
+    request<Organization>(`/admin/organizations/${id}`, { method: 'PATCH', body }),
 
   // Applications
   applications: (status?: AppStatus, signal?: AbortSignal) =>

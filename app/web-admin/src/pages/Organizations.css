@@ -1,0 +1,184 @@
+/* ── Organizations: stores and courier companies ─────────────────────────── */
+
+.orgfilters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.orgtabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--glass-2);
+}
+.orgtab {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease);
+}
+.orgtab:hover {
+  color: var(--text);
+}
+.orgtab.on {
+  background: var(--gold-soft);
+  color: var(--gold-ink);
+}
+.orgtab:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.orgname {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* Kind is also a column, but a colour lets the eye group a long list without
+   reading every row. */
+.orgdot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.orgdot.store {
+  background: var(--gold);
+}
+.orgdot.courier {
+  background: var(--money);
+}
+.orgname b {
+  display: block;
+  color: var(--text);
+  font-size: 13.5px;
+}
+.orgslug {
+  display: block;
+  color: var(--muted);
+  font-size: 11.5px;
+  margin-top: 1px;
+}
+
+/* Missing owners and missing payout details both stop a business working, so
+   they read as warnings rather than as blanks. */
+.orgwarn {
+  color: var(--amber);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* ── Detail modal ────────────────────────────────────────────────────────── */
+
+.orgdetail {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 22px;
+  align-items: start;
+}
+.orgcol {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+.orgaside {
+  position: sticky;
+  top: 0;
+}
+.orgblock {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  background: var(--glass-2);
+}
+.orgblock-t {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.orgrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+.orgrow:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.orgrow-l {
+  width: 110px;
+  flex: none;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.orgrow-v {
+  flex: 1;
+  color: var(--text);
+  font-size: 13px;
+  min-width: 0;
+}
+.orgmember {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+.orgmember:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.orgmember b {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+}
+.orgnote {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.orgnote.small {
+  margin: 12px 0 0;
+  font-size: 11.5px;
+}
+.orgactions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fieldhint {
+  display: block;
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  .orgdetail {
+    grid-template-columns: 1fr;
+  }
+  .orgaside {
+    position: static;
+  }
+}

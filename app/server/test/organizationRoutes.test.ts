@@ -426,6 +426,10 @@ describe("Afrizone staff", () => {
     const members = await prisma().organizationMember.findMany({ where: { organizationId: res.body.id } });
     expect(members).toHaveLength(1);
     expect(members[0].role).toBe("OWNER");
+    // The created row must carry the same memberCount the list endpoint would,
+    // or a client that adds it optimistically shows "0 people" for a business
+    // that was just given an owner - which reads as the owner failing to attach.
+    expect(res.body.memberCount).toBe(1);
   });
 
   it("creates no store at all when the owner email is wrong", async () => {

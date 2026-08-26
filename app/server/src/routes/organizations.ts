@@ -394,7 +394,11 @@ adminRouter.post(
       status: org.status,
       ownerId,
     });
-    res.status(201).json(publicOrg(org, "ADMIN"));
+    // memberCount is included so the created row matches the shape the list
+    // endpoint returns. Without it a client that adds the new organization to
+    // its list optimistically renders "0 people" for a business that was just
+    // given an owner - which reads as the owner having failed to attach.
+    res.status(201).json({ ...publicOrg(org, "ADMIN"), memberCount: ownerId ? 1 : 0 });
   }
 );
 

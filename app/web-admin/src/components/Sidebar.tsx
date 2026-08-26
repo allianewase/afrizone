@@ -30,6 +30,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { to: '/workers', label: 'Workers', icon: 'users' },
       { to: '/verification', label: 'Verification', icon: 'shield' },
+      { to: '/organizations', label: 'Organizations', icon: 'tag' },
       { to: '/hiring', label: 'Hiring', icon: 'briefcase' },
     ],
   },

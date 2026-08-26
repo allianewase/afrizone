@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard'
 import Tasks from './pages/Tasks'
 import Payments from './pages/Payments'
 import Workers from './pages/Workers'
+import Organizations from './pages/Organizations'
 import Applications from './pages/Applications'
 import Timesheets from './pages/Timesheets'
 import Hiring from './pages/Hiring'
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/disputes" element={<Disputes />} />
         <Route path="/verification" element={<Verification />} />
         <Route path="/workers" element={<Workers />} />
+        <Route path="/organizations" element={<Organizations />} />
         <Route path="/hiring" element={<Hiring />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />

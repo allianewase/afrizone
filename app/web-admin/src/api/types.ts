@@ -64,6 +64,67 @@ export interface Task {
   eligibility?: Eligibility | null
 }
 
+/**
+ * STORE fulfils AfriZoneMart orders, COURIER delivers them. One model, because
+ * both need the same membership, approval and payout structure - what differs
+ * is the work they receive.
+ *
+ * An individual courier has NO organization: they are a plain worker with
+ * accountType COURIER. Do not assume every courier appears on this screen.
+ */
+export type OrgKind = 'STORE' | 'COURIER'
+export type OrgRole = 'OWNER' | 'STAFF'
+export type OrgStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED'
+
+export interface Organization {
+  id: string
+  kind: OrgKind
+  name: string
+  slug: string
+  phone?: string | null
+  email?: string | null
+  address?: string | null
+  lat?: number | null
+  lng?: number | null
+  /** Full number is returned to admins; bankMasked is what screens display. */
+  bankAccountNumber?: string | null
+  bankMasked?: string | null
+  bankCode?: string | null
+  bankName?: string | null
+  tin?: string | null
+  status: OrgStatus
+  createdAt?: string
+  /** Added by the admin list endpoint. */
+  memberCount?: number
+  /** Added by the admin detail endpoint. */
+  members?: OrgMember[]
+}
+
+export interface OrgMember {
+  id: string
+  userId: string
+  role: OrgRole
+  createdAt?: string
+  name?: string | null
+  email?: string | null
+  phone?: string | null
+}
+
+export interface CreateOrgBody {
+  name: string
+  kind: OrgKind
+  slug?: string
+  phone?: string
+  email?: string
+  address?: string
+  bankAccountNumber?: string
+  bankCode?: string
+  bankName?: string
+  tin?: string
+  /** Optional: seeds the first OWNER. An org with no owner is unmanageable. */
+  ownerEmail?: string
+}
+
 export interface TaskRequirements {
   requiresIdentityVerified: boolean
   skills: { id: string; name: string }[]

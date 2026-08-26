@@ -138,6 +138,25 @@ export function kycPill(s: string): { variant: PillVariant; label: string } {
   }
 }
 
+/**
+ * Approval standing of a store or courier company.
+ *
+ * "Awaiting approval" rather than "Pending": pending reads as something the
+ * platform is doing to itself, when in fact it is a queue an admin has to work.
+ */
+export function orgPill(s: string): { variant: PillVariant; label: string } {
+  switch (s) {
+    case 'ACTIVE':
+      return { variant: 'ready', label: 'Active' }
+    case 'SUSPENDED':
+      return { variant: 'danger', label: 'Suspended' }
+    case 'PENDING':
+      return { variant: 'pending', label: 'Awaiting approval' }
+    default:
+      return { variant: 'pending', label: s }
+  }
+}
+
 /** Display pay for a task ("₦2.5k/h" or "₦18k"). */
 export function taskPay(rate?: number | null, budget?: number | null, payModel?: string): string {
   if (payModel === 'HOURLY' && rate != null) return `${formatNairaCompact(rate)}/h`
