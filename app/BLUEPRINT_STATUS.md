@@ -28,7 +28,7 @@ approved stores; two-way ratings.*
 | Basic auto task creation | **Not started** | Requires the AZM event bus (§5). Nothing subscribes to anything yet |
 | Contract lifecycle | **Partial** | `Contract` exists with a typed-name signature and a tamper hash — but **two states**, against the blueprint's eleven |
 | Wallet | **Built** | Derived balance, withdrawals, Paystack transfers, webhook settlement |
-| Escrow | **Not started** | And it conflicts with a decision taken since — see §3 |
+| Escrow | **Not started** | Design settled (state, not custody). No model yet — see §4 |
 | Map of approved stores | **Not started** | `lat`/`lng` are stored on every `Organization`; nothing renders them |
 | Two-way ratings | **Partial** | `Rating` runs one way only — `workerId` is always the subject. A Tasker cannot rate the experience |
 
@@ -53,7 +53,7 @@ which is the beginning of §7's hire-through-applications.
 
 ---
 
-## 3. Six reversals the blueprint forces
+## 3. Six reversals the blueprint forces (two now cost nothing)
 
 Each of these overturns a decision taken during the build. Listed with what it
 costs, cheapest first.
@@ -81,73 +81,73 @@ accounts. *Cost: medium-high.* If identity is shared, Part-Time should have a
 "continue with AfriZoneMart" button and no registration form. Blocked on AZM
 exposing an identity provider.
 
-**Escrow** (§10). *Cost: high — see §4.*
+**Escrow** (§10). *Resolved at no cost* — escrow as STATE rather than custody, see §4. Mart holds the money; PartTime records the ring-fence.
 
-**PAPSS and AfriCOIN as payment rails** (§10). *Cost: highest — see §4.*
-
----
-
-## 4. Two parameters needed before any further money or schema work
-
-Everything else can proceed without these. Nothing in the money layer should.
-
-### Currency
-
-The blueprint names **PAPSS** (pan-African cross-border settlement) and
-**AfriCOIN**. The build is single-currency by construction: `Payment.amount`,
-`Task.rate`, `Task.budget` and `Withdrawal.amount` are all whole-Naira integers
-with **no currency column**, and payouts are Paystack NUBAN transfers.
-
-If this platform will ever settle in more than one currency, the currency column
-must land **before there are production money rows**. Adding it afterwards means
-back-filling a value that was never recorded, and Paystack does not operate
-across PAPSS's footprint.
-
-> **Needed: is this Nigeria-only, or multi-country?**
-
-### Escrow — custody, or bookkeeping?
-
-The blueprint says funds are *"ring-fenced when a contract goes live and released
-only on verified acceptance."* A recent decision was that Part-Time **only
-computes what is owed** and Mart pays.
-
-These may not actually conflict, and the distinction is worth drawing carefully
-because it decides whether Part-Time becomes a regulated payments business:
-
-- **Escrow as custody** — Part-Time receives and holds the money. Real float,
-  reconciliation, and licensing exposure.
-- **Escrow as state** — Mart holds the money; Part-Time records that a specific
-  amount is committed to a specific contract and releases it on verified
-  acceptance. **The worker-facing promise is identical** — their pay is
-  ring-fenced the moment the contract goes live — and Part-Time touches nothing.
-
-The second satisfies §10's guarantee at a fraction of the cost and keeps the
-"Part-Time is not a second AfriZoneMart" principle intact.
-
-> **Needed: does Part-Time hold funds, or track a commitment against funds Mart
-> holds?**
+**PAPSS and AfriCOIN as payment rails** (§10). *Deferred* — Nigeria-only for now, see §4.
 
 ---
 
-## 5. Gaps in the Mart integration spec
+## 4. Two parameters — both now decided
 
-`MART_INTEGRATION.md` was written before this blueprint and **covers one of the
-four events §5 requires**:
+### Currency: Naira only
 
-| Blueprint event | In the spec? |
-|---|---|
-| `order.confirmed` → dispatch task | **Yes** |
-| `stock.low` → sourcing task | **No** |
-| `store.applied` → audit task | **No** |
-| `listing.needs_media` → photography task | **No** |
+**Decided: Nigeria-only, for now.** No currency column. `Payment.amount`,
+`Task.rate`, `Task.budget` and `Withdrawal.amount` stay whole-Naira integers, and
+payouts stay on Paystack NUBAN transfers. Blueprint §10 names PAPSS and AfriCOIN;
+neither is in scope today.
 
-The spec also assumes Mart pushes orders and nothing else. §5 asks for a
-configurable rule engine — *"keep the rules Admin-editable (thresholds, target
-radius, required skill role, pay band) rather than hard-coded"* — which is a
-larger feature than an inbound webhook.
+**The trigger for revisiting is precise, and it is not a date.** The currency
+column has to land *before the first non-Naira row exists in production* —
+afterwards means back-filling a value that was never recorded, across every money
+table at once. So the moment a second country is genuinely on the table, this is
+the first schema change, not a later one.
 
-**This should be fixed before the spec goes to the Mart team.** Agreeing one
-event and then returning for three more is how integrations lose a month.
+### Escrow: state, not custody
+
+**Decided: Mart holds the money throughout. PartTime records the commitment and
+releases it on verified acceptance.**
+
+This satisfies Blueprint §10's guarantee — *"funds ring-fenced when a contract
+goes live and released only on verified acceptance"* — without PartTime ever
+receiving money. The worker-facing promise is identical: their pay is ring-fenced
+the moment the contract goes live. What differs is that PartTime does not become a
+regulated payments business, hold a float, or reconcile a balance of its own.
+
+Four commitment states: `COMMITTED` when the contract goes live, `RELEASED` on
+verified acceptance, `PAID` when Mart confirms it paid, `CANCELLED` if the
+contract fails. PartTime never asserts anything was paid — only Mart knows that.
+Specified in `MART_INTEGRATION.md` §7.
+
+---
+
+## 5. Mart integration spec — now covers all four events
+
+`MART_INTEGRATION.md` was written before this blueprint and covered only
+`order.confirmed`. It has been rewritten around the event bus §5 asks for:
+
+| Blueprint event | Creates | De-duplicated on |
+|---|---|---|
+| `order.confirmed` | Fulfilment + dispatch | `martOrderId` |
+| `stock.low` | Sourcing task | `sku` + region — one open task per product per region |
+| `store.applied` | Audit task | `applicationId` |
+| `listing.needs_media` | Photography task | `listingId` |
+
+Two things came out of writing it that are worth knowing here:
+
+**Mart sends facts, not task parameters.** No pay band, no radius, no required
+skill role, no deadline. Those are PartTime's Admin-editable generation rules per
+§5 — putting them in Mart's payload would mean changing Mart's code to raise a
+courier fee.
+
+**Two kinds of duplicate need different answers.** `eventId` stops the same
+delivery being processed twice; a per-type de-duplication rule stops duplicate
+*work*. `stock.low` firing hourly while a shelf stays empty is the case that
+makes the distinction obvious, and neither mechanism substitutes for the other.
+
+One new conflict surfaced (D10 in that spec): **PartTime already owns
+`Organization` and approves stores, but §5 has store applications originating at
+Mart.** Both cannot own the store record, and picking late means reconciling two
+store lists.
 
 ---
 
@@ -193,12 +193,19 @@ migration touching them anyway.
 
 ## 8. Suggested order
 
-1. **Answer the two parameters in §4.** They gate the money layer and get more
-   expensive every week.
-2. **Fix the Mart spec** to cover all four events (§5), before it goes out.
-3. **The task state machine.** Everything downstream hangs off it, and doing it
-   before there is production task data is much cheaper.
-4. **Two-way ratings and the store map.** Both small, both finish Phase 1 items.
-5. **Store premises audit** (§8) — it completes store onboarding and is itself a
-   task, so it exercises the state machine.
+Both blocking parameters are answered, so the money layer is no longer frozen.
+
+1. **The task state machine** (§4.2). Eleven states against today'''s four, and
+   everything downstream — payment, disputes, analytics — is meant to hang off
+   clean transitions. Cheapest now, before production task data exists.
+2. **Settle D10** — whether Mart or PartTime owns the store record. It is a
+   one-word answer that decides whether store onboarding gets rebuilt.
+3. **Two-way ratings and the store map.** Both small, both close Phase 1 items.
+4. **Commitment states for escrow-as-state** (§4). Small, and it unblocks
+   anything that talks about money being ring-fenced.
+5. **Store premises audit** (§8) — completes store onboarding, and is itself a
+   task, so it exercises the state machine on something real.
 6. **Event bus and auto-task generation** (§5), once Mart is ready.
+
+Still needed from the Mart team before 6: agreement on , a staging
+environment, two shared secrets, and answers to D1–D10.
