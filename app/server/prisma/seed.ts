@@ -37,12 +37,13 @@ const TABLES_CHILD_TO_PARENT = [
   "Timesheet",
   "Application",
   "Task",
-  // StoreMember references BOTH Store and User, so it clears before either.
-  // Store itself has no FK out, but must still precede User here only because
-  // this list doubles as the dump order in reverse - Store rows have to be
-  // restored before the memberships that point at them.
-  "StoreMember",
-  "Store",
+  // OrganizationMember references BOTH Organization and User, so it clears
+  // before either. Organization itself has no FK out, but must still precede
+  // User here only because this list doubles as the dump order in reverse -
+  // Organization rows have to be restored before the memberships pointing at
+  // them.
+  "OrganizationMember",
+  "Organization",
   "PasswordReset",
   "OtpCode",
   "User",
@@ -122,9 +123,10 @@ async function main() {
   await prisma.timesheet.deleteMany();
   await prisma.application.deleteMany();
   await prisma.task.deleteMany();
-  // stores: StoreMember FKs BOTH Store and User, so it clears before either
-  await prisma.storeMember.deleteMany();
-  await prisma.store.deleteMany();
+  // organizations: OrganizationMember FKs BOTH Organization and User, so it
+  // clears before either
+  await prisma.organizationMember.deleteMany();
+  await prisma.organization.deleteMany();
   // auth tables (PasswordReset FKs User; OtpCode is standalone but clear too)
   await prisma.passwordReset.deleteMany();
   await prisma.otpCode.deleteMany();
@@ -643,18 +645,23 @@ async function main() {
     await prisma.skill.create({ data: { ...sk, active: true } });
   }
 
-  // ── A demo AfriZoneMart store ─────────────────────────────────────────────
+  // ── Demo organizations: one store, one courier company ───────────────────
   //
-  // Two members on purpose, an OWNER and a STAFF. One member would demo just as
-  // well and would prove nothing: the reason Store exists as its own table
-  // rather than as a User row is precisely that a store has several people and
-  // one bank account, and a fixture with a single member is indistinguishable
-  // from the shape this replaces.
+  // Two members on the store on purpose, an OWNER and a STAFF. One member would
+  // demo just as well and would prove nothing: the reason Organization exists as
+  // its own table rather than as a User row is precisely that a business has
+  // several people and one bank account, and a single-member fixture is
+  // indistinguishable from the shape it replaces.
   //
-  // ACTIVE so it is usable straight after a seed. Real stores default PENDING
-  // and are approved by Afrizone.
-  const demoStore = await prisma.store.create({
+  // The courier company exists for the same reason at the other end - it is the
+  // only thing that demonstrates `kind` actually separates two businesses rather
+  // than being a column nobody reads.
+  //
+  // Both ACTIVE so they are usable straight after a seed. Real ones default
+  // PENDING and are approved by Afrizone.
+  const demoStore = await prisma.organization.create({
     data: {
+      kind: "STORE",
       name: "Ikeja City Mart",
       slug: "ikeja-city-mart",
       phone: "+2348030000101",
@@ -694,11 +701,63 @@ async function main() {
       location: "Lagos, NG",
     },
   });
-  await prisma.storeMember.create({
-    data: { storeId: demoStore.id, userId: storeOwner.id, role: "OWNER" },
+  await prisma.organizationMember.create({
+    data: { organizationId: demoStore.id, userId: storeOwner.id, role: "OWNER" },
   });
-  await prisma.storeMember.create({
-    data: { storeId: demoStore.id, userId: storeStaff.id, role: "STAFF" },
+  await prisma.organizationMember.create({
+    data: { organizationId: demoStore.id, userId: storeStaff.id, role: "STAFF" },
+  });
+
+  const demoCourierCo = await prisma.organization.create({
+    data: {
+      kind: "COURIER",
+      name: "Lagos Swift Riders",
+      slug: "lagos-swift-riders",
+      phone: "+2348030000102",
+      email: "dispatch@lagosswift.ng",
+      address: "12 Allen Avenue, Ikeja, Lagos",
+      lat: 6.6018,
+      lng: 3.3421,
+      bankAccountNumber: "9876543210",
+      bankCode: "058",
+      bankName: "GTBank",
+      bankMasked: "****3210",
+      status: "ACTIVE",
+    },
+  });
+  const courierOwner = await prisma.user.create({
+    data: {
+      name: "Emeka Okafor",
+      email: "emeka.okafor@lagosswift.ng",
+      passwordHash: workerHash,
+      role: "WORKER",
+      accountType: "COURIER",
+      tiers: "DISPATCH",
+      kycStatus: "VERIFIED",
+      location: "Lagos, NG",
+    },
+  });
+  // A rider employed by the company. Note they are a member of an org AND carry
+  // accountType COURIER - the two are independent, and an individual courier
+  // with no company looks exactly the same minus the membership row. Every
+  // courier flow has to work for both.
+  const courierRider = await prisma.user.create({
+    data: {
+      name: "Yusuf Bello",
+      email: "yusuf.bello@lagosswift.ng",
+      passwordHash: workerHash,
+      role: "WORKER",
+      accountType: "COURIER",
+      tiers: "DISPATCH",
+      kycStatus: "VERIFIED",
+      location: "Lagos, NG",
+    },
+  });
+  await prisma.organizationMember.create({
+    data: { organizationId: demoCourierCo.id, userId: courierOwner.id, role: "OWNER" },
+  });
+  await prisma.organizationMember.create({
+    data: { organizationId: demoCourierCo.id, userId: courierRider.id, role: "STAFF" },
   });
 
   const credentialTypes: Array<{
@@ -802,8 +861,8 @@ async function main() {
     candidates: await prisma.jobApplication.count(),
     taxRates: await prisma.taxRate.count(),
     categories: await prisma.category.count(),
-    stores: await prisma.store.count(),
-    storeMembers: await prisma.storeMember.count(),
+    organizations: await prisma.organization.count(),
+    orgMembers: await prisma.organizationMember.count(),
     settings: await prisma.setting.count(),
     clockEvents: await prisma.clockEvent.count(),
     withdrawals: await prisma.withdrawal.count(),

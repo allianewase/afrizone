@@ -3,8 +3,8 @@
 //
 // requireAccountType answers "is this caller a store account?" - which every
 // store account answers the same way. It cannot distinguish one store from
-// another, so a route relying on it alone is one storeId away from serving
-// another store's orders. requireStoreAccess is the half that actually
+// another, so a route relying on it alone is one organizationId away from serving
+// another store's orders. requireOrgAccess is the half that actually
 // protects a store, and it is the half these tests spend most of their time on.
 //
 // The 404-not-403 rule below is the least obvious property here and the easiest
@@ -12,44 +12,44 @@
 // an implementation detail.
 import { describe, it, expect } from "vitest";
 import { createUserWithToken, testPrisma } from "./helpers";
-import { requireStoreAccess, listStoresForUser } from "../src/util/store";
+import { requireOrgAccess, listOrganizationsForUser } from "../src/util/organization";
 import { requireAccountType } from "../src/auth";
 
 const prisma = () => testPrisma() as any;
 
 let seq = 0;
 
-async function makeStore(status = "ACTIVE", name = "Test Store") {
+async function makeOrg(status = "ACTIVE", name = "Test Store", kind = "STORE") {
   seq += 1;
-  return prisma().store.create({
-    data: { name, slug: `test-store-${seq}-${Date.now()}`, status },
+  return prisma().organization.create({
+    data: { kind, name, slug: `test-org-${seq}-${Date.now()}`, status },
   });
 }
 
-async function addMember(storeId: string, userId: string, role = "STAFF") {
-  return prisma().storeMember.create({ data: { storeId, userId, role } });
+async function addMember(organizationId: string, userId: string, role = "STAFF") {
+  return prisma().organizationMember.create({ data: { organizationId, userId, role } });
 }
 
 describe("store ownership", () => {
   it("lets a member through and hands back the store", async () => {
     const { user } = await createUserWithToken("WORKER");
-    const store = await makeStore();
-    await addMember(store.id, user.id, "OWNER");
+    const org = await makeOrg();
+    await addMember(org.id, user.id, "OWNER");
 
-    const res = await requireStoreAccess(user.id, store.id);
+    const res = await requireOrgAccess(user.id, org.id);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.store.id).toBe(store.id);
+    expect(res.org.id).toBe(org.id);
     expect(res.membership.role).toBe("OWNER");
   });
 
   it("refuses a non-member with 404, never 403", async () => {
     const { user: outsider } = await createUserWithToken("WORKER");
     const { user: insider } = await createUserWithToken("WORKER");
-    const store = await makeStore();
-    await addMember(store.id, insider.id);
+    const org = await makeOrg();
+    await addMember(org.id, insider.id);
 
-    const res = await requireStoreAccess(outsider.id, store.id);
+    const res = await requireOrgAccess(outsider.id, org.id);
     expect(res.ok).toBe(false);
     if (res.ok) return;
     // 403 would confirm the store exists and that the caller merely lacks
@@ -61,33 +61,33 @@ describe("store ownership", () => {
 
   it("gives the same answer for a store that does not exist", async () => {
     const { user } = await createUserWithToken("WORKER");
-    const real = await requireStoreAccess(user.id, "does-not-exist");
+    const real = await requireOrgAccess(user.id, "does-not-exist");
     expect(real.ok).toBe(false);
     if (real.ok) return;
     expect(real.status).toBe(404);
-    expect(real.error).toBe("Store not found");
+    expect(real.error).toBe("Not found");
   });
 
   it("keeps two stores apart", async () => {
     const { user: aliceUser } = await createUserWithToken("WORKER");
     const { user: bobUser } = await createUserWithToken("WORKER");
-    const storeA = await makeStore("ACTIVE", "Store A");
-    const storeB = await makeStore("ACTIVE", "Store B");
+    const storeA = await makeOrg("ACTIVE", "Store A");
+    const storeB = await makeOrg("ACTIVE", "Store B");
     await addMember(storeA.id, aliceUser.id);
     await addMember(storeB.id, bobUser.id);
 
     // Each sees their own...
-    expect((await requireStoreAccess(aliceUser.id, storeA.id)).ok).toBe(true);
-    expect((await requireStoreAccess(bobUser.id, storeB.id)).ok).toBe(true);
+    expect((await requireOrgAccess(aliceUser.id, storeA.id)).ok).toBe(true);
+    expect((await requireOrgAccess(bobUser.id, storeB.id)).ok).toBe(true);
     // ...and neither sees the other's. This is the requirement in one line.
-    expect((await requireStoreAccess(aliceUser.id, storeB.id)).ok).toBe(false);
-    expect((await requireStoreAccess(bobUser.id, storeA.id)).ok).toBe(false);
+    expect((await requireOrgAccess(aliceUser.id, storeB.id)).ok).toBe(false);
+    expect((await requireOrgAccess(bobUser.id, storeA.id)).ok).toBe(false);
   });
 
-  it("treats a missing or non-string storeId as not found rather than throwing", async () => {
+  it("treats a missing or non-string organizationId as not found rather than throwing", async () => {
     const { user } = await createUserWithToken("WORKER");
     for (const bad of [undefined, null, "", 42, {}, []]) {
-      const res = await requireStoreAccess(user.id, bad);
+      const res = await requireOrgAccess(user.id, bad);
       expect(res.ok).toBe(false);
       if (res.ok) continue;
       expect(res.status).toBe(404);
@@ -98,10 +98,10 @@ describe("store ownership", () => {
 describe("store role and status gates", () => {
   it("refuses STAFF where OWNER is required, and says so with 403", async () => {
     const { user } = await createUserWithToken("WORKER");
-    const store = await makeStore();
-    await addMember(store.id, user.id, "STAFF");
+    const org = await makeOrg();
+    await addMember(org.id, user.id, "STAFF");
 
-    const res = await requireStoreAccess(user.id, store.id, { roles: ["OWNER"] });
+    const res = await requireOrgAccess(user.id, org.id, { roles: ["OWNER"] });
     expect(res.ok).toBe(false);
     if (res.ok) return;
     // 403 rather than 404 here is correct and is not a contradiction of the
@@ -112,14 +112,14 @@ describe("store role and status gates", () => {
 
   it("blocks a PENDING store from work, but not from being read", async () => {
     const { user } = await createUserWithToken("WORKER");
-    const store = await makeStore("PENDING");
-    await addMember(store.id, user.id, "OWNER");
+    const org = await makeOrg("PENDING");
+    await addMember(org.id, user.id, "OWNER");
 
     // Its own people can still reach it - otherwise completing the profile that
     // gets it approved would be impossible.
-    expect((await requireStoreAccess(user.id, store.id)).ok).toBe(true);
+    expect((await requireOrgAccess(user.id, org.id)).ok).toBe(true);
 
-    const working = await requireStoreAccess(user.id, store.id, { requireActive: true });
+    const working = await requireOrgAccess(user.id, org.id, { requireActive: true });
     expect(working.ok).toBe(false);
     if (working.ok) return;
     expect(working.status).toBe(403);
@@ -128,10 +128,10 @@ describe("store role and status gates", () => {
 
   it("blocks a SUSPENDED store and says which of the two it is", async () => {
     const { user } = await createUserWithToken("WORKER");
-    const store = await makeStore("SUSPENDED");
-    await addMember(store.id, user.id, "OWNER");
+    const org = await makeOrg("SUSPENDED");
+    await addMember(org.id, user.id, "OWNER");
 
-    const res = await requireStoreAccess(user.id, store.id, { requireActive: true });
+    const res = await requireOrgAccess(user.id, org.id, { requireActive: true });
     expect(res.ok).toBe(false);
     if (res.ok) return;
     // Suspended and not-yet-approved are different situations for the person
@@ -144,29 +144,29 @@ describe("store role and status gates", () => {
 describe("many stores per person", () => {
   it("lists every store a person can act for, oldest first", async () => {
     const { user } = await createUserWithToken("WORKER");
-    const first = await makeStore("ACTIVE", "Branch One");
-    const second = await makeStore("ACTIVE", "Branch Two");
+    const first = await makeOrg("ACTIVE", "Branch One");
+    const second = await makeOrg("ACTIVE", "Branch Two");
     await addMember(first.id, user.id, "OWNER");
     await addMember(second.id, user.id, "STAFF");
 
-    const stores = await listStoresForUser(user.id);
-    expect(stores).toHaveLength(2);
-    expect(stores.map((s) => s.store.id)).toEqual([first.id, second.id]);
-    expect(stores.map((s) => s.role)).toEqual(["OWNER", "STAFF"]);
+    const orgs = await listOrganizationsForUser(user.id);
+    expect(orgs).toHaveLength(2);
+    expect(orgs.map((s) => s.org.id)).toEqual([first.id, second.id]);
+    expect(orgs.map((s) => s.role)).toEqual(["OWNER", "STAFF"]);
   });
 
   it("returns nothing for someone who runs no store", async () => {
     const { user } = await createUserWithToken("WORKER");
-    expect(await listStoresForUser(user.id)).toEqual([]);
+    expect(await listOrganizationsForUser(user.id)).toEqual([]);
   });
 
   it("refuses a second membership for the same person in the same store", async () => {
     const { user } = await createUserWithToken("WORKER");
-    const store = await makeStore();
-    await addMember(store.id, user.id, "STAFF");
-    // The unique pair is not decoration: requireStoreAccess resolves membership
+    const org = await makeOrg();
+    await addMember(org.id, user.id, "STAFF");
+    // The unique pair is not decoration: requireOrgAccess resolves membership
     // with findUnique on it, which a duplicate row would break outright.
-    await expect(addMember(store.id, user.id, "OWNER")).rejects.toThrow();
+    await expect(addMember(org.id, user.id, "OWNER")).rejects.toThrow();
   });
 });
 
@@ -240,6 +240,72 @@ describe("requireAccountType", () => {
   });
 });
 
+describe("kind: stores and courier companies share one model", () => {
+  it("guards a courier company exactly as it guards a store", async () => {
+    const { user } = await createUserWithToken("WORKER");
+    const outsider = await createUserWithToken("WORKER");
+    const courier = await makeOrg("ACTIVE", "Swift Riders", "COURIER");
+    await addMember(courier.id, user.id, "OWNER");
+
+    // Nothing in util/organization.ts branches on kind, and this is the test
+    // that says so. The moment it needs to, the shared model is worth
+    // re-examining.
+    const mine = await requireOrgAccess(user.id, courier.id);
+    expect(mine.ok).toBe(true);
+    expect((await requireOrgAccess(outsider.user.id, courier.id)).ok).toBe(false);
+  });
+
+  it("answers 404 when the kind is wrong, not 403", async () => {
+    const { user } = await createUserWithToken("WORKER");
+    const courier = await makeOrg("ACTIVE", "Wrong Kind Riders", "COURIER");
+    await addMember(courier.id, user.id, "OWNER");
+
+    // A courier id handed to a store-only route is not a permission problem,
+    // it is the wrong object - so it answers like anything else this caller
+    // cannot address, rather than confirming what kind of business it found.
+    const res = await requireOrgAccess(user.id, courier.id, { kind: "STORE" });
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.status).toBe(404);
+  });
+
+  it("names the right thing when refusing an unapproved courier company", async () => {
+    const { user } = await createUserWithToken("WORKER");
+    const courier = await makeOrg("PENDING", "Pending Riders", "COURIER");
+    await addMember(courier.id, user.id, "OWNER");
+
+    const res = await requireOrgAccess(user.id, courier.id, { requireActive: true });
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    // "This store is not approved yet" shown to a courier company is the kind
+    // of copy that makes people think the system has them confused with
+    // somebody else.
+    expect(res.error).toContain("courier company");
+    expect(res.error).not.toContain("store");
+  });
+
+  it("filters the picker by kind", async () => {
+    const { user } = await createUserWithToken("WORKER");
+    const shop = await makeOrg("ACTIVE", "Corner Shop", "STORE");
+    const riders = await makeOrg("ACTIVE", "Corner Riders", "COURIER");
+    await addMember(shop.id, user.id, "OWNER");
+    await addMember(riders.id, user.id, "STAFF");
+
+    expect(await listOrganizationsForUser(user.id)).toHaveLength(2);
+    const stores = await listOrganizationsForUser(user.id, "STORE");
+    expect(stores.map((o) => o.org.id)).toEqual([shop.id]);
+    const couriers = await listOrganizationsForUser(user.id, "COURIER");
+    expect(couriers.map((o) => o.org.id)).toEqual([riders.id]);
+  });
+
+  it("defaults to STORE, so rows written before couriers existed are correct", async () => {
+    const org = await prisma().organization.create({
+      data: { name: "No Kind Given", slug: `nokind-${Date.now()}` },
+    });
+    expect(org.kind).toBe("STORE");
+  });
+});
+
 describe("account type", () => {
   it("defaults every account to INDIVIDUAL", async () => {
     const { user } = await createUserWithToken("WORKER");
@@ -265,12 +331,12 @@ describe("account type", () => {
   it("does not imply store membership on its own", async () => {
     const { user } = await createUserWithToken("WORKER");
     await prisma().user.update({ where: { id: user.id }, data: { accountType: "STORE" } });
-    const store = await makeStore();
+    const org = await makeOrg();
 
     // Being a STORE account is not the same as belonging to THIS store, and
     // this is exactly the gap a route guarded only by account type would leave
     // open.
-    const res = await requireStoreAccess(user.id, store.id);
+    const res = await requireOrgAccess(user.id, org.id);
     expect(res.ok).toBe(false);
   });
 });

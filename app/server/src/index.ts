@@ -20,7 +20,7 @@ import clockRouter from "./routes/clock";
 import walletRouter from "./routes/wallet";
 import contractsRouter from "./routes/contracts";
 import disputesRouter, { adminRouter as adminDisputesRouter } from "./routes/disputes";
-import storesRouter, { adminRouter as adminStoresRouter } from "./routes/stores";
+import organizationsRouter, { adminRouter as adminOrganizationsRouter } from "./routes/organizations";
 import ratingsRouter from "./routes/ratings";
 import webhooksRouter from "./routes/webhooks";
 import kycDocumentsRouter, { handleKycUpload, handleKycFileGet } from "./routes/kycDocuments";
@@ -204,12 +204,13 @@ app.use("/api/me/kyc/documents", kycDocumentsRouter);
 app.use("/api/clock", clockRouter);
 app.use("/api/wallet", walletRouter);
 app.use("/api/contracts", contractsRouter);
-// Stores. Two mounts, because they are two different audiences: /api/stores is
-// a store's own people (gated on membership, see routes/stores.ts), while
-// /api/admin/stores is Afrizone staff and is the only path that can approve or
-// suspend one.
-app.use("/api/stores", storesRouter);
-app.use("/api/admin/stores", adminStoresRouter);
+// Organizations - stores and courier companies. Two mounts, because they are
+// two different audiences: /api/organizations is a business's own people
+// (gated on membership, see routes/organizations.ts), while
+// /api/admin/organizations is Afrizone staff and is the only path that can
+// approve or suspend one.
+app.use("/api/organizations", organizationsRouter);
+app.use("/api/admin/organizations", adminOrganizationsRouter);
 app.use("/api/disputes", adminDisputesRouter);
 app.use("/api/me/disputes", disputesRouter);
 app.use("/api/workers", ratingsRouter);

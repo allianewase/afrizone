@@ -30,41 +30,41 @@ async function apiDelete(path: string, token: string) {
 
 let seq = 0;
 
-/** A store plus an OWNER who can act for it. The common fixture. */
-async function storeWithOwner(status = "ACTIVE") {
+/** An organization plus an OWNER who can act for it. The common fixture. */
+async function orgWithOwner(status = "ACTIVE", kind = "STORE") {
   seq += 1;
   const owner = await createUserWithToken("WORKER");
-  const store = await prisma().store.create({
-    data: { name: `Store ${seq}`, slug: `route-store-${seq}-${Date.now()}`, status },
+  const org = await prisma().organization.create({
+    data: { kind, name: `Org ${seq}`, slug: `route-org-${seq}-${Date.now()}`, status },
   });
-  await prisma().storeMember.create({
-    data: { storeId: store.id, userId: owner.user.id, role: "OWNER" },
+  await prisma().organizationMember.create({
+    data: { organizationId: org.id, userId: owner.user.id, role: "OWNER" },
   });
-  return { store, owner };
+  return { org, owner };
 }
 
-async function addStaff(storeId: string) {
+async function addStaff(organizationId: string) {
   const staff = await createUserWithToken("WORKER");
-  const member = await prisma().storeMember.create({
-    data: { storeId, userId: staff.user.id, role: "STAFF" },
+  const member = await prisma().organizationMember.create({
+    data: { organizationId, userId: staff.user.id, role: "STAFF" },
   });
   return { staff, member };
 }
 
 describe("listing my stores", () => {
   it("returns only the stores the caller belongs to", async () => {
-    const mine = await storeWithOwner();
-    await storeWithOwner(); // somebody else's
+    const mine = await orgWithOwner();
+    await orgWithOwner(); // somebody else's
 
-    const res = await apiGet("/api/stores", mine.owner.token);
+    const res = await apiGet("/api/organizations", mine.owner.token);
     expect(res.status).toBe(200);
-    expect(res.body.map((s: any) => s.id)).toEqual([mine.store.id]);
+    expect(res.body.map((s: any) => s.id)).toEqual([mine.org.id]);
     expect(res.body[0].myRole).toBe("OWNER");
   });
 
   it("returns an empty list rather than an error for someone with no store", async () => {
     const { token } = await createUserWithToken("WORKER");
-    const res = await apiGet("/api/stores", token);
+    const res = await apiGet("/api/organizations", token);
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
   });
@@ -72,39 +72,39 @@ describe("listing my stores", () => {
 
 describe("cross-store isolation", () => {
   it("hides another store on every endpoint, with 404 rather than 403", async () => {
-    const theirs = await storeWithOwner();
+    const theirs = await orgWithOwner();
     const outsider = await createUserWithToken("WORKER");
-    const id = theirs.store.id;
+    const id = theirs.org.id;
 
     // One handler that looks a store up by id alone is all it takes, so this
     // walks the whole surface rather than sampling it.
     const attempts = [
-      await apiGet(`/api/stores/${id}`, outsider.token),
-      await apiGet(`/api/stores/${id}/members`, outsider.token),
-      await apiPatch(`/api/stores/${id}`, { name: "Hijacked" }, outsider.token),
-      await apiPost(`/api/stores/${id}/members`, { email: "x@y.z" }, outsider.token),
-      await apiPatch(`/api/stores/${id}/members/anything`, { role: "OWNER" }, outsider.token),
-      await apiDelete(`/api/stores/${id}/members/anything`, outsider.token),
+      await apiGet(`/api/organizations/${id}`, outsider.token),
+      await apiGet(`/api/organizations/${id}/members`, outsider.token),
+      await apiPatch(`/api/organizations/${id}`, { name: "Hijacked" }, outsider.token),
+      await apiPost(`/api/organizations/${id}/members`, { email: "x@y.z" }, outsider.token),
+      await apiPatch(`/api/organizations/${id}/members/anything`, { role: "OWNER" }, outsider.token),
+      await apiDelete(`/api/organizations/${id}/members/anything`, outsider.token),
     ];
     for (const r of attempts) expect(r.status).toBe(404);
 
     // And nothing was actually changed by any of them.
-    const after = await prisma().store.findUnique({ where: { id } });
-    expect(after.name).toBe(theirs.store.name);
+    const after = await prisma().organization.findUnique({ where: { id } });
+    expect(after.name).toBe(theirs.org.name);
   });
 
   it("refuses an unauthenticated caller before anything else", async () => {
-    const theirs = await storeWithOwner();
-    expect((await apiGet(`/api/stores/${theirs.store.id}`)).status).toBe(401);
-    expect((await apiGet("/api/stores")).status).toBe(401);
+    const theirs = await orgWithOwner();
+    expect((await apiGet(`/api/organizations/${theirs.org.id}`)).status).toBe(401);
+    expect((await apiGet("/api/organizations")).status).toBe(401);
   });
 });
 
 describe("editing a store", () => {
   it("lets an OWNER edit and derives the mask from the account it was given", async () => {
-    const { store, owner } = await storeWithOwner();
+    const { org, owner } = await orgWithOwner();
     const res = await apiPatch(
-      `/api/stores/${store.id}`,
+      `/api/organizations/${org.id}`,
       { name: "Yaba Mart", bankAccountNumber: "0123456789", bankCode: "058" },
       owner.token
     );
@@ -116,21 +116,21 @@ describe("editing a store", () => {
   });
 
   it("refuses a STAFF edit with 403", async () => {
-    const { store } = await storeWithOwner();
-    const { staff } = await addStaff(store.id);
-    const res = await apiPatch(`/api/stores/${store.id}`, { name: "Nope" }, staff.token);
+    const { org } = await orgWithOwner();
+    const { staff } = await addStaff(org.id);
+    const res = await apiPatch(`/api/organizations/${org.id}`, { name: "Nope" }, staff.token);
     // 403, not 404: they are a known member, so the store's existence is not a
     // secret being leaked to them.
     expect(res.status).toBe(403);
   });
 
   it("never lets a store change its own status, at any role", async () => {
-    const { store, owner } = await storeWithOwner("PENDING");
-    const res = await apiPatch(`/api/stores/${store.id}`, { status: "ACTIVE" }, owner.token);
+    const { org, owner } = await orgWithOwner("PENDING");
+    const res = await apiPatch(`/api/organizations/${org.id}`, { status: "ACTIVE" }, owner.token);
     // Either refused outright as an empty update, or accepted while ignoring
     // the field - both are fine. What must not happen is a store approving
     // itself, which is the hole the PENDING default exists to close.
-    const after = await prisma().store.findUnique({ where: { id: store.id } });
+    const after = await prisma().organization.findUnique({ where: { id: org.id } });
     expect(after.status).toBe("PENDING");
     expect([200, 400]).toContain(res.status);
   });
@@ -138,14 +138,14 @@ describe("editing a store", () => {
 
 describe("payout visibility", () => {
   it("shows the full account to an OWNER and hides it from STAFF", async () => {
-    const { store, owner } = await storeWithOwner();
-    await apiPatch(`/api/stores/${store.id}`, { bankAccountNumber: "0123456789" }, owner.token);
-    const { staff } = await addStaff(store.id);
+    const { org, owner } = await orgWithOwner();
+    await apiPatch(`/api/organizations/${org.id}`, { bankAccountNumber: "0123456789" }, owner.token);
+    const { staff } = await addStaff(org.id);
 
-    const asOwner = await apiGet(`/api/stores/${store.id}`, owner.token);
+    const asOwner = await apiGet(`/api/organizations/${org.id}`, owner.token);
     expect(asOwner.body.bankAccountNumber).toBe("0123456789");
 
-    const asStaff = await apiGet(`/api/stores/${store.id}`, staff.token);
+    const asStaff = await apiGet(`/api/organizations/${org.id}`, staff.token);
     // Staff work orders. Store staff turnover is exactly the population you do
     // not want holding the payout account.
     expect(asStaff.body.bankAccountNumber).toBeUndefined();
@@ -155,11 +155,11 @@ describe("payout visibility", () => {
 
 describe("members", () => {
   it("adds an existing account and leaves their accountType alone", async () => {
-    const { store, owner } = await storeWithOwner();
+    const { org, owner } = await orgWithOwner();
     const joiner = await createUserWithToken("WORKER");
 
     const res = await apiPost(
-      `/api/stores/${store.id}/members`,
+      `/api/organizations/${org.id}/members`,
       { email: joiner.user.email, role: "STAFF" },
       owner.token
     );
@@ -173,9 +173,9 @@ describe("members", () => {
   });
 
   it("refuses to invent an account for an unknown address", async () => {
-    const { store, owner } = await storeWithOwner();
+    const { org, owner } = await orgWithOwner();
     const res = await apiPost(
-      `/api/stores/${store.id}/members`,
+      `/api/organizations/${org.id}/members`,
       { email: "nobody@example.com" },
       owner.token
     );
@@ -186,10 +186,10 @@ describe("members", () => {
   });
 
   it("refuses a duplicate membership", async () => {
-    const { store, owner } = await storeWithOwner();
-    const { staff } = await addStaff(store.id);
+    const { org, owner } = await orgWithOwner();
+    const { staff } = await addStaff(org.id);
     const res = await apiPost(
-      `/api/stores/${store.id}/members`,
+      `/api/organizations/${org.id}/members`,
       { email: staff.user.email },
       owner.token
     );
@@ -197,12 +197,12 @@ describe("members", () => {
   });
 
   it("does not let STAFF add or remove anyone", async () => {
-    const { store } = await storeWithOwner();
-    const { staff } = await addStaff(store.id);
+    const { org } = await orgWithOwner();
+    const { staff } = await addStaff(org.id);
     const other = await createUserWithToken("WORKER");
 
     const add = await apiPost(
-      `/api/stores/${store.id}/members`,
+      `/api/organizations/${org.id}/members`,
       { email: other.user.email },
       staff.token
     );
@@ -210,44 +210,44 @@ describe("members", () => {
   });
 
   it("lets an OWNER remove a member", async () => {
-    const { store, owner } = await storeWithOwner();
-    const { member } = await addStaff(store.id);
-    const res = await apiDelete(`/api/stores/${store.id}/members/${member.id}`, owner.token);
+    const { org, owner } = await orgWithOwner();
+    const { member } = await addStaff(org.id);
+    const res = await apiDelete(`/api/organizations/${org.id}/members/${member.id}`, owner.token);
     expect(res.status).toBe(200);
-    expect(await prisma().storeMember.findUnique({ where: { id: member.id } })).toBeNull();
+    expect(await prisma().organizationMember.findUnique({ where: { id: member.id } })).toBeNull();
   });
 
   it("will not remove a member of a different store", async () => {
-    const a = await storeWithOwner();
-    const b = await storeWithOwner();
-    const { member: bMember } = await addStaff(b.store.id);
+    const a = await orgWithOwner();
+    const b = await orgWithOwner();
+    const { member: bMember } = await addStaff(b.org.id);
 
     // The membership id is real, just not theirs. A handler that looked it up
     // by id alone would delete it.
-    const res = await apiDelete(`/api/stores/${a.store.id}/members/${bMember.id}`, a.owner.token);
+    const res = await apiDelete(`/api/organizations/${a.org.id}/members/${bMember.id}`, a.owner.token);
     expect(res.status).toBe(404);
-    expect(await prisma().storeMember.findUnique({ where: { id: bMember.id } })).not.toBeNull();
+    expect(await prisma().organizationMember.findUnique({ where: { id: bMember.id } })).not.toBeNull();
   });
 });
 
 describe("a store must keep an owner", () => {
   it("refuses to remove the last owner", async () => {
-    const { store, owner } = await storeWithOwner();
-    const membership = await prisma().storeMember.findFirst({
-      where: { storeId: store.id, userId: owner.user.id },
+    const { org, owner } = await orgWithOwner();
+    const membership = await prisma().organizationMember.findFirst({
+      where: { organizationId: org.id, userId: owner.user.id },
     });
-    const res = await apiDelete(`/api/stores/${store.id}/members/${membership.id}`, owner.token);
+    const res = await apiDelete(`/api/organizations/${org.id}/members/${membership.id}`, owner.token);
     expect(res.status).toBe(400);
     expect(res.body.error).toContain("at least one owner");
   });
 
   it("refuses to demote the last owner", async () => {
-    const { store, owner } = await storeWithOwner();
-    const membership = await prisma().storeMember.findFirst({
-      where: { storeId: store.id, userId: owner.user.id },
+    const { org, owner } = await orgWithOwner();
+    const membership = await prisma().organizationMember.findFirst({
+      where: { organizationId: org.id, userId: owner.user.id },
     });
     const res = await apiPatch(
-      `/api/stores/${store.id}/members/${membership.id}`,
+      `/api/organizations/${org.id}/members/${membership.id}`,
       { role: "STAFF" },
       owner.token
     );
@@ -255,24 +255,89 @@ describe("a store must keep an owner", () => {
   });
 
   it("allows both once a second owner exists", async () => {
-    const { store, owner } = await storeWithOwner();
+    const { org, owner } = await orgWithOwner();
     const second = await createUserWithToken("WORKER");
     await apiPost(
-      `/api/stores/${store.id}/members`,
+      `/api/organizations/${org.id}/members`,
       { email: second.user.email, role: "OWNER" },
       owner.token
     );
 
-    const membership = await prisma().storeMember.findFirst({
-      where: { storeId: store.id, userId: owner.user.id },
+    const membership = await prisma().organizationMember.findFirst({
+      where: { organizationId: org.id, userId: owner.user.id },
     });
     const res = await apiPatch(
-      `/api/stores/${store.id}/members/${membership.id}`,
+      `/api/organizations/${org.id}/members/${membership.id}`,
       { role: "STAFF" },
       owner.token
     );
     expect(res.status).toBe(200);
     expect(res.body.role).toBe("STAFF");
+  });
+});
+
+describe("kind over the wire", () => {
+  it("registers a courier company and keeps it out of the store list", async () => {
+    const admin = await createUserWithToken("SUPER_ADMIN");
+    const res = await apiPost(
+      "/api/admin/organizations",
+      { name: "Lagos Swift Logistics", kind: "COURIER" },
+      admin.token
+    );
+    expect(res.status).toBe(201);
+    expect(res.body.kind).toBe("COURIER");
+    expect(res.body.status).toBe("PENDING");
+
+    const stores = await apiGet("/api/admin/organizations?kind=STORE", admin.token);
+    expect(stores.body.some((o: any) => o.id === res.body.id)).toBe(false);
+    const couriers = await apiGet("/api/admin/organizations?kind=COURIER", admin.token);
+    expect(couriers.body.some((o: any) => o.id === res.body.id)).toBe(true);
+  });
+
+  it("defaults to STORE when no kind is given", async () => {
+    const admin = await createUserWithToken("SUPER_ADMIN");
+    const res = await apiPost("/api/admin/organizations", { name: "Assumed Store" }, admin.token);
+    expect(res.body.kind).toBe("STORE");
+  });
+
+  it("ignores an unrecognised kind rather than storing it", async () => {
+    const admin = await createUserWithToken("SUPER_ADMIN");
+    const res = await apiPost(
+      "/api/admin/organizations",
+      { name: "Nonsense Kind", kind: "BANK" },
+      admin.token
+    );
+    // An unvalidated discriminator would sit in the column and silently exclude
+    // the row from every kind-filtered list, with nothing to explain why.
+    expect(res.body.kind).toBe("STORE");
+  });
+
+  it("will not let anyone reclassify a business after the fact", async () => {
+    const admin = await createUserWithToken("SUPER_ADMIN");
+    const { org, owner } = await orgWithOwner("ACTIVE", "STORE");
+
+    await apiPatch(`/api/admin/organizations/${org.id}`, { kind: "COURIER" }, admin.token);
+    await apiPatch(`/api/organizations/${org.id}`, { kind: "COURIER" }, owner.token);
+
+    // Changing kind would silently change what work an existing business can
+    // receive. That is a new registration, not an edit.
+    const after = await prisma().organization.findUnique({ where: { id: org.id } });
+    expect(after.kind).toBe("STORE");
+  });
+
+  it("lets a member filter their own list by kind", async () => {
+    const shop = await orgWithOwner("ACTIVE", "STORE");
+    const riders = await prisma().organization.create({
+      data: { kind: "COURIER", name: "Side Riders", slug: `side-riders-${Date.now()}`, status: "ACTIVE" },
+    });
+    await prisma().organizationMember.create({
+      data: { organizationId: riders.id, userId: shop.owner.user.id, role: "STAFF" },
+    });
+
+    const all = await apiGet("/api/organizations", shop.owner.token);
+    expect(all.body).toHaveLength(2);
+    const onlyStores = await apiGet("/api/organizations?kind=STORE", shop.owner.token);
+    expect(onlyStores.body.map((o: any) => o.id)).toEqual([shop.org.id]);
   });
 });
 
@@ -337,7 +402,7 @@ describe("registration declares an account type", () => {
     });
     // Declaring yourself a store is not the same as belonging to one. The app
     // has to handle this state rather than assume it away.
-    const mine = await apiGet("/api/stores", res.body.token);
+    const mine = await apiGet("/api/organizations", res.body.token);
     expect(mine.body).toEqual([]);
   });
 });
@@ -348,7 +413,7 @@ describe("Afrizone staff", () => {
     const owner = await createUserWithToken("WORKER");
 
     const res = await apiPost(
-      "/api/admin/stores",
+      "/api/admin/organizations",
       { name: "Surulere Mart", ownerEmail: owner.user.email },
       admin.token
     );
@@ -358,29 +423,29 @@ describe("Afrizone staff", () => {
     expect(res.body.status).toBe("PENDING");
     expect(res.body.slug).toBe("surulere-mart");
 
-    const members = await prisma().storeMember.findMany({ where: { storeId: res.body.id } });
+    const members = await prisma().organizationMember.findMany({ where: { organizationId: res.body.id } });
     expect(members).toHaveLength(1);
     expect(members[0].role).toBe("OWNER");
   });
 
   it("creates no store at all when the owner email is wrong", async () => {
     const admin = await createUserWithToken("SUPER_ADMIN");
-    const before = await prisma().store.count();
+    const before = await prisma().organization.count();
     const res = await apiPost(
-      "/api/admin/stores",
+      "/api/admin/organizations",
       { name: "Ghost Mart", ownerEmail: "typo@example.com" },
       admin.token
     );
     expect(res.status).toBe(404);
     // Resolved before the create, so a typo cannot leave an ownerless store.
-    expect(await prisma().store.count()).toBe(before);
+    expect(await prisma().organization.count()).toBe(before);
   });
 
   it("refuses a duplicate slug", async () => {
     const admin = await createUserWithToken("SUPER_ADMIN");
-    await apiPost("/api/admin/stores", { name: "Twin Mart", slug: "twin-mart" }, admin.token);
+    await apiPost("/api/admin/organizations", { name: "Twin Mart", slug: "twin-mart" }, admin.token);
     const again = await apiPost(
-      "/api/admin/stores",
+      "/api/admin/organizations",
       { name: "Twin Mart Again", slug: "twin-mart" },
       admin.token
     );
@@ -389,16 +454,16 @@ describe("Afrizone staff", () => {
 
   it("approves a store and records who did it", async () => {
     const admin = await createUserWithToken("SUPER_ADMIN");
-    const { store } = await storeWithOwner("PENDING");
+    const { org } = await orgWithOwner("PENDING");
 
-    const res = await apiPatch(`/api/admin/stores/${store.id}`, { status: "ACTIVE" }, admin.token);
+    const res = await apiPatch(`/api/admin/organizations/${org.id}`, { status: "ACTIVE" }, admin.token);
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("ACTIVE");
 
     // Approving is what lets a store receive orders and be paid, so it is a
     // decision by a named person.
     const audit = await prisma().auditLog.findFirst({
-      where: { entity: "Store", entityId: store.id, action: "store.status.changed" },
+      where: { entity: "Organization", entityId: org.id, action: "organization.status.changed" },
     });
     expect(audit).not.toBeNull();
     expect(JSON.parse(audit.meta)).toMatchObject({ from: "PENDING", to: "ACTIVE" });
@@ -406,18 +471,18 @@ describe("Afrizone staff", () => {
 
   it("rejects an unknown status rather than storing it", async () => {
     const admin = await createUserWithToken("SUPER_ADMIN");
-    const { store } = await storeWithOwner();
-    const res = await apiPatch(`/api/admin/stores/${store.id}`, { status: "BANNED" }, admin.token);
+    const { org } = await orgWithOwner();
+    const res = await apiPatch(`/api/admin/organizations/${org.id}`, { status: "BANNED" }, admin.token);
     expect(res.status).toBe(400);
   });
 
   it("keeps the admin routes away from store members and workers", async () => {
-    const { store, owner } = await storeWithOwner();
+    const { org, owner } = await orgWithOwner();
     // An OWNER of this very store still cannot reach the admin surface - that
     // is the whole reason approval lives on a separate router.
-    expect((await apiGet("/api/admin/stores", owner.token)).status).toBe(403);
+    expect((await apiGet("/api/admin/organizations", owner.token)).status).toBe(403);
     expect(
-      (await apiPatch(`/api/admin/stores/${store.id}`, { status: "ACTIVE" }, owner.token)).status
+      (await apiPatch(`/api/admin/organizations/${org.id}`, { status: "ACTIVE" }, owner.token)).status
     ).toBe(403);
   });
 });

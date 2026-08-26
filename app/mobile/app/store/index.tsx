@@ -33,11 +33,13 @@ import { colors, spacing, type, radii, fontFamily } from '../../src/theme';
 import { api } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
-import type { Store, StoreMember } from '../../src/api/types';
+import type { Organization, OrgMember } from '../../src/api/types';
 
 export default function StoreHomeScreen() {
   const { user, signOut } = useAuth();
-  const stores = useAsync<Store[]>((signal) => api.myStores(signal), []);
+  // kind=STORE, filtered server-side: somebody who is also a rider for a
+  // courier company must not find it listed on the store dashboard.
+  const stores = useAsync<Organization[]>((signal) => api.myOrganizations('STORE', signal), []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const list = stores.data ?? [];
@@ -104,7 +106,7 @@ export default function StoreHomeScreen() {
   );
 }
 
-function statusLabel(status: Store['status']): string {
+function statusLabel(status: Organization['status']): string {
   // Never the raw enum. "PENDING" tells a shopkeeper nothing about whether they
   // should be doing something.
   if (status === 'ACTIVE') return 'Open for orders';
@@ -138,8 +140,11 @@ function NoStoreYet({ name, onSignOut }: { name?: string; onSignOut: () => void 
   );
 }
 
-function StoreDetail({ store }: { store: Store }) {
-  const members = useAsync<StoreMember[]>((signal) => api.storeMembers(store.id, signal), [store.id]);
+function StoreDetail({ store }: { store: Organization }) {
+  const members = useAsync<OrgMember[]>(
+    (signal) => api.organizationMembers(store.id, signal),
+    [store.id]
+  );
 
   return (
     <>

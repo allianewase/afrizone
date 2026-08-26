@@ -74,7 +74,7 @@ model User {
   notifEmail        Boolean  @default(false) // email summary digest (future)
   createdAt         DateTime @default(now())
 
-  tasksCreated        Task[]            @relation("TaskCreatedBy")
+  tasksCreated        Task[]               @relation("TaskCreatedBy")
   applications        Application[]
   timesheets          Timesheet[]
   payments            Payment[]
@@ -87,13 +87,13 @@ model User {
   kycDocuments        KycDocument[]
   kycVerifications    KycVerification[]
   disputes            Dispute[]
-  ratingsReceived     Rating[]          @relation("WorkerRatings")
-  ratingsGiven        Rating[]          @relation("RatingsGiven")
+  ratingsReceived     Rating[]             @relation("WorkerRatings")
+  ratingsGiven        Rating[]             @relation("RatingsGiven")
   notifications       Notification[]
   skills              WorkerSkill[]
-  credentials         Credential[]      @relation("WorkerCredentials")
-  credentialsReviewed Credential[]      @relation("CredentialsReviewed")
-  storeMemberships    StoreMember[]
+  credentials         Credential[]         @relation("WorkerCredentials")
+  credentialsReviewed Credential[]         @relation("CredentialsReviewed")
+  orgMemberships      OrganizationMember[]
 }
 
 model Task {
@@ -637,27 +637,33 @@ model Credential {
   @@index([workerId, status])
 }
 
-// ── AfriZoneMart Stores ──────────────────────────────────────────────────────
+// ── Organizations: AfriZoneMart stores and courier companies ─────────────────
 
-/// A store that fulfils AfriZoneMart orders.
+/// A business that works with Afrizone: a store that fulfils orders, or a
+/// courier company whose riders deliver them.
 ///
-/// WHY THIS IS NOT A USER ROW, WHICH IS THE ENTIRE POINT OF THE MODEL:
+/// ONE MODEL WITH A `kind`, NOT TWO TABLES. Both need exactly the same things -
+/// several staff who log in as themselves, one bank account belonging to the
+/// business rather than to any employee, one location, and an Afrizone approval
+/// gate. Building them separately means writing membership, approval,
+/// verification and payout twice and then maintaining two of each. What differs
+/// between a store and a courier company is what they DO, which lives in the
+/// routes and the work they receive, not in who they are.
 ///
-/// A store is not a person. It has several staff who each log in as themselves,
-/// one bank account that is the store's rather than any individual's, one
-/// physical location, and a lifecycle (approved, suspended) that has nothing to
-/// do with any employee. Every one of those breaks the moment the store IS a
-/// User: two staff means two accounts means two payout destinations, and
-/// suspending the store means finding every person attached to it.
-///
-/// It works for exactly as long as one person runs one store, and every foreign
-/// key added in the meantime points at the wrong table.
-model Store {
+/// An individual courier is NOT an Organization. Someone delivering on their own
+/// bike is a plain User with accountType COURIER and no business behind them, so
+/// every flow that touches a courier has to work for a bare user as well as for
+/// an org member. That is a real cost, taken deliberately: the alternative is a
+/// one-person "organization" wrapped around every rider, which is a fiction the
+/// payout and approval flows would then have to keep up.
+model Organization {
   id   String @id @default(cuid())
+  /// STORE | COURIER. What kind of business this is.
+  kind String @default("STORE")
   name String
   /// Stable identifier for code, imports and the AfriZoneMart side of the
-  /// integration. `name` is deliberately NOT unique - renaming a store must
-  /// never orphan the rows pointing at it (same rule as Skill.slug).
+  /// integration. `name` is deliberately NOT unique - renaming must never
+  /// orphan the rows pointing at it (same rule as Skill.slug).
   slug String @unique
 
   phone   String?
@@ -666,9 +672,9 @@ model Store {
   lat     Float?
   lng     Float?
 
-  /// Payout details live HERE, not on any member's User row. Money owed for an
-  /// order goes to the store regardless of which staff member happened to touch
-  /// it, and a member leaving must not take the payout account with them.
+  /// Payout details live HERE, not on any member's User row. Money owed goes to
+  /// the business regardless of which staff member touched the work, and a
+  /// member leaving must not take the payout account with them.
   bankAccountNumber String?
   bankCode          String?
   bankName          String?
@@ -677,45 +683,50 @@ model Store {
 
   /// PENDING | ACTIVE | SUSPENDED.
   ///
-  /// Defaults PENDING: a store must be approved by Afrizone before it can
-  /// receive orders. A store that could receive orders the moment somebody
-  /// typed its name in would be a hole, not a convenience.
+  /// Defaults PENDING: a business must be approved by Afrizone before it can
+  /// receive work. One that could take orders the moment somebody typed its
+  /// name in would be a hole, not a convenience.
   status String @default("PENDING")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members StoreMember[]
+  members OrganizationMember[]
+
+  /// "Which stores are live?" and "which courier companies are waiting for
+  /// approval?" are both list screens, and both filter on exactly this pair.
+  @@index([kind, status])
 }
 
-/// Which people may act for which store.
+/// Which people may act for which business.
 ///
-/// A join table rather than `User.storeId` because the relationship is
-/// genuinely many-to-many: a store has several staff, and one person can run
-/// more than one branch. Modelling it as a column on User would force a
-/// migration the first time somebody manages two stores - and would make
-/// "which store am I acting as?" unanswerable rather than merely awkward.
+/// A join table rather than `User.organizationId` because the relationship is
+/// genuinely many-to-many: one person can run more than one branch, and a rider
+/// can work for two companies. A column would force a migration the first time
+/// that happens and would make "which business am I acting as?" unanswerable
+/// rather than merely awkward.
 ///
 /// The unique pair is what makes the row-level guard cheap: "is this user a
-/// member of THIS store" is one indexed lookup, which is the question every
-/// store-scoped endpoint has to ask (see util/store.ts).
-model StoreMember {
-  id      String @id @default(cuid())
-  storeId String
-  userId  String
+/// member of THIS organization" is one indexed lookup, which is the question
+/// every org-scoped endpoint has to ask (see util/organization.ts).
+model OrganizationMember {
+  id             String @id @default(cuid())
+  organizationId String
+  userId         String
 
-  /// OWNER | STAFF. OWNER may manage members and the payout account; STAFF
-  /// works orders. Deliberately separate from User.role, which is about
-  /// Afrizone staff, and from User.accountType, which is about what kind of
-  /// party the person is. This one is about standing WITHIN one store.
+  /// OWNER | STAFF. OWNER may manage members and the payout account; STAFF does
+  /// the work - shelf staff in a store, a rider in a courier company.
+  /// Deliberately separate from User.role, which is about Afrizone staff, and
+  /// from User.accountType, which is about what kind of party the person is.
+  /// This one is about standing WITHIN one business.
   role String @default("STAFF")
 
   createdAt DateTime @default(now())
 
-  store Store @relation(fields: [storeId], references: [id])
-  user  User  @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
 
-  @@unique([storeId, userId])
-  /// "Which stores can this person act for?" - the sign-in store picker.
+  @@unique([organizationId, userId])
+  /// "Which businesses can this person act for?" - the sign-in picker.
   @@index([userId])
 }

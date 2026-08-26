@@ -4,8 +4,9 @@ import type {
   OtpRequestResponse,
   VerifyOtpResponse,
   AccountType,
-  Store,
-  StoreMember,
+  Organization,
+  OrgKind,
+  OrgMember,
   Task,
   TaskEligibility,
   WorkerDetail,
@@ -274,24 +275,29 @@ export const api = {
   },
 
   /**
-   * GET /api/stores: every store this person may act for.
+   * GET /api/organizations: every business this person may act for.
    *
    * Returns [] rather than an error for someone who belongs to none - which is
-   * the normal state for a brand-new STORE account, not a failure. The store
-   * screen has to render that case rather than treat it as broken.
+   * the normal state for a brand-new STORE account, not a failure. The screen
+   * has to render that case rather than treat it as broken.
+   *
+   * The `kind` filter is applied by the SERVER, not here. A member of both a
+   * shop and a courier company would otherwise see the wrong business on the
+   * wrong dashboard, and filtering on the client is filtering that can be
+   * skipped.
    */
-  myStores(signal?: AbortSignal): Promise<Store[]> {
-    return request<Store[]>('/stores', { signal });
+  myOrganizations(kind?: OrgKind, signal?: AbortSignal): Promise<Organization[]> {
+    return request<Organization[]>(`/organizations${kind ? `?kind=${kind}` : ''}`, { signal });
   },
 
-  /** GET /api/stores/:id */
-  store(id: string, signal?: AbortSignal): Promise<Store> {
-    return request<Store>(`/stores/${id}`, { signal });
+  /** GET /api/organizations/:id */
+  organization(id: string, signal?: AbortSignal): Promise<Organization> {
+    return request<Organization>(`/organizations/${id}`, { signal });
   },
 
-  /** GET /api/stores/:id/members */
-  storeMembers(id: string, signal?: AbortSignal): Promise<StoreMember[]> {
-    return request<StoreMember[]>(`/stores/${id}/members`, { signal });
+  /** GET /api/organizations/:id/members */
+  organizationMembers(id: string, signal?: AbortSignal): Promise<OrgMember[]> {
+    return request<OrgMember[]>(`/organizations/${id}/members`, { signal });
   },
 
   /** GET /api/tasks: task feed (augmented with filledCount/applicantCount). */

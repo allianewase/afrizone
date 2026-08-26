@@ -55,11 +55,21 @@ export interface User {
  */
 export type AccountType = 'INDIVIDUAL' | 'STORE' | 'COURIER';
 
-export type StoreRole = 'OWNER' | 'STAFF';
-export type StoreStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED';
+/**
+ * STORE fulfils orders, COURIER delivers them. One model, because both need the
+ * same membership, approval and payout structure - what differs is the work
+ * they receive.
+ *
+ * An individual courier has NO organization: they are a plain user with
+ * accountType COURIER. Anything courier-facing has to work for both.
+ */
+export type OrgKind = 'STORE' | 'COURIER';
+export type OrgRole = 'OWNER' | 'STAFF';
+export type OrgStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED';
 
-export interface Store {
+export interface Organization {
   id: string;
+  kind: OrgKind;
   name: string;
   slug: string;
   phone?: string | null;
@@ -73,16 +83,16 @@ export interface Store {
   bankCode?: string | null;
   bankName?: string | null;
   tin?: string | null;
-  status: StoreStatus;
+  status: OrgStatus;
   createdAt?: string;
-  /** This viewer's standing in this store, added by GET /api/stores. */
-  myRole?: StoreRole;
+  /** This viewer's standing here, added by GET /api/organizations. */
+  myRole?: OrgRole;
 }
 
-export interface StoreMember {
+export interface OrgMember {
   id: string;
   userId: string;
-  role: StoreRole;
+  role: OrgRole;
   createdAt?: string;
   name?: string | null;
   email?: string | null;
