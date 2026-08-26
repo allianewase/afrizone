@@ -6,6 +6,7 @@ import { isSmileConfigured, submitDocumentVerification, NgIdType, NG_ID_TYPES } 
 import { getFileBuffer } from "../services/storage";
 import { requireAssignedTask } from "../util/assignment";
 import { closeIfBothSidesRated, isRateable } from "../services/ratings";
+import { commitmentLabel, commitmentSummary } from "../services/commitments";
 import { userActor } from "../util/audit";
 
 const router = Router();
@@ -349,7 +350,42 @@ router.post("/ratings", requireAuth, async (req: AuthedRequest, res: Response) =
   });
 });
 
-// GET /api/me/contracts → worker's contracts joined with task summary.
+/**
+ * GET /api/me/commitments -> what is ring-fenced for this worker.
+ *
+ * Blueprint §10's guarantee, made visible. "Set aside for you" is the whole
+ * point of escrow from a worker's side, and a promise nobody can see is not one.
+ */
+router.get("/commitments", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const workerId = req.user!.id;
+  const [rows, summary] = await Promise.all([
+    prisma.commitment.findMany({
+      where: { workerId },
+      orderBy: { committedAt: "desc" },
+      include: { contract: { include: { task: true } } },
+    }),
+    commitmentSummary(workerId),
+  ]);
+
+  res.json({
+    ...summary,
+    items: rows.map((c) => ({
+      id: c.id,
+      status: c.status,
+      state: commitmentLabel(c.status),
+      // Null means hourly work whose hours are not in yet. The client shows
+      // that as "to be confirmed" rather than as zero.
+      amount: c.amount,
+      reason: c.reason,
+      committedAt: c.committedAt,
+      releasedAt: c.releasedAt,
+      paidAt: c.paidAt,
+      task: c.contract?.task ? { id: c.contract.task.id, title: c.contract.task.title } : null,
+    })),
+  });
+});
+
+// GET /api/me/contracts -> worker's contracts joined with task summary.
 router.get("/contracts", requireAuth, async (req: AuthedRequest, res: Response) => {
   const contracts = await prisma.contract.findMany({
     where: { workerId: req.user!.id },

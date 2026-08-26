@@ -4,6 +4,7 @@ import { requireAuth, requireRole, AuthedRequest } from "../auth";
 import { tiersToArray } from "../types";
 import { notifyWorker } from "../services/push";
 import { userActor, writeAudit } from "../util/audit";
+import { commitForContract, committableAmount } from "../services/commitments";
 import {
   blockingBlockers,
   decide,
@@ -172,11 +173,24 @@ router.post("/:id/approve", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGE
   const existingContract = await prisma.contract.findFirst({
     where: { taskId: app.taskId, workerId: app.workerId },
   });
-  if (!existingContract) {
-    await prisma.contract.create({
+  const contract =
+    existingContract ??
+    (await prisma.contract.create({
       data: { taskId: app.taskId, workerId: app.workerId, status: "CLAIMED" },
-    });
-  }
+    }));
+
+  // The contract going live is what ring-fences the pay (Blueprint §10). Mart
+  // holds the money; this records that it is set aside for this person.
+  //
+  // A FIXED task commits its budget. An HOURLY one commits no figure at all -
+  // it is not knowable until hours are submitted, and an invented estimate is a
+  // number nobody promised. It gets trued up when the work is accepted.
+  await commitForContract(
+    contract.id,
+    app.workerId,
+    committableAmount(app.task),
+    userActor(req.user!.id)
+  );
 
   // Notify worker: approved + contract ready
   await notifyWorker(

@@ -5,6 +5,7 @@ import { writeAudit, userActor, auditData, type AuditActor } from "../util/audit
 import { notifyWorker, notifyWorkers } from "../services/push";
 
 import { transitionContract, type ContractState } from "../services/contractState";
+import { markPaidForContract } from "../services/commitments";
 
 const router = Router();
 
@@ -76,6 +77,13 @@ router.post("/:id/release", requireAuth, requireRole("SUPER_ADMIN"), async (req:
     via: "payment-released",
     paymentId: payment.id,
   });
+  const paidContract = await prisma.contract.findFirst({
+    where: { taskId: payment.taskId, workerId: payment.workerId },
+    select: { id: true },
+  });
+  if (paidContract) {
+    await markPaidForContract(paidContract.id, userActor(req.user!.id));
+  }
   await writeAudit(userActor(req.user!.id), "PAYMENT_RELEASED", "Payment", payment.id, {
     net: payment.net,
     gross: payment.gross,
@@ -99,21 +107,27 @@ router.post("/release-all", requireAuth, requireRole("SUPER_ADMIN"), async (req:
   const approved = await prisma.payment.findMany({ where: { status: "APPROVED" } });
   const totalNet = approved.reduce((sum, p) => sum + p.net, 0);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.payment.updateMany({ where: { status: "APPROVED" }, data: { status: "RELEASED" } });
-    for (const p of approved) {
-      // auditData() rather than writeAudit(), so this writes through the
-      // transaction's own client instead of a second connection.
-      await tx.auditLog.create({
+  // ARRAY FORM, NOT THE CALLBACK FORM. D1 does not support interactive
+  // transactions - the callback version throws - so this endpoint could never
+  // have released a batch in production.
+  //
+  // Every audit row is built up front and sent in the SAME batch as the status
+  // update, so a release cannot land without its trail. auditData() rather than
+  // writeAudit() for that reason: writeAudit writes on its own and would fall
+  // outside the batch.
+  await prisma.$transaction([
+    prisma.payment.updateMany({ where: { status: "APPROVED" }, data: { status: "RELEASED" } }),
+    ...approved.map((p) =>
+      prisma.auditLog.create({
         data: auditData(userActor(req.user!.id), "PAYMENT_RELEASED", "Payment", p.id, {
           net: p.net,
           gross: p.gross,
           workerId: p.workerId,
           batch: true,
         }),
-      });
-    }
-  });
+      })
+    ),
+  ]);
 
   // Notify each worker whose payment was released
   const workerIds = [...new Set(approved.map((p) => p.workerId))];

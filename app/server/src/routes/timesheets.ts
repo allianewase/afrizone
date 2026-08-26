@@ -6,6 +6,7 @@ import { tiersToArray } from "../types";
 import { computeWht } from "../util/tax";
 
 import { transitionContract, type ContractState } from "../services/contractState";
+import { releaseForContract } from "../services/commitments";
 import { userActor, type AuditActor } from "../util/audit";
 
 const router = Router();
@@ -138,12 +139,21 @@ router.post("/:id/approve", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGE
   const whtRate = 0.05;
   const { whtAmount, net } = computeWht(gross, whtRate);
 
-  const result = await prisma.$transaction(async (tx) => {
-    const updatedSheet = await tx.timesheet.update({
+  // ARRAY FORM, NOT THE CALLBACK FORM. D1 does not support interactive
+  // transactions at all - `$transaction(async tx => ...)` throws outright - so
+  // the callback version meant this endpoint could never run in production.
+  // Approving a timesheet is what mints a Payment, so nothing was payable.
+  //
+  // Neither statement depends on the other's result, so the batch form is a
+  // straight swap and keeps the two writes atomic: a timesheet marked approved
+  // with no Payment behind it is a worker who did the work and is owed nothing
+  // on paper.
+  const [updatedSheet, payment] = await prisma.$transaction([
+    prisma.timesheet.update({
       where: { id: sheet.id },
       data: { status: "APPROVED" },
-    });
-    const payment = await tx.payment.create({
+    }),
+    prisma.payment.create({
       data: {
         workerId: sheet.workerId,
         taskId: sheet.taskId,
@@ -153,9 +163,20 @@ router.post("/:id/approve", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGE
         net,
         status: "APPROVED",
       },
-    });
-    return { updatedSheet, payment };
+    }),
+  ]);
+  const result = { updatedSheet, payment };
+
+  // Acceptance releases the ring-fence, and this is where an hourly commitment
+  // finally gets its number - taken from what was actually verified rather than
+  // from anything estimated at the start.
+  const liveContract = await prisma.contract.findFirst({
+    where: { taskId: sheet.taskId, workerId: sheet.workerId },
+    select: { id: true },
   });
+  if (liveContract) {
+    await releaseForContract(liveContract.id, result.payment.net, userActor(req.user!.id));
+  }
 
   // Acceptance criteria met, so money becomes owed. VERIFIED is the state the
   // Payment hangs off - it is created in the same transaction above.

@@ -13,6 +13,14 @@ const prisma = new PrismaClient();
 // parents before children, so FK references always exist by insert time.
 const TABLES_CHILD_TO_PARENT = [
   "AuditLog",
+  // Commitment FKs Contract, Organization AND User, so it is the most-child row
+  // here and clears first.
+  //
+  // This list doubles as the INSERT order in reverse, and that ordering is
+  // load-bearing rather than tidy: the dump opens with PRAGMA foreign_keys=OFF,
+  // but D1 does NOT honour it - a row inserted before its parent fails with a
+  // plain FOREIGN KEY constraint error and takes the whole seed down.
+  "Commitment",
   // Task requirements, before Task and before the two catalogues they point at.
   "TaskSkillRequirement",
   "TaskCredentialRequirement",
@@ -98,7 +106,7 @@ async function seedLocalD1() {
       stdio: "inherit",
     });
   } finally {
-    fs.unlinkSync(dumpPath);
+    if (!process.env.KEEP_SEED_DUMP) fs.unlinkSync(dumpPath);
   }
 }
 
@@ -111,6 +119,8 @@ async function main() {
   // Clear existing data (idempotent re-seed). Order respects FKs.
   await prisma.auditLog.deleteMany();
   // v3 tables (delete before payments/tasks/users they reference)
+  // Commitment FKs Contract, Organization AND User, so it clears before all three.
+  await prisma.commitment.deleteMany();
   await prisma.clockEvent.deleteMany();
   await prisma.withdrawal.deleteMany();
   await prisma.contract.deleteMany();
@@ -459,9 +469,26 @@ async function main() {
 
   // ── v3: Amaka's worker journey (mobile app demo data) ─────────────────────
   // Amaka already has: APPROVED application on tPromo + ₦18,000 APPROVED Payment.
-  // An assigned but not-yet-started contract for the approved mall activation.
-  await prisma.contract.create({
+  // An assigned but not-yet-started contract for the approved mall activation,
+  // with its pay ring-fenced.
+  //
+  // The commitment is created here explicitly because the seed writes contracts
+  // straight to the database rather than going through the approve endpoint
+  // that normally mints one. Without it a fresh seed shows an empty escrow
+  // view, and a feature that only appears once somebody hand-approves an
+  // application is a feature that gets reported as missing.
+  const promoContract = await prisma.contract.create({
     data: { taskId: tPromo.id, workerId: amaka.id, status: "CLAIMED" },
+  });
+  await prisma.commitment.create({
+    data: {
+      contractId: promoContract.id,
+      workerId: amaka.id,
+      // FIXED task, so the ring-fence is exact from the start.
+      amount: tPromo.budget,
+      reason: "TASK_PAY",
+      status: "COMMITTED",
+    },
   });
   // A second PROMO task so Amaka has a tier-matching "Applied" item.
   const tPromo2 = await prisma.task.create({

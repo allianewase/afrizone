@@ -94,6 +94,7 @@ model User {
   credentials         Credential[]         @relation("WorkerCredentials")
   credentialsReviewed Credential[]         @relation("CredentialsReviewed")
   orgMemberships      OrganizationMember[]
+  commitments         Commitment[]         @relation("WorkerCommitments")
 }
 
 model Task {
@@ -387,8 +388,9 @@ model Contract {
   signatureHash String? // SHA-256 of `${contractId}:${workerId}:${signerName}:${signedAt.toISOString()}`, for tamper-evidence
   createdAt     DateTime  @default(now())
 
-  task   Task @relation(fields: [taskId], references: [id])
-  worker User @relation(fields: [workerId], references: [id])
+  task        Task         @relation(fields: [taskId], references: [id])
+  worker      User         @relation(fields: [workerId], references: [id])
+  commitments Commitment[]
 
   @@index([taskId, workerId])
   @@index([workerId])
@@ -712,7 +714,8 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members OrganizationMember[]
+  members     OrganizationMember[]
+  commitments Commitment[]
 
   /// "Which stores are live?" and "which courier companies are waiting for
   /// approval?" are both list screens, and both filter on exactly this pair.
@@ -750,4 +753,65 @@ model OrganizationMember {
   @@unique([organizationId, userId])
   /// "Which businesses can this person act for?" - the sign-in picker.
   @@index([userId])
+}
+
+/// Money ring-fenced against a piece of work. Blueprint §10's escrow.
+///
+/// AFRIZONE PART-TIME NEVER HOLDS THE MONEY. AfriZoneMart holds it throughout;
+/// this row records that a specific amount is committed to a specific
+/// engagement, and that it became payable on acceptance. The worker-facing
+/// promise is identical to custodial escrow - their pay is ring-fenced the
+/// moment the contract goes live - while Part-Time stays a ledger rather than a
+/// regulated payments business. See MART_INTEGRATION.md §7.
+///
+/// WHY THIS IS NOT Payment. Payment is created at acceptance, is worker-only,
+/// and carries withholding tax because it is wages. A Commitment is created
+/// when the contract goes LIVE, can be owed to an organization as easily as a
+/// person, and carries no tax because a store selling goods is not earning
+/// wages. They coexist: the Commitment is the promise, the Payment is the wage
+/// calculation.
+model Commitment {
+  id String @id @default(cuid())
+
+  /// COMMITTED | RELEASED | PAID | CANCELLED. Transitions in
+  /// services/commitmentState.ts, which is the only thing that should move one.
+  status String @default("COMMITTED")
+
+  /// Who is owed. EXACTLY ONE of these is set - a commitment owed to nobody, or
+  /// to two parties, is a bug rather than a state.
+  workerId       String?
+  organizationId String?
+
+  /// What it is owed for. At most one.
+  contractId  String?
+  /// An AfriZoneMart order, for store fulfilment that has no Contract behind it.
+  martOrderId String?
+
+  /// Whole Naira, and NULLABLE on purpose.
+  ///
+  /// A FIXED task has a budget, so the ring-fence is exact from the start. An
+  /// HOURLY one cannot be known until hours are submitted, so it is committed
+  /// with no figure and trued up on acceptance. Inventing an estimate would put
+  /// a number in front of a worker that nobody promised them.
+  amount Int?
+
+  /// TASK_PAY | ORDER_FULFILMENT | DELIVERY_FEE | RETAINER
+  reason String
+  note   String?
+
+  committedAt DateTime  @default(now())
+  releasedAt  DateTime?
+  paidAt      DateTime?
+  cancelledAt DateTime?
+
+  worker       User?         @relation("WorkerCommitments", fields: [workerId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  contract     Contract?     @relation(fields: [contractId], references: [id])
+
+  /// One commitment per engagement per reason: a contract must not accumulate
+  /// duplicate ring-fences because an endpoint was retried.
+  @@unique([contractId, reason])
+  /// "What is ring-fenced for me?" - the wallet asks this on every load.
+  @@index([workerId, status])
+  @@index([organizationId, status])
 }
