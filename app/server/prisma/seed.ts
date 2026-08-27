@@ -5,6 +5,7 @@ import path from "path";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { computeWht } from "../src/util/tax";
+import { CATEGORIES, CREDENTIAL_TYPES, SKILLS, TAX_RATES } from "./reference";
 
 const prisma = new PrismaClient();
 
@@ -34,6 +35,11 @@ const TABLES_CHILD_TO_PARENT = [
   // for the same reason as everything else in this list: without it, a re-seed
   // leaves the previous run's rows behind, which is exactly the kind of
   // leftover that makes a "clean" database behave unaccountably.
+  // CourierProfile FKs User, so it clears before it. Added with migration 0018:
+  // a new table with a foreign key that is missing from this list makes the
+  // seed fail with a bare "FOREIGN KEY constraint failed" and no table name,
+  // which is a genuinely slow thing to diagnose.
+  "CourierProfile",
   "Notification",
   "ClockEvent",
   "Withdrawal",
@@ -631,23 +637,17 @@ async function main() {
     });
   }
 
-  // ── v2: Settings, tax rates ───────────────────────────────────────────────
-  await prisma.taxRate.create({
-    data: { jurisdiction: "Federal", category: "Services", whtRate: 0.05, vatRate: 0.075, active: true },
-  });
-  await prisma.taxRate.create({
-    data: { jurisdiction: "Lagos", category: "default", whtRate: 0.05, vatRate: 0, active: true },
-  });
+  // ── Reference catalogues ──────────────────────────────────────────────────
+  //
+  // From prisma/reference.ts, which is also what scripts/reference-sql.ts turns
+  // into production SQL. One list, so a document type that exists in dev cannot
+  // be missing in production - which a worker would discover by being asked for
+  // a paper the catalogue has no entry for.
+  for (const t of TAX_RATES) {
+    await prisma.taxRate.create({ data: { ...t, active: true } });
+  }
 
-  // ── v2: Settings, categories ──────────────────────────────────────────────
-  const cats: Array<{ name: string; tier: string; defaultPayModel: string }> = [
-    { name: "Dispatch", tier: "DISPATCH", defaultPayModel: "HOURLY" },
-    { name: "Promo", tier: "PROMO", defaultPayModel: "FIXED" },
-    { name: "Remote", tier: "REMOTE", defaultPayModel: "HOURLY" },
-    { name: "Trade", tier: "TRADE", defaultPayModel: "FIXED" },
-    { name: "Student", tier: "STUDENT", defaultPayModel: "HOURLY" },
-  ];
-  for (const cat of cats) {
+  for (const cat of CATEGORIES) {
     await prisma.category.create({ data: { ...cat, active: true } });
   }
 
@@ -660,24 +660,7 @@ async function main() {
   // gate nothing. Anything that must actually be guaranteed - a licence, a
   // certification, proof of enrolment - is a credential type, because only
   // those are checked by a person. See schema.prisma.
-  const skills: Array<{ name: string; slug: string; group: string; sortOrder: number }> = [
-    { name: "Motorcycle riding", slug: "motorcycle-riding", group: "Logistics", sortOrder: 1 },
-    { name: "Route planning", slug: "route-planning", group: "Logistics", sortOrder: 2 },
-    { name: "Parcel handling", slug: "parcel-handling", group: "Logistics", sortOrder: 3 },
-    { name: "Customer service", slug: "customer-service", group: "Retail", sortOrder: 1 },
-    { name: "Product sampling", slug: "product-sampling", group: "Retail", sortOrder: 2 },
-    { name: "Merchandising", slug: "merchandising", group: "Retail", sortOrder: 3 },
-    { name: "Cash handling", slug: "cash-handling", group: "Retail", sortOrder: 4 },
-    { name: "Data entry", slug: "data-entry", group: "Office", sortOrder: 1 },
-    { name: "Survey administration", slug: "survey-administration", group: "Office", sortOrder: 2 },
-    { name: "Social media", slug: "social-media", group: "Office", sortOrder: 3 },
-    { name: "Photography", slug: "photography", group: "Creative", sortOrder: 1 },
-    { name: "Event setup", slug: "event-setup", group: "Creative", sortOrder: 2 },
-    { name: "Electrical work", slug: "electrical-work", group: "Trade", sortOrder: 1 },
-    { name: "Plumbing", slug: "plumbing", group: "Trade", sortOrder: 2 },
-    { name: "Carpentry", slug: "carpentry", group: "Trade", sortOrder: 3 },
-  ];
-  for (const sk of skills) {
+  for (const sk of SKILLS) {
     await prisma.skill.create({ data: { ...sk, active: true } });
   }
 
@@ -847,121 +830,13 @@ async function main() {
     ],
   });
 
-  const credentialTypes: Array<{
-    name: string;
-    slug: string;
-    reviewMode: string;
-    issuerMode: string;
-    requiresExpiry: boolean;
-    requiresReference: boolean;
-    requiresFile: boolean;
-    issuerHint?: string;
-    sortOrder: number;
-  }> = [
-    {
-      name: "Driver's licence",
-      slug: "drivers-licence",
-      reviewMode: "ADMIN_REVIEW",
-      issuerMode: "THIRD_PARTY",
-      requiresExpiry: true,
-      requiresReference: true,
-      requiresFile: true,
-      issuerHint: "FRSC",
-      sortOrder: 1,
-    },
-    {
-      name: "Vehicle registration",
-      slug: "vehicle-registration",
-      reviewMode: "ADMIN_REVIEW",
-      issuerMode: "THIRD_PARTY",
-      requiresExpiry: true,
-      requiresReference: true,
-      requiresFile: true,
-      sortOrder: 2,
-    },
-    {
-      // The third of the courier papers, and the one this build was missing.
-      // A CredentialType rather than a column for the same reason a licence is:
-      // it expires, a person has to look at it, and expiry is computed from the
-      // clock rather than stored - so a lapsed policy cannot keep reading as
-      // valid because a background job did not run.
-      name: "Vehicle insurance",
-      slug: "vehicle-insurance",
-      reviewMode: "ADMIN_REVIEW",
-      issuerMode: "THIRD_PARTY",
-      requiresExpiry: true,
-      requiresReference: true,
-      requiresFile: true,
-      issuerHint: "Insurer",
-      sortOrder: 3,
-    },
-    {
-      name: "Student enrolment",
-      slug: "student-enrolment",
-      reviewMode: "ADMIN_REVIEW",
-      issuerMode: "THIRD_PARTY",
-      requiresExpiry: true,
-      requiresReference: true,
-      requiresFile: true,
-      issuerHint: "University or polytechnic",
-      sortOrder: 4,
-    },
-    {
-      name: "Trade certification",
-      slug: "trade-certification",
-      reviewMode: "ADMIN_REVIEW",
-      issuerMode: "THIRD_PARTY",
-      requiresExpiry: false,
-      requiresReference: false,
-      requiresFile: true,
-      sortOrder: 5,
-    },
-    {
-      name: "CV",
-      slug: "cv",
-      reviewMode: "SELF_DECLARED",
-      issuerMode: "THIRD_PARTY",
-      requiresExpiry: false,
-      requiresReference: false,
-      requiresFile: true,
-      sortOrder: 6,
-    },
-    {
-      // Issued by Afrizone on the evidence of platform history rather than any
-      // third-party paper. This is the route by which a worker who is plainly
-      // competent, but holds no formal certificate, can still pass a gate.
-      name: "Afrizone verified dispatch rider",
-      slug: "afrizone-verified-dispatch",
-      reviewMode: "ADMIN_REVIEW",
-      issuerMode: "AFRIZONE",
-      requiresExpiry: false,
-      requiresReference: false,
-      requiresFile: false,
-      sortOrder: 7,
-    },
-  ];
-  for (const ct of credentialTypes) {
+  // Credential types, including the auditor accreditation that
+  // services/storeAudit.ts looks up BY SLUG when generating an inspection task.
+  // Without that row the task is created ungated, which is worse than not
+  // creating one, and the service says so loudly in the audit trail.
+  for (const ct of CREDENTIAL_TYPES) {
     await prisma.credentialType.create({ data: { ...ct, active: true } });
   }
-
-  // The credential that makes somebody an Auditor (Blueprint §3.1: "a store
-  // audit requires a verified auditor credential"). Seeded because
-  // services/storeAudit.ts looks it up by slug when generating an inspection
-  // task - without it the task is created ungated, which is worse than not
-  // creating one, and the service says so loudly in the audit trail.
-  await prisma.credentialType.create({
-    data: {
-      name: "Auditor accreditation",
-      slug: "auditor-accreditation",
-      reviewMode: "ADMIN_REVIEW",
-      issuerMode: "AFRIZONE",
-      requiresExpiry: true,
-      requiresReference: false,
-      requiresFile: false,
-      active: true,
-      sortOrder: 8,
-    },
-  });
 
   // ── One gated task, so a fresh seed actually shows the requirements gate ──
   //

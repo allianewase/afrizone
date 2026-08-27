@@ -9,6 +9,7 @@
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
     "seed": "ts-node-dev --transpile-only prisma/seed.ts",
+    "reference:sql": "ts-node-dev --transpile-only scripts/reference-sql.ts",
     "prisma:push": "prisma db push",
     "prisma:generate": "prisma generate",
     "setup": "prisma generate && prisma db push && npm run seed",
