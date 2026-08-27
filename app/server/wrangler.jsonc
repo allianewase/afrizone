@@ -25,7 +25,13 @@
     // admin.afrizonemart.com, which belong to Afrizoma's separate
     // e-commerce infrastructure. See the api.parttime.afrizonemart.com /
     // admin.parttime.afrizonemart.com Worker/Pages custom domains.
-    "CORS_ORIGIN": "https://admin.parttime.afrizonemart.com,https://afrizone.pages.dev",
+    // Two audiences, two origins. admin.* is Afrizone staff; portal.* is the
+    // store and courier facing app, which is a separate Pages project on
+    // purpose - one deploy must not be able to break the other's users.
+    //
+    // The .pages.dev entries are the projects' own preview hostnames, kept so a
+    // deployment can be checked before its custom domain is pointed at it.
+    "CORS_ORIGIN": "https://admin.parttime.afrizonemart.com,https://afrizone.pages.dev,https://portal.parttime.afrizonemart.com,https://afrizone-portal.pages.dev",
     "WEB_ADMIN_URL": "https://admin.parttime.afrizonemart.com",
     // OAuth client IDs are public identifiers, not secrets (they already ship
     // inside the mobile app bundle) - safe to check in, unlike GOOGLE_*
