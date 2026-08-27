@@ -603,3 +603,30 @@ export interface TaskRule {
 }
 
 export type TaskRules = Record<string, TaskRule>
+
+/* ===== Store network map (Blueprint §8) ===== */
+
+/** One approved business, as something to travel to. */
+export interface MapNode {
+  id: string
+  kind: OrgKind
+  name: string
+  slug: string
+  address: string | null
+  lat: number
+  lng: number
+  /** Null unless the request carried a reference point. */
+  distanceMetres: number | null
+  distance: string | null
+}
+
+export interface OrgMap {
+  count: number
+  /**
+   * Approved businesses the map cannot show, because nobody set their
+   * coordinates. Counted separately so "not approved yet" stays distinguishable
+   * from "approved but unplaceable" - they need different people to fix them.
+   */
+  unplaced: number
+  nodes: MapNode[]
+}

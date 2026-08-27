@@ -17,6 +17,7 @@ import Settings from './pages/Settings'
 import Disputes from './pages/Disputes'
 import Verification from './pages/Verification'
 import Mart from './pages/Mart'
+import Network from './pages/Network'
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/verification" element={<Verification />} />
         <Route path="/workers" element={<Workers />} />
         <Route path="/organizations" element={<Organizations />} />
+        <Route path="/network" element={<Network />} />
         <Route path="/mart" element={<Mart />} />
         <Route path="/hiring" element={<Hiring />} />
         <Route path="/reports" element={<Reports />} />

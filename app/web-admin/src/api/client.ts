@@ -50,6 +50,7 @@ import type {
   RejectionReasonCode,
   CredentialCorrections,
   MartEventsResponse,
+  OrgMap,
   MartEventStatus,
   TaskRules,
 } from './types'
@@ -438,6 +439,22 @@ export const api = {
     return request<MartEventsResponse>(`/admin/mart/events${qs ? `?${qs}` : ''}`, { signal })
   },
   martRules: (signal?: AbortSignal) => request<TaskRules>('/admin/mart/rules', { signal }),
+
+  // ===== Store network map =====
+  // The endpoint is open to any signed-in user by design - a courier needs it -
+  // so this is the same call the mobile app makes, not an admin-only one.
+  orgMap: (
+    kind: OrgKind,
+    from: { lat: number; lng: number } | null,
+    signal?: AbortSignal,
+  ) => {
+    const q = new URLSearchParams({ kind })
+    if (from) {
+      q.set('lat', String(from.lat))
+      q.set('lng', String(from.lng))
+    }
+    return request<OrgMap>(`/organizations/map?${q.toString()}`, { signal })
+  },
   // Generation rules are Settings rows, so they are written through the same
   // endpoint every other setting uses rather than a second write path.
   putRule: (kind: string, param: string, value: string) =>

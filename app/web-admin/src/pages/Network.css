@@ -1,0 +1,168 @@
+/* ===== Store network map ===== */
+
+.net-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.net-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.net-warn {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  border-left: 3px solid var(--gold);
+}
+.net-warn svg {
+  color: var(--gold);
+  flex: none;
+  margin-top: 2px;
+}
+
+.net-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  align-items: start;
+}
+.net-mapcard {
+  padding: 0;
+  overflow: hidden;
+}
+/* Leaflet needs a real height on its container - a percentage against an auto
+   parent collapses to zero and the map renders as an empty box. */
+.net-map {
+  height: 620px;
+  width: 100%;
+  border-radius: var(--r-md);
+}
+/* The tile layer paints its own attribution in a light box; keep it legible
+   without letting it borrow the page's card styling. */
+.net-map .leaflet-control-attribution {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.net-list {
+  padding: 8px;
+  max-height: 620px;
+  overflow-y: auto;
+}
+.net-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.net-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.net-item:hover {
+  background: var(--glass-2);
+}
+.net-item.sel {
+  background: var(--glass-2);
+  box-shadow: inset 2px 0 0 var(--clay-deep);
+}
+.net-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+.net-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.net-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.net-addr {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.net-dist {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--clay-deep);
+  flex: none;
+}
+
+/* ===== pins ===== */
+/* divIcon carries a default white background and border; the wrapper clears
+   them so only the shape below is visible. */
+.net-pin-wrap {
+  background: transparent;
+  border: 0;
+}
+.net-pin {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: var(--pin);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.net-pin.sel {
+  outline: 3px solid rgba(233, 162, 59, 0.6);
+}
+.net-origin {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #1e2643;
+  border: 3px solid #e9a23b;
+  box-shadow: 0 0 0 4px rgba(233, 162, 59, 0.25);
+}
+
+@media (max-width: 1000px) {
+  .net-grid {
+    grid-template-columns: 1fr;
+  }
+  .net-map {
+    height: 420px;
+  }
+  .net-list {
+    max-height: none;
+  }
+}
+
+/* The lazy chunk's fallback has to reserve the same height, or the page jumps
+   as the map arrives. */
+.net-map-loading {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 13px;
+}

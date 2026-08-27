@@ -796,6 +796,57 @@ async function main() {
     data: { organizationId: demoCourierCo.id, userId: courierRider.id, role: "STAFF" },
   });
 
+  // ── More of the network, so the map is a map ──────────────────────────────
+  //
+  // These carry no members and no bank details, deliberately: they exist to be
+  // PLACES. One store is not a network, and a map with a single pin cannot show
+  // the two things the screen is for - relative distance, and the gap below.
+  //
+  // Ibadan is 120km out on purpose. Every fixture inside Lagos makes any
+  // distance bug look like a rounding error; one far node makes it obvious.
+  await prisma.organization.createMany({
+    data: [
+      {
+        kind: "STORE",
+        name: "Yaba Market Hub",
+        slug: "yaba-market-hub",
+        address: "6 Commercial Avenue, Yaba, Lagos",
+        lat: 6.5095,
+        lng: 3.3711,
+        status: "ACTIVE",
+      },
+      {
+        kind: "STORE",
+        name: "Lekki Phase 1 Depot",
+        slug: "lekki-phase-1-depot",
+        address: "14 Admiralty Way, Lekki Phase 1, Lagos",
+        lat: 6.4433,
+        lng: 3.4726,
+        status: "ACTIVE",
+      },
+      {
+        kind: "STORE",
+        name: "Ibadan Gate Store",
+        slug: "ibadan-gate-store",
+        address: "Ring Road, Ibadan, Oyo",
+        lat: 7.3775,
+        lng: 3.947,
+        status: "ACTIVE",
+      },
+      {
+        // APPROVED AND UNPLACEABLE, and that is the fixture. It can take work,
+        // it just cannot be navigated to, and it is invisible on the map. The
+        // seed carries one so the "not shown" warning is exercised by default
+        // rather than discovered when a courier cannot find a shop.
+        kind: "STORE",
+        name: "Apapa Wharf Store",
+        slug: "apapa-wharf-store",
+        address: "Wharf Road, Apapa, Lagos",
+        status: "ACTIVE",
+      },
+    ],
+  });
+
   const credentialTypes: Array<{
     name: string;
     slug: string;
