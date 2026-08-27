@@ -386,6 +386,24 @@ function ReviewModal({
               </div>
             </div>
 
+            {credential.courier && (
+              <div className="verif-note">
+                <Icon name="pin" size={15} />
+                <span>
+                  Declared vehicle: <strong>{credential.courier.label}</strong>
+                  {credential.courier.plateNumber ? (
+                    <>
+                      {' · plate '}
+                      <strong>{credential.courier.plateNumber}</strong>
+                    </>
+                  ) : (
+                    ' · no plate'
+                  )}
+                  . Check it matches the document.
+                </span>
+              </div>
+            )}
+
             {credential.duplicateOf && (
               <div className="verif-warn" role="alert">
                 <Icon name="alert" size={15} />

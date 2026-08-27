@@ -139,3 +139,24 @@
   border: 1px solid var(--line, rgba(255, 255, 255, 0.16));
   background: var(--bg2);
 }
+
+/* Context, not a warning. The declared vehicle is something to compare the
+   document against, and giving it the amber treatment of .verif-warn would say
+   something is wrong when nothing is. */
+.verif-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  background: var(--glass-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+.verif-note svg {
+  color: var(--muted);
+  flex: none;
+  margin-top: 1px;
+}

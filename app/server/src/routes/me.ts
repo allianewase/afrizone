@@ -7,6 +7,13 @@ import { getFileBuffer } from "../services/storage";
 import { requireAssignedTask } from "../util/assignment";
 import { closeIfBothSidesRated, isRateable } from "../services/ratings";
 import { commitmentLabel, commitmentSummary } from "../services/commitments";
+import {
+  courierReadiness,
+  saveCourierVehicle,
+  VEHICLE_LABEL,
+  VEHICLE_TYPES,
+  requiresPlate,
+} from "../services/courier";
 import { recordAudit } from "../services/storeAudit";
 import { userActor } from "../util/audit";
 
@@ -40,6 +47,12 @@ function formatUser(user: any) {
     email: user.email,
     phone: user.phone ?? null,
     tiers: tiersToArray(user.tiers),
+    // INDIVIDUAL | STORE | COURIER. The client's own User type has declared this
+    // since the account-type work landed, and this endpoint never sent it - so
+    // every screen branching on it silently took the INDIVIDUAL path. A field
+    // the client believes it has and the server does not send is worse than an
+    // absent one, because nothing errors.
+    accountType: user.accountType,
     kycStatus: user.kycStatus,
     kycNote: user.kycNote ?? null,
     location: user.location,
@@ -810,6 +823,53 @@ router.get("/tax-statement", requireAuth, async (req: AuthedRequest, res: Respon
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   res.send(rows.join("\r\n"));
+});
+
+/**
+ * GET /api/me/courier -> how far along this courier is (Blueprint §3.2).
+ *
+ * OPEN TO ANY SIGNED-IN USER, not gated on accountType COURIER. Somebody
+ * deciding whether to start delivering should be able to see what it would take
+ * before they commit to being one, and a checklist that 403s until you have
+ * already declared yourself is a door with the instructions on the inside.
+ *
+ * This is a progress report and gates nothing. Whether a courier may take a
+ * particular delivery is services/eligibility.ts, and it stays that way.
+ */
+router.get("/courier", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const readiness = await courierReadiness(req.user!.id);
+  res.json({
+    ...readiness,
+    // The catalogue travels with the answer so the client never hard-codes a
+    // list of vehicles that then drifts from the server's.
+    vehicleTypes: VEHICLE_TYPES.map((t) => ({
+      value: t,
+      label: VEHICLE_LABEL[t],
+      requiresPlate: requiresPlate(t),
+    })),
+  });
+});
+
+/** PUT /api/me/courier/vehicle -> record or change what they deliver on. */
+router.put("/courier/vehicle", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const vehicleType = String(req.body?.vehicleType ?? "");
+  const plateNumber = req.body?.plateNumber != null ? String(req.body.plateNumber) : null;
+
+  const result = await saveCourierVehicle(req.user!.id, vehicleType, plateNumber);
+  if (!result.ok) return res.status(result.status).json({ error: result.error });
+
+  // The readiness is returned rather than just the row: changing the vehicle
+  // changes which papers are required, and a client that has to ask again to
+  // find that out will show a stale checklist in between.
+  const readiness = await courierReadiness(req.user!.id);
+  res.json({
+    ...readiness,
+    vehicleTypes: VEHICLE_TYPES.map((t) => ({
+      value: t,
+      label: VEHICLE_LABEL[t],
+      requiresPlate: requiresPlate(t),
+    })),
+  });
 });
 
 export default router;

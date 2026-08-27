@@ -7,7 +7,15 @@
  * the map of every admin endpoint to a store's browser, which is the thing this
  * whole application exists to avoid.
  */
-import type { AccountType, AuthResponse, Organization, OrgKind, OrgMember, User } from './types'
+import type {
+  AccountType,
+  AuthResponse,
+  CourierReadiness,
+  Organization,
+  OrgKind,
+  OrgMember,
+  User,
+} from './types'
 
 const TOKEN_KEY = 'afz_portal_token'
 const API_BASE = `${import.meta.env.VITE_API_URL ?? ''}/api`
@@ -107,4 +115,17 @@ export const api = {
   /** Record the business's CAC registration number. OWNER only, server-side. */
   submitCac: (id: string, cacNumber: string) =>
     request<Organization>(`/organizations/${id}/cac`, { method: 'POST', body: { cacNumber } }),
+
+  /** How far along a courier is. A progress report; it gates nothing. */
+  courierReadiness: (signal?: AbortSignal) =>
+    request<CourierReadiness>('/me/courier', { signal }),
+
+  // Answers with the whole readiness, not just the row: changing the vehicle
+  // changes which papers are required, and a client that has to ask again shows
+  // a stale checklist in between.
+  saveVehicle: (vehicleType: string, plateNumber: string | null) =>
+    request<CourierReadiness>('/me/courier/vehicle', {
+      method: 'PUT',
+      body: { vehicleType, plateNumber },
+    }),
 }

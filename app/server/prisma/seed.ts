@@ -880,6 +880,22 @@ async function main() {
       sortOrder: 2,
     },
     {
+      // The third of the courier papers, and the one this build was missing.
+      // A CredentialType rather than a column for the same reason a licence is:
+      // it expires, a person has to look at it, and expiry is computed from the
+      // clock rather than stored - so a lapsed policy cannot keep reading as
+      // valid because a background job did not run.
+      name: "Vehicle insurance",
+      slug: "vehicle-insurance",
+      reviewMode: "ADMIN_REVIEW",
+      issuerMode: "THIRD_PARTY",
+      requiresExpiry: true,
+      requiresReference: true,
+      requiresFile: true,
+      issuerHint: "Insurer",
+      sortOrder: 3,
+    },
+    {
       name: "Student enrolment",
       slug: "student-enrolment",
       reviewMode: "ADMIN_REVIEW",
@@ -888,7 +904,7 @@ async function main() {
       requiresReference: true,
       requiresFile: true,
       issuerHint: "University or polytechnic",
-      sortOrder: 3,
+      sortOrder: 4,
     },
     {
       name: "Trade certification",
@@ -898,7 +914,7 @@ async function main() {
       requiresExpiry: false,
       requiresReference: false,
       requiresFile: true,
-      sortOrder: 4,
+      sortOrder: 5,
     },
     {
       name: "CV",
@@ -908,7 +924,7 @@ async function main() {
       requiresExpiry: false,
       requiresReference: false,
       requiresFile: true,
-      sortOrder: 5,
+      sortOrder: 6,
     },
     {
       // Issued by Afrizone on the evidence of platform history rather than any
@@ -921,7 +937,7 @@ async function main() {
       requiresExpiry: false,
       requiresReference: false,
       requiresFile: false,
-      sortOrder: 6,
+      sortOrder: 7,
     },
   ];
   for (const ct of credentialTypes) {
@@ -943,7 +959,7 @@ async function main() {
       requiresReference: false,
       requiresFile: false,
       active: true,
-      sortOrder: 7,
+      sortOrder: 8,
     },
   });
 

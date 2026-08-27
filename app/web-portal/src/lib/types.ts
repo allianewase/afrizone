@@ -60,3 +60,29 @@ export interface OrgMember {
   name?: string | null
   email?: string | null
 }
+
+/* ===== Courier onboarding ===== */
+
+/**
+ * WAITING is deliberately distinct from TODO. A rider who has uploaded a
+ * document and is waiting on Afrizone has nothing left to do, and showing that
+ * as incomplete sends them looking for work that is not theirs.
+ */
+export type StepState = 'DONE' | 'WAITING' | 'TODO' | 'PROBLEM'
+
+export interface ReadinessStep {
+  key: string
+  label: string
+  state: StepState
+  /** Written by the server. No client composes this sentence. */
+  detail: string
+}
+
+export interface CourierReadiness {
+  ready: boolean
+  steps: ReadinessStep[]
+  /** TODO and PROBLEM steps only - the ones the courier can act on. */
+  outstanding: number
+  vehicle: { type: string; label: string; plateNumber: string | null } | null
+  vehicleTypes: { value: string; label: string; requiresPlate: boolean }[]
+}

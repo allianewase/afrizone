@@ -5,6 +5,7 @@ import { tiersToArray, tiersToString, TIERS, Tier, isCredentialValid, isCredenti
 import { writeAudit, userActor } from "../util/audit";
 import { resolveUrl } from "../services/storage";
 import { notifyWorker } from "../services/push";
+import { VEHICLE_LABEL, type VehicleType } from "../services/courier";
 
 const router = Router();
 
@@ -54,6 +55,10 @@ router.get("/:id", requireAuth, requireRole("SUPER_ADMIN", "HR_ADMIN", "TASK_MAN
       applications: { include: { task: true }, orderBy: { createdAt: "desc" } },
       payments: { include: { task: true }, orderBy: { createdAt: "desc" } },
       withdrawals: true,
+      // A reviewer looking at a vehicle registration has to be able to see WHICH
+      // vehicle it is claimed for. Without this the document and the plate on it
+      // are two facts nobody can put side by side.
+      courierProfile: true,
     },
   });
   if (!worker || worker.role !== "WORKER") return res.status(404).json({ error: "Worker not found" });
@@ -81,6 +86,13 @@ router.get("/:id", requireAuth, requireRole("SUPER_ADMIN", "HR_ADMIN", "TASK_MAN
       task: { id: p.task.id, title: p.task.title },
     })),
     wallet: wallet(worker.payments, worker.withdrawals),
+    courier: worker.courierProfile
+      ? {
+          vehicleType: worker.courierProfile.vehicleType,
+          label: VEHICLE_LABEL[worker.courierProfile.vehicleType as VehicleType] ?? worker.courierProfile.vehicleType,
+          plateNumber: worker.courierProfile.plateNumber,
+        }
+      : null,
   });
 });
 

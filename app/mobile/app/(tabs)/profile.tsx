@@ -175,6 +175,19 @@ export default function ProfileScreen() {
             onPress={() => router.push('/profile/skills')}
             chevron
           />
+          {/* Only couriers see this. The setup screen itself is readable by
+              anyone - somebody weighing up delivery work should be able to see
+              what it takes - but a row about vehicles on a photographer's
+              profile is noise. */}
+          {user?.accountType === 'COURIER' && (
+            <ListRow
+              icon="map-pin"
+              title="Courier setup"
+              subtitle="Your vehicle, licence and insurance"
+              onPress={() => router.push('/profile/courier')}
+              chevron
+            />
+          )}
         </Card>
       </Section>
 

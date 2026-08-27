@@ -4,10 +4,14 @@ The blueprint is the governing specification. This file reconciles it against
 what exists, so nobody has to read 16 sections and 30 tables side by side to find
 out what is done.
 
-**Headline: of the ten things Blueprint §15 lists for Phase 1, seven are
-finished and three are partial. Nothing is untouched.** The three that remain
-are each blocked on something outside the codebase — a verification provider, a
-courier onboarding decision, and a screen for data the API already returns.
+**Headline: every one of the ten things Blueprint §15 lists for Phase 1 is
+built.** What remains is not Phase 1 — it is delivery, ranked matching, evidence
+capture and the rest of §14, plus the operational work of switching Mart on.
+
+Two Phase 1 items are built to a deliberate limit, and pretending otherwise
+would be the more expensive mistake: **CAC verification is a manual check** until
+a registry provider is configured, and **the store map is an admin screen** —
+couriers see the network through the API, not a map on their phone.
 
 Living document. When it stops matching the code, the code is right.
 
@@ -22,14 +26,14 @@ approved stores; two-way ratings.*
 | Phase 1 item | Status | Where it stands |
 |---|---|---|
 | Tasker sign-up & KYC | **Built** | Phone-OTP and email sign-up, an 8-step KYC stepper, document upload to R2, Smile Identity when configured, manual admin review otherwise |
-| Courier sign-up & KYC | **Partial** | `accountType: COURIER` exists; `Driver's licence` and `Vehicle registration` exist as credential types. No courier-specific onboarding flow, no insurance field |
-| Store sign-up & KYC | **Partial** | `Organization`, membership, admin approval, a `tin` field, and a premises audit raised as gated paid work (§8) are live. No CAC verification — the one remaining gap, and it needs a provider |
+| Courier sign-up & KYC | **Built** | A readiness checklist in both the portal and the app, `CourierProfile` for the vehicle and plate, and `Vehicle insurance` as the third credential type. What is asked for follows the vehicle: nobody on foot is asked for a licence |
+| Store sign-up & KYC | **Built** | `Organization`, membership, admin approval, `tin`, a premises audit raised as gated paid work (§8), and CAC registration with a four-state review. The registry lookup is env-gated: with no provider, it is a manual check and the screen says so |
 | Manual task creation | **Built** | Two-step admin form with a live qualifying-worker count |
 | Basic auto task creation | **Built** | One signed inbound endpoint, an event ledger, per-type de-duplication, and admin-editable generation rules. `order.confirmed` records DEFERRED — delivery does not exist to generate |
 | Contract lifecycle | **Built** | An explicit state machine — nine states and a table of legal moves, against the two it had. The blueprint names eleven; the two absent are stages this build reaches through the task, not the contract |
 | Wallet | **Built** | Derived balance, withdrawals, Paystack transfers, webhook settlement |
 | Escrow | **Built** | `Commitment` records the ring-fence — COMMITTED on a live contract, RELEASED on verified acceptance. Mart holds the money throughout; see §4 |
-| Map of approved stores | **Partial** | `GET /api/organizations/map` returns approved stores by distance, filtered by kind. No screen renders it yet — the gap is a view, not data |
+| Map of approved stores | **Built** | People → Network: a real basemap, pins by kind, click-anywhere to measure, and a count of approved businesses the map cannot show because nobody set their coordinates. Admin-facing; a courier's in-app map is delivery work, not this |
 | Two-way ratings | **Built** | `Rating.direction` splits OF_WORKER from OF_EXPERIENCE, so a Tasker rates the job back and the two averages never mix |
 
 ---
@@ -70,11 +74,12 @@ and Sourcing Agents, not shoppers — which is a different thing and belongs her
 *Cost: low-medium.* Coordinates are already stored.
 
 **Couriers are a Tasker sub-family, not a peer account type** (§3.2). The build
-has three peer `accountType` values. *Cost: medium.* Note the nuance before
-ripping anything out: the blueprint still gives couriers *"its own onboarding
-and its own live map view"*, so `accountType: COURIER` may survive as the
-onboarding discriminator while courier-ness for **task matching** becomes a
-skill role. That reading keeps today's portal intact.
+has three peer `accountType` values. *Cost: medium, and lower than it was.* The
+courier onboarding built since keeps both readings open on purpose: it uses
+`accountType: COURIER` only to decide who is SHOWN the setup screen, and what a
+courier may actually do is decided by credentials through the eligibility
+engine - which is account-type agnostic. So making courier-ness a skill role
+later changes who sees a menu row, not who can work.
 
 **Shared identity with AZM** (§13). The portal shipped today creates its own
 accounts. *Cost: medium-high.* If identity is shared, Part-Time should have a
@@ -202,24 +207,30 @@ migration touching them anyway.
 
 ## 8. What is next
 
-Items 1-6 of the previous ordering are done: the contract state machine, D10,
-two-way ratings and the store map API, commitment states, the store premises
-audit, and the event bus with auto-task generation.
+**Phase 1 is complete.** Everything below is Phase 2 or later, in the order it is
+worth doing:
 
-What remains, in the order it is worth doing:
+1. **Delivery.** It is the only reason `order.confirmed` sits DEFERRED, and every
+   deferred order replays the day it lands. It needs pickup and drop-off on a
+   task that has one location today, a work-progress axis distinct from the
+   posting's status, and a customer OTP for somebody who has no PartTime account.
+2. **Ranked matching** (§11). The build gates qualified / not qualified; the
+   blueprint wants candidates scored on skill, proximity, reliability and load.
+3. **Proof-of-work evidence** (§14) — geo-tagged photos, signatures, timestamps,
+   required per task type, so verification is largely automatic.
+4. **Reputation tiers and badges** (§9). Note this is a *third* meaning of
+   "tier"; the naming needs settling before it is built.
+5. **Surge pay, crew contracts, referral loop** (§10, §14), **shared identity
+   with AZM** (§13, blocked on Mart exposing an identity provider), and
+   **offline-tolerant mobile flows** (§16).
 
-1. **A screen for the store map.** The API returns approved stores by distance
-   already; nothing renders them. It is the last Phase 1 item that needs no
-   decision from anybody.
-2. **Delivery**, which is the only reason `order.confirmed` sits DEFERRED. It
-   needs pickup and drop-off on a task that has one location today, a work-progress
-   axis distinct from the posting's status, and a customer OTP for somebody who
-   has no PartTime account. Every deferred order replays the day it lands.
-3. **Courier onboarding** (§3.2) — blocked on the open question of whether
-   couriers are a peer account type or a Tasker sub-family.
-4. **CAC verification** for stores — blocked on a provider.
-5. **Ranked matching** (§11), **proof-of-work evidence** (§14), **reputation
-   tiers** (§9).
+Two Phase 1 items have a deliberate ceiling worth revisiting when there is a
+reason:
+
+- **CAC verification is manual** until `CAC_LOOKUP_URL` and `CAC_API_KEY` are
+  set. The lookup and the name comparison are built and dormant.
+- **The store map is admin-only.** A courier's in-app map needs a native map
+  component and a rebuild, and it belongs with delivery rather than ahead of it.
 
 Still needed from the Mart team before any of this carries real traffic:
 agreement on `stockSource`, a staging environment, and the shared secret for

@@ -37,8 +37,12 @@ export async function apiPatch(path: string, json?: unknown, token?: string): Pr
   return apiSend("PATCH", path, json, token);
 }
 
+export async function apiPut(path: string, json?: unknown, token?: string): Promise<ApiResult> {
+  return apiSend("PUT", path, json, token);
+}
+
 async function apiSend(
-  method: "POST" | "PATCH",
+  method: "POST" | "PATCH" | "PUT",
   path: string,
   json?: unknown,
   token?: string

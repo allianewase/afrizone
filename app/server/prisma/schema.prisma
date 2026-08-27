@@ -91,6 +91,7 @@ model User {
   ratingsGiven        Rating[]             @relation("RatingsGiven")
   notifications       Notification[]
   skills              WorkerSkill[]
+  courierProfile      CourierProfile?
   credentials         Credential[]         @relation("WorkerCredentials")
   credentialsReviewed Credential[]         @relation("CredentialsReviewed")
   orgMemberships      OrganizationMember[]
@@ -947,4 +948,37 @@ model MartEvent {
   /// asks when something is missing, and it filters on exactly this pair.
   @@index([type, status])
   @@index([receivedAt])
+}
+
+/// The vehicle a courier actually rides (Blueprint §3.2).
+///
+/// What a courier has that a Tasker does not is a vehicle, and everything that
+/// follows from one - a licence, papers, insurance. Those three are already
+/// `Credential` rows: reviewed by a person, expiring on their own schedule, and
+/// gating work through the eligibility engine. This is the vehicle itself,
+/// which had nowhere to live.
+///
+/// ON THE USER, NOT THE ORGANIZATION. A rider on their own bike has no
+/// organization at all, and a company's rider still rides one specific machine
+/// with one plate. Hanging this off the business would leave independents - the
+/// majority - with nowhere to record it, and make a company's fleet a list
+/// nobody can attribute to whoever is carrying the parcel.
+model CourierProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  /// MOTORCYCLE | TRICYCLE | CAR | VAN | BICYCLE | FOOT.
+  ///
+  /// FOOT is not a joke entry. Inner-city drops on foot are real work, and a
+  /// courier forced to invent a vehicle to finish sign-up will type something
+  /// false into the plate field, which is worse than the truth.
+  vehicleType String
+  /// Null where the vehicle has no plate - which FOOT and BICYCLE never do.
+  /// Unique where present: two couriers cannot be riding the same machine.
+  plateNumber String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
 }

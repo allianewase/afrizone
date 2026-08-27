@@ -38,6 +38,7 @@ import type {
   CredentialType,
   Credential,
   CredentialInput,
+  CourierReadiness,
 } from './types';
 
 export class ApiError extends Error {
@@ -585,6 +586,25 @@ export const api = {
   /** GET /api/settings/credential-types: what Afrizone recognises. */
   credentialTypes(signal?: AbortSignal): Promise<CredentialType[]> {
     return request<CredentialType[]>('/settings/credential-types', { signal });
+  },
+
+  /**
+   * GET /api/me/courier: how far along this courier is.
+   *
+   * A progress report, not a gate. Whether a courier may take a given delivery
+   * is decided server-side per task, and this screen must never try to guess
+   * that answer itself.
+   */
+  courierReadiness(signal?: AbortSignal): Promise<CourierReadiness> {
+    return request<CourierReadiness>('/me/courier', { signal });
+  },
+
+  /** PUT /api/me/courier/vehicle: record or change what they deliver on. */
+  saveCourierVehicle(vehicleType: string, plateNumber: string | null): Promise<CourierReadiness> {
+    return request<CourierReadiness>('/me/courier/vehicle', {
+      method: 'PUT',
+      body: { vehicleType, plateNumber },
+    });
   },
 
   /** GET /api/me/credentials: this worker's credentials, newest first. */

@@ -254,6 +254,12 @@ export interface Worker {
 
 export interface WorkerDetail extends Worker {
   applications?: Application[]
+  /**
+   * Set for couriers. Present so a reviewer looking at a vehicle registration
+   * can see which vehicle it is claimed for - the document and the plate on it
+   * are otherwise two facts nobody can put side by side.
+   */
+  courier?: { vehicleType: string; label: string; plateNumber: string | null } | null
 }
 
 export type KycDocType = 'ID' | 'SELFIE' | 'DOCS'
@@ -566,6 +572,13 @@ export interface CredentialDetail extends Credential {
    * reviewer to weigh, never an automatic refusal.
    */
   duplicateOf: { workerId: string; workerName: string } | null
+  /**
+   * The vehicle this courier declared, on the three credential types that are
+   * about one. Present so the plate on the paper can be compared with the plate
+   * on the account without leaving the screen - a reviewer sent elsewhere to
+   * find it will not go.
+   */
+  courier?: { vehicleType: string; label: string; plateNumber: string | null } | null
 }
 
 export type CredentialFilter = 'pending' | 'verified' | 'rejected' | 'revoked' | 'expiring'

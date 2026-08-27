@@ -573,3 +573,29 @@ export interface CredentialInput {
   expiresAt?: string | null;
   documentId?: string | null;
 }
+
+/* ===== Courier onboarding (Blueprint 3.2) ===== */
+
+/**
+ * WAITING is deliberately distinct from TODO. A rider who has uploaded a
+ * document and is waiting on Afrizone has nothing left to do, and showing that
+ * as incomplete sends them looking for work that is not theirs.
+ */
+export type CourierStepState = 'DONE' | 'WAITING' | 'TODO' | 'PROBLEM';
+
+export interface CourierStep {
+  key: string;
+  label: string;
+  state: CourierStepState;
+  /** Written by the server. No client composes this sentence. */
+  detail: string;
+}
+
+export interface CourierReadiness {
+  ready: boolean;
+  steps: CourierStep[];
+  /** TODO and PROBLEM only - the steps the courier can actually act on. */
+  outstanding: number;
+  vehicle: { type: string; label: string; plateNumber: string | null } | null;
+  vehicleTypes: { value: string; label: string; requiresPlate: boolean }[];
+}

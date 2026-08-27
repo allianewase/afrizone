@@ -3,7 +3,14 @@ import { Link, Navigate } from 'react-router-dom'
 import Shell, { ErrorNote } from './Shell'
 import { useAuth, homeFor } from '../lib/auth'
 import { api, ApiError } from '../lib/api'
-import type { CacStatus, Organization, OrgKind, OrgMember } from '../lib/types'
+import type {
+  CacStatus,
+  CourierReadiness,
+  Organization,
+  OrgKind,
+  OrgMember,
+  ReadinessStep,
+} from '../lib/types'
 
 /**
  * The three destinations.
@@ -282,6 +289,8 @@ export function CourierDashboard() {
           Hello {user?.name?.split(' ')[0]}. Delivery jobs will appear here once the AfriZoneMart
           connection is live.
         </p>
+        <CourierChecklist />
+
         {/* A courier riding on their own has no company behind them, so this
             screen has to work with no organization at all - which is exactly
             what OrgView's empty state does. */}
@@ -290,6 +299,175 @@ export function CourierDashboard() {
     </Guarded>
   )
 }
+
+
+const STEP_MARK: Record<ReadinessStep['state'], { cls: string; mark: string }> = {
+  DONE: { cls: 'ok', mark: 'Done' },
+  WAITING: { cls: 'wait', mark: 'With Afrizone' },
+  TODO: { cls: 'wait', mark: 'To do' },
+  PROBLEM: { cls: 'bad', mark: 'Needs fixing' },
+}
+
+/**
+ * What a courier still has to do before they can be given deliveries.
+ *
+ * THE ORDER IS THE POINT. Identity first, because everything after it is a
+ * claim about a person nobody has confirmed exists. The vehicle second, because
+ * what it is decides which papers the third group asks for - somebody
+ * delivering on foot is asked for none, and a step they could never complete
+ * would teach them to ignore the whole list.
+ *
+ * "With Afrizone" is not a failure state and is not counted as outstanding. A
+ * rider who has uploaded everything and is waiting on a review has nothing left
+ * to do, and telling them otherwise sends them chasing work that is not theirs.
+ *
+ * Documents are uploaded in the mobile app, not here. This says so rather than
+ * offering a file picker that would be a second, thinner version of a flow that
+ * already exists and works.
+ */
+function CourierChecklist() {
+  const [data, setData] = useState<CourierReadiness | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const [vehicleType, setVehicleType] = useState('')
+  const [plate, setPlate] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const ctrl = new AbortController()
+    api
+      .courierReadiness(ctrl.signal)
+      .then((r) => {
+        setData(r)
+        setVehicleType(r.vehicle?.type ?? '')
+        setPlate(r.vehicle?.plateNumber ?? '')
+      })
+      .catch((e) => {
+        if (!ctrl.signal.aborted) setError(e instanceof ApiError ? e.message : 'Could not load.')
+      })
+    return () => ctrl.abort()
+  }, [])
+
+  if (error) return <ErrorNote message={error} />
+  if (!data) return <p className="muted">Loading...</p>
+
+  const chosen = data.vehicleTypes.find((v) => v.value === vehicleType)
+  const needsPlate = chosen?.requiresPlate ?? false
+  const changed =
+    vehicleType !== (data.vehicle?.type ?? '') ||
+    (needsPlate && plate.trim() !== (data.vehicle?.plateNumber ?? ''))
+
+  async function saveVehicle(e: React.FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setFormError(null)
+    try {
+      const next = await api.saveVehicle(vehicleType, needsPlate ? plate.trim() : null)
+      setData(next)
+      // The server clears the plate when the vehicle stops needing one; echoing
+      // that back stops the form showing a plate the record no longer holds.
+      setPlate(next.vehicle?.plateNumber ?? '')
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Could not save that.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      <h2 className="sectitle">Getting set up</h2>
+
+      <div className="card">
+        {data.ready ? (
+          <p style={{ marginTop: 0 }}>
+            <b>You are set up.</b> Deliveries will appear here once the AfriZoneMart connection is
+            live.
+          </p>
+        ) : (
+          <p className="muted" style={{ marginTop: 0 }}>
+            {data.outstanding === 0
+              ? 'Everything is with Afrizone. There is nothing for you to do right now.'
+              : `${data.outstanding} thing${data.outstanding === 1 ? '' : 's'} left for you to do.`}
+          </p>
+        )}
+
+        <div className="rows">
+          {data.steps.map((step) => {
+            const mark = STEP_MARK[step.state]
+            return (
+              <div className="row" key={step.key}>
+                <span className="row-l">{step.label}</span>
+                <span className="row-v">
+                  <span className={`pill ${mark.cls}`}>{mark.mark}</span>
+                  <br />
+                  <span className="muted" style={{ fontSize: 13 }}>{step.detail}</span>
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="card">
+        <form onSubmit={saveVehicle}>
+          <div className="field">
+            <label htmlFor="vt">What do you deliver on?</label>
+            <select
+              id="vt"
+              value={vehicleType}
+              onChange={(e) => {
+                setVehicleType(e.target.value)
+                setFormError(null)
+              }}
+            >
+              <option value="" disabled>
+                Choose one
+              </option>
+              {data.vehicleTypes.map((v) => (
+                <option key={v.value} value={v.value}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {needsPlate && (
+            <div className="field">
+              <label htmlFor="plate">Plate number</label>
+              <input
+                id="plate"
+                value={plate}
+                placeholder="ABC 123 DE"
+                autoComplete="off"
+                onChange={(e) => setPlate(e.target.value)}
+              />
+            </div>
+          )}
+
+          {formError && <ErrorNote message={formError} />}
+
+          <button className="btn" disabled={busy || !vehicleType || !changed || (needsPlate && !plate.trim())}>
+            {busy ? 'Saving...' : data.vehicle ? 'Update vehicle' : 'Save vehicle'}
+          </button>
+        </form>
+      </div>
+
+      {/* Uploading happens in the app. Saying so is better than a file picker
+          here that would be a second, thinner copy of a flow that works. */}
+      {data.steps.some((st) => st.state === 'TODO' && st.key !== 'vehicle') && (
+        <div className="note">
+          <b>Documents go in the Afrizone app</b>
+          <br />
+          Your licence, vehicle papers and insurance are uploaded there, where you can photograph
+          them directly.
+        </div>
+      )}
+    </>
+  )
+}
+
 
 /* ─────────────────────────── Individual ─────────────────────────── */
 

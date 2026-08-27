@@ -14,6 +14,7 @@ import { requireAuth, requireRole, AuthedRequest } from "../auth";
 import { isCredentialValid, isCredentialExpiring, tiersToArray } from "../types";
 import { writeAudit, userActor } from "../util/audit";
 import { notifyWorker } from "../services/push";
+import { VEHICLE_LABEL, type VehicleType } from "../services/courier";
 
 const router = Router();
 
@@ -192,10 +193,30 @@ router.get("/:id", requireAuth, requireRole(...REVIEWERS), async (req: AuthedReq
     if (clash) duplicateOf = { workerId: clash.worker.id, workerName: clash.worker.name };
   }
 
+  // The vehicle, for the two credential types that are ABOUT one. A reviewer
+  // holding a vehicle registration has to be able to compare the plate on the
+  // paper with the plate the courier declared, and sending them to another
+  // screen to find it means they will not.
+  const vehicleSlugs = ["vehicle-registration", "vehicle-insurance", "drivers-licence"];
+  let courier: { vehicleType: string; label: string; plateNumber: string | null } | null = null;
+  if (vehicleSlugs.includes(credential.credentialType?.slug ?? "")) {
+    const profile = await prisma.courierProfile.findUnique({
+      where: { userId: credential.workerId },
+    });
+    if (profile) {
+      courier = {
+        vehicleType: profile.vehicleType,
+        label: VEHICLE_LABEL[profile.vehicleType as VehicleType] ?? profile.vehicleType,
+        plateNumber: profile.plateNumber,
+      };
+    }
+  }
+
   res.json({
     ...shape(credential, now),
     otherCredentials: others.map((o) => shape({ ...o, worker: undefined }, now)),
     duplicateOf,
+    courier,
   });
 });
 
