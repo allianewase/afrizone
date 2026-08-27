@@ -725,6 +725,29 @@ model Organization {
   bankMasked        String?
   tin               String?
 
+  /// CAC registration - Nigeria's company registry (Blueprint §15).
+  ///
+  /// A STATUS, NOT A BOOLEAN. `cacVerified` cannot express the state a real
+  /// queue spends most of its time in - supplied, not yet decided - and a store
+  /// waiting for review would be indistinguishable from one that never gave a
+  /// number. Those need different people to act on them.
+  ///
+  /// UNVERIFIED | PENDING | VERIFIED | REJECTED. Defaults UNVERIFIED, which is
+  /// the honest value for every row that predates the check, and **gates
+  /// nothing today** - stores are live in the pilot without a number, and a
+  /// column added on Tuesday must not suspend them on Wednesday.
+  /// Unique where present. SQLite counts NULLs as distinct, so stores without
+  /// a number are unaffected by the constraint.
+  cacNumber    String?   @unique
+  cacStatus    String    @default("UNVERIFIED")
+  /// The name the registry returns, which is the whole reason to check a number
+  /// rather than merely store it. A mismatch against `name` is shown to the
+  /// reviewer as a warning and never actioned automatically: "Mama Nkechi
+  /// Provisions" against "M. NKECHI PROVISIONS LTD" is the normal case.
+  cacName      String?
+  cacCheckedAt DateTime?
+  cacNote      String?
+
   /// PENDING | ACTIVE | SUSPENDED.
   ///
   /// Defaults PENDING: a business must be approved by Afrizone before it can
@@ -743,6 +766,8 @@ model Organization {
   /// "Which stores are live?" and "which courier companies are waiting for
   /// approval?" are both list screens, and both filter on exactly this pair.
   @@index([kind, status])
+  /// The CAC review queue filters on exactly this.
+  @@index([cacStatus])
 }
 
 /// Which people may act for which business.

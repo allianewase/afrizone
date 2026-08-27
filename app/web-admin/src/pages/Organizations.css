@@ -182,3 +182,12 @@
     position: static;
   }
 }
+
+/* Registration numbers are strings people compare character by character
+   against a certificate, which proportional digits make harder than it needs
+   to be. */
+.orgmono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}

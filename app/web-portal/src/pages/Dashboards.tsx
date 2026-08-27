@@ -3,7 +3,7 @@ import { Link, Navigate } from 'react-router-dom'
 import Shell, { ErrorNote } from './Shell'
 import { useAuth, homeFor } from '../lib/auth'
 import { api, ApiError } from '../lib/api'
-import type { Organization, OrgKind, OrgMember } from '../lib/types'
+import type { CacStatus, Organization, OrgKind, OrgMember } from '../lib/types'
 
 /**
  * The three destinations.
@@ -30,6 +30,132 @@ function Guarded({ need, children }: { need: 'STORE' | 'COURIER' | 'INDIVIDUAL';
   if (type !== need) return <Navigate to={homeFor(type)} replace />
   return <>{children}</>
 }
+
+
+const CAC_COPY: Record<CacStatus, { cls: string; label: string; note: string }> = {
+  UNVERIFIED: {
+    cls: 'wait',
+    label: 'Not supplied',
+    note: 'Adding your CAC number lets Afrizone confirm the business is registered to you. It is not required to take orders today.',
+  },
+  PENDING: {
+    cls: 'wait',
+    label: 'With Afrizone',
+    note: 'Recorded. Afrizone will confirm it, and there is nothing else for you to do.',
+  },
+  VERIFIED: { cls: 'ok', label: 'Confirmed', note: 'Afrizone has confirmed this registration.' },
+  REJECTED: {
+    cls: 'bad',
+    label: 'Not accepted',
+    note: 'Afrizone could not confirm this registration. Check the number and submit it again.',
+  },
+}
+
+/**
+ * The store's own view of its CAC registration.
+ *
+ * OWNER ONLY for the form, which the server enforces independently. Staff still
+ * see the status, because "is our registration confirmed" is a fair thing for
+ * anyone in the business to know - they simply cannot change it.
+ *
+ * The number stays editable after submission on purpose. The commonest failure
+ * is a typo, and a rejected registration nobody can correct is a dead end.
+ */
+function CacCard({ org, onUpdated }: { org: Organization; onUpdated: (o: Organization) => void }) {
+  const status: CacStatus = org.cacStatus ?? 'UNVERIFIED'
+  const copy = CAC_COPY[status]
+  const isOwner = org.myRole === 'OWNER'
+
+  const [value, setValue] = useState(org.cacNumber ?? '')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setError(null)
+    setSaved(false)
+    try {
+      const updated = await api.submitCac(org.id, value.trim())
+      // myRole is not on the submission response; carrying it over keeps the
+      // form from vanishing under the owner who just used it.
+      onUpdated({ ...updated, myRole: org.myRole })
+      // Show what was actually STORED, not what was typed. The server strips
+      // spaces and casing, and leaving "rc 771234" on screen next to "Recorded"
+      // means the number the store thinks Afrizone holds is not the one it does.
+      if (updated.cacNumber) setValue(updated.cacNumber)
+      setSaved(true)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not record that.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      <h2 className="sectitle">Business registration</h2>
+      <div className="card">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+          <span className="row-l">CAC status</span>
+          <span className={`pill ${copy.cls}`}>{copy.label}</span>
+        </div>
+        <p className="muted" style={{ marginTop: 0 }}>{copy.note}</p>
+
+        {org.cacNote && status === 'REJECTED' && (
+          <div className="note">
+            <b>Afrizone said</b>
+            <br />
+            {org.cacNote}
+          </div>
+        )}
+
+        {isOwner ? (
+          <form onSubmit={submit}>
+            <div className="field">
+              <label htmlFor="cac">CAC registration number</label>
+              <input
+                id="cac"
+                value={value}
+                placeholder="RC123456"
+                autoComplete="off"
+                onChange={(e) => {
+                  setValue(e.target.value)
+                  setSaved(false)
+                }}
+              />
+            </div>
+            {error && <ErrorNote message={error} />}
+            {saved && !error && (
+              <p className="muted" style={{ marginBottom: 12 }}>
+                Recorded. Afrizone will confirm it.
+              </p>
+            )}
+            <button
+              className="btn"
+              disabled={busy || !value.trim() || value.trim() === (org.cacNumber ?? '')}
+            >
+              {busy ? 'Saving...' : status === 'UNVERIFIED' ? 'Submit' : 'Update'}
+            </button>
+          </form>
+        ) : (
+          <div className="rows">
+            <div className="row">
+              <span className="row-l">Number</span>
+              <span className="row-v">{org.cacNumber || '-'}</span>
+            </div>
+            <div className="row">
+              <span className="row-l">Who can change this</span>
+              <span className="row-v">The owner of this store.</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
 
 /* ─────────────────────────── Store ─────────────────────────── */
 
@@ -101,6 +227,8 @@ function OrgView({ kind }: { kind: OrgKind }) {
           <div className="row"><span className="row-l">Your role</span><span className="row-v">{org.myRole === 'OWNER' ? 'Owner' : 'Staff'}</span></div>
         </div>
       </div>
+
+      {kind === 'STORE' && <CacCard org={org} onUpdated={(next) => setOrgs([next])} />}
 
       <h2 className="sectitle">{kind === 'STORE' ? 'Orders' : 'Deliveries'}</h2>
       <div className="note">

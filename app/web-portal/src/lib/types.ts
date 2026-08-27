@@ -29,6 +29,9 @@ export interface AuthResponse {
   challenge?: string
 }
 
+/** Where a business's CAC registration has got to. */
+export type CacStatus = 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED'
+
 export interface Organization {
   id: string
   kind: OrgKind
@@ -39,8 +42,15 @@ export interface Organization {
   address?: string | null
   bankMasked?: string | null
   bankName?: string | null
+  cacNumber?: string | null
+  cacStatus?: CacStatus
+  /** The name the registry holds, when it was consulted. */
+  cacName?: string | null
+  cacNote?: string | null
   status: OrgStatus
   myRole?: OrgRole
+  /** Returned by the CAC submission, which answers with the updated business. */
+  message?: string
 }
 
 export interface OrgMember {

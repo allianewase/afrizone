@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { api, ApiError } from '../api/client'
 import { useApi } from '../lib/useApi'
 import { formatDate, orgPill } from '../lib/format'
-import type { CreateOrgBody, OrgKind, OrgStatus, Organization } from '../api/types'
+import type { CacStatus, CreateOrgBody, OrgKind, OrgStatus, Organization } from '../api/types'
 import PageHeader from '../components/PageHeader'
 import Glass from '../components/ui/Glass'
 import Button from '../components/ui/Button'
@@ -10,6 +10,7 @@ import Modal from '../components/ui/Modal'
 import StatusPill from '../components/ui/StatusPill'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
+import Textarea from '../components/ui/Textarea'
 import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
 import { Label } from '@/components/shadcn/label'
@@ -67,6 +68,10 @@ function kindLabel(kind: OrgKind): string {
 export default function Organizations() {
   const { user } = useAuth()
   const canEdit = user?.role === 'SUPER_ADMIN'
+  // Reviewing a registration number is the same class of act as reviewing a
+  // worker's KYC, so it is the same people. Approving the business stays with a
+  // super admin.
+  const canReview = user?.role === 'SUPER_ADMIN' || user?.role === 'TASK_MANAGER'
 
   const [kind, setKind] = useState<OrgKind | 'ALL'>('ALL')
   const [status, setStatus] = useState(ANY)
@@ -250,6 +255,7 @@ export default function Organizations() {
       <OrgDetailModal
         id={openId}
         canEdit={canEdit}
+        canReview={canReview}
         onClose={() => setOpenId(null)}
         onChanged={upsert}
       />
@@ -432,11 +438,18 @@ function NewOrgModal({
 function OrgDetailModal({
   id,
   canEdit,
+  canReview,
   onClose,
   onChanged,
 }: {
   id: string | null
   canEdit: boolean
+  /**
+   * Verifying a registration number is not the same act as approving a
+   * business, so it is not the same permission: a task manager reviews it, the
+   * way they review a worker's KYC. Only a super admin can approve.
+   */
+  canReview: boolean
   onClose: () => void
   onChanged: (o: Organization) => void
 }) {
@@ -526,6 +539,13 @@ function OrgDetailModal({
           </div>
 
           <div className="orgaside">
+            {/* Above Approval on purpose: a reviewer should have seen whether
+                the business is who it says it is before deciding whether it can
+                trade - even though nothing forces them to. */}
+            {org.kind === 'STORE' && (
+              <CacBlock org={org} canReview={canReview} onChanged={onChanged} onDone={reload} />
+            )}
+
             <div className="orgblock">
               <span className="orgblock-t">Approval</span>
               {org.status === 'PENDING' ? (
@@ -587,6 +607,153 @@ function OrgDetailModal({
       )}
     </Modal>
   )
+}
+
+const CAC_PILL: Record<CacStatus, { variant: 'pending' | 'ready' | 'danger' | 'review'; label: string }> = {
+  UNVERIFIED: { variant: 'review', label: 'Not supplied' },
+  PENDING: { variant: 'pending', label: 'Awaiting review' },
+  VERIFIED: { variant: 'ready', label: 'Verified' },
+  REJECTED: { variant: 'danger', label: 'Rejected' },
+}
+
+/**
+ * CAC registration, as a reviewer sees it.
+ *
+ * The screen has to distinguish three things a single "unverified" would blur:
+ * no number was ever supplied, a number is waiting for somebody, and a number
+ * was checked and refused. Only the middle one is work.
+ */
+function CacBlock({
+  org,
+  canReview,
+  onChanged,
+  onDone,
+}: {
+  org: Organization
+  canReview: boolean
+  onChanged: (o: Organization) => void
+  onDone: () => void
+}) {
+  const status: CacStatus = org.cacStatus ?? 'UNVERIFIED'
+  const pill = CAC_PILL[status]
+  const registry = useApi((signal) => api.cacConfig(signal))
+
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState<string | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+
+  async function decide(decision: 'VERIFIED' | 'REJECTED') {
+    setBusy(decision)
+    setErr(null)
+    try {
+      const updated = await api.cacDecision(org.id, decision, note.trim() || undefined)
+      onChanged(updated)
+      onDone()
+      setNote('')
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Could not record that')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  // A name the registry returned that does not obviously match the trading name
+  // is worth a reviewer's attention and is NOT evidence of anything on its own -
+  // most Nigerian businesses trade under a shorter name than they registered.
+  const mismatch =
+    !!org.cacName && !looksLike(org.name, org.cacName)
+
+  return (
+    <div className="orgblock">
+      <span className="orgblock-t">CAC registration</span>
+
+      <DetailRow label="Status" value={<StatusPill variant={pill.variant} label={pill.label} />} />
+      <DetailRow
+        label="Number"
+        value={org.cacNumber ? <span className="orgmono">{org.cacNumber}</span> : <span className="orgwarn">Not supplied</span>}
+      />
+      {org.cacName && <DetailRow label="Registered as" value={org.cacName} />}
+      {org.cacCheckedAt && <DetailRow label="Last checked" value={formatDate(org.cacCheckedAt)} />}
+
+      {org.cacNote && <p className="orgnote">{org.cacNote}</p>}
+
+      {mismatch && (
+        <div className="login-error" role="status" style={{ marginBottom: 12 }}>
+          <Icon name="alert" size={15} />
+          The registered name differs from the trading name. Common, and worth a look.
+        </div>
+      )}
+
+      {/* Without this line, a reviewer reads a missing registered name as the
+          registry having no record - when in fact nobody asked it. */}
+      {registry.data && !registry.data.configured && status !== 'UNVERIFIED' && (
+        <p className="orgnote small">
+          No registry provider is configured, so this is a manual check against CAC yourself.
+        </p>
+      )}
+
+      {status === 'UNVERIFIED' ? (
+        <p className="orgnote small">
+          The business supplies this itself, from its own dashboard. It does not stop the store
+          being approved.
+        </p>
+      ) : (
+        <>
+          {err && (
+            <div className="login-error" role="alert" style={{ marginBottom: 12 }}>
+              <Icon name="alert" size={15} />
+              {err}
+            </div>
+          )}
+          <Label htmlFor="cac-note">Note</Label>
+          <Textarea
+            id="cac-note"
+            rows={2}
+            value={note}
+            disabled={!canReview}
+            placeholder="Required when rejecting"
+            onChange={(e) => setNote(e.target.value)}
+          />
+          <div className="orgactions" style={{ marginTop: 10 }}>
+            <Button
+              variant="primary"
+              icon="check"
+              loading={busy === 'VERIFIED'}
+              disabled={!canReview || status === 'VERIFIED'}
+              onClick={() => decide('VERIFIED')}
+            >
+              Confirm
+            </Button>
+            <Button
+              variant="danger"
+              icon="x"
+              loading={busy === 'REJECTED'}
+              disabled={!canReview || !note.trim()}
+              onClick={() => decide('REJECTED')}
+            >
+              Reject
+            </Button>
+          </div>
+          {!note.trim() && status !== 'REJECTED' && (
+            <p className="orgnote small">A rejection needs a reason, so the business can fix it.</p>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+/** Same loose comparison the server uses, for the warning only. */
+function looksLike(trading: string, registered: string): boolean {
+  const strip = (v: string) =>
+    v
+      .toUpperCase()
+      .replace(/\b(LIMITED|LTD|PLC|ENTERPRISES|ENTERPRISE|NIG|NIGERIA|COMPANY|CO|AND|&)\b/g, '')
+      .replace(/[^A-Z0-9]/g, '')
+  const a = strip(trading)
+  const b = strip(registered)
+  if (!a || !b) return false
+  return a.includes(b) || b.includes(a)
 }
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {

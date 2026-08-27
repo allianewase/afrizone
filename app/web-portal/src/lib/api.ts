@@ -103,4 +103,8 @@ export const api = {
 
   organizationMembers: (id: string, signal?: AbortSignal) =>
     request<OrgMember[]>(`/organizations/${id}/members`, { signal }),
+
+  /** Record the business's CAC registration number. OWNER only, server-side. */
+  submitCac: (id: string, cacNumber: string) =>
+    request<Organization>(`/organizations/${id}/cac`, { method: 'POST', body: { cacNumber } }),
 }

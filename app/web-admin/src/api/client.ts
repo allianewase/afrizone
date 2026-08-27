@@ -51,6 +51,7 @@ import type {
   CredentialCorrections,
   MartEventsResponse,
   OrgMap,
+  CacStatus,
   MartEventStatus,
   TaskRules,
 } from './types'
@@ -246,12 +247,13 @@ export const api = {
   // Admin-only endpoints. The member-facing /api/organizations is the mobile
   // app's, and deliberately returns only what the caller belongs to.
   organizations: (
-    filter: { kind?: OrgKind; status?: OrgStatus } = {},
+    filter: { kind?: OrgKind; status?: OrgStatus; cacStatus?: CacStatus } = {},
     signal?: AbortSignal,
   ) => {
     const q = new URLSearchParams()
     if (filter.kind) q.set('kind', filter.kind)
     if (filter.status) q.set('status', filter.status)
+    if (filter.cacStatus) q.set('cacStatus', filter.cacStatus)
     const qs = q.toString()
     return request<Organization[]>(`/admin/organizations${qs ? `?${qs}` : ''}`, { signal })
   },
@@ -439,6 +441,18 @@ export const api = {
     return request<MartEventsResponse>(`/admin/mart/events${qs ? `?${qs}` : ''}`, { signal })
   },
   martRules: (signal?: AbortSignal) => request<TaskRules>('/admin/mart/rules', { signal }),
+
+  // ===== CAC registration (stores) =====
+  cacDecision: (id: string, decision: 'VERIFIED' | 'REJECTED', note?: string) =>
+    request<Organization>(`/admin/organizations/${id}/cac-decision`, {
+      method: 'POST',
+      body: { decision, note },
+    }),
+  // Whether a registry provider is wired up. The review screen needs it to say
+  // "no registry configured, this is a manual check" rather than leaving a
+  // reviewer to read a missing registered name as a red flag.
+  cacConfig: (signal?: AbortSignal) =>
+    request<{ configured: boolean }>('/admin/organizations/cac/config', { signal }),
 
   // ===== Store network map =====
   // The endpoint is open to any signed-in user by design - a courier needs it -

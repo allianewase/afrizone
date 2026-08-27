@@ -31,6 +31,7 @@ import { slugify } from "../types";
 import { formatDistance, haversineMetres, isValidCoord } from "../util/geo";
 import { latestAudit, recordAudit, requestStoreAudit } from "../services/storeAudit";
 import { userActor, writeAudit } from "../util/audit";
+import { decideCac, isCacConfigured, submitCac } from "../services/cacVerification";
 import {
   kindLabel,
   listOrganizationsForUser,
@@ -226,6 +227,30 @@ router.patch("/:id", requireAuth, async (req: AuthedRequest, res: Response) => {
     });
   }
   res.json({ ...publicOrg(org, "OWNER"), myRole: "OWNER" });
+});
+
+/**
+ * POST /api/organizations/:id/cac → record the CAC registration number. OWNER.
+ *
+ * OWNER, not STAFF. This is the business asserting who it legally is, which is
+ * the same class of act as changing the payout account, and staff turnover is
+ * exactly the population that should not be able to make it.
+ *
+ * Always lands on PENDING, never VERIFIED - see services/cacVerification.ts for
+ * why a registry hit is not a decision.
+ */
+router.post("/:id/cac", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const access = await requireOrgAccess(req.user!.id, req.params.id, { roles: ["OWNER"] });
+  if (!access.ok) return res.status(access.status).json({ error: access.error });
+
+  const raw = String(req.body?.cacNumber ?? "").trim();
+  if (!raw) return res.status(400).json({ error: "Give the registration number" });
+
+  const result = await submitCac(access.org.id, raw, userActor(req.user!.id));
+  if (!result.ok) return res.status(result.status).json({ error: result.error });
+
+  const org = await prisma.organization.findUnique({ where: { id: access.org.id } });
+  res.json({ ...publicOrg(org, "OWNER"), myRole: "OWNER", message: result.message });
 });
 
 // GET /api/organizations/:id/members → who can act for it. Any member may look.
@@ -425,8 +450,15 @@ adminRouter.get(
   async (req: AuthedRequest, res: Response) => {
     const status = req.query.status ? String(req.query.status) : undefined;
     const kind = readKind(req.query.kind);
+    // The CAC review queue is a filter on this list rather than a screen of its
+    // own: it is the same rows, asked a different question.
+    const cacStatus = req.query.cacStatus ? String(req.query.cacStatus) : undefined;
     const orgs = await prisma.organization.findMany({
-      where: { ...(status ? { status } : {}), ...(kind ? { kind } : {}) },
+      where: {
+        ...(status ? { status } : {}),
+        ...(kind ? { kind } : {}),
+        ...(cacStatus ? { cacStatus } : {}),
+      },
       orderBy: { createdAt: "desc" },
       include: { _count: { select: { members: true } } },
     });
@@ -604,6 +636,49 @@ adminRouter.patch(
       );
     }
     res.json(publicOrg(org, "ADMIN"));
+  }
+);
+
+/**
+ * POST /api/admin/organizations/:id/cac-decision → confirm or refuse it.
+ *
+ * TASK_MANAGER as well as SUPER_ADMIN, matching who reviews a worker's KYC and
+ * credentials. This is a verification, not an approval: it records whether a
+ * registration number checks out, and it deliberately does not change whether
+ * the business can trade. Approving one stays SUPER_ADMIN, on PATCH.
+ */
+adminRouter.post(
+  "/:id/cac-decision",
+  requireAuth,
+  requireRole("SUPER_ADMIN", "TASK_MANAGER"),
+  async (req: AuthedRequest, res: Response) => {
+    const decision = String(req.body?.decision ?? "");
+    if (decision !== "VERIFIED" && decision !== "REJECTED") {
+      return res.status(400).json({ error: "decision must be VERIFIED or REJECTED" });
+    }
+    const note = req.body?.note != null ? String(req.body.note) : null;
+
+    const result = await decideCac(req.params.id, decision, note, userActor(req.user!.id));
+    if (!result.ok) return res.status(result.status).json({ error: result.error });
+
+    const org = await prisma.organization.findUnique({ where: { id: req.params.id } });
+    res.json(publicOrg(org, "ADMIN"));
+  }
+);
+
+/**
+ * GET /api/admin/organizations/cac/config → is a registry provider wired up?
+ *
+ * So the review screen can say "checked against the registry" or "no registry
+ * configured - this is a manual check" rather than leaving a reviewer to guess
+ * how much the absence of a registered name means.
+ */
+adminRouter.get(
+  "/cac/config",
+  requireAuth,
+  requireRole("SUPER_ADMIN", "TASK_MANAGER"),
+  async (_req: AuthedRequest, res: Response) => {
+    res.json({ configured: isCacConfigured() });
   }
 );
 

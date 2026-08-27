@@ -92,6 +92,19 @@ export interface Organization {
   bankCode?: string | null
   bankName?: string | null
   tin?: string | null
+  /**
+   * CAC registration - Nigeria's company registry.
+   *
+   * `cacStatus` gates nothing today. It is a verification recorded against the
+   * business, not a condition of trading, and stores are live in the pilot
+   * without a number.
+   */
+  cacNumber?: string | null
+  cacStatus?: CacStatus
+  /** The name the registry returned, when one was consulted. */
+  cacName?: string | null
+  cacCheckedAt?: string | null
+  cacNote?: string | null
   status: OrgStatus
   createdAt?: string
   /** Added by the admin list endpoint. */
@@ -109,6 +122,8 @@ export interface OrgMember {
   email?: string | null
   phone?: string | null
 }
+
+export type CacStatus = 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED'
 
 export interface CreateOrgBody {
   name: string
