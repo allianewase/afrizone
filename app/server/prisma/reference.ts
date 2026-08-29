@@ -63,6 +63,7 @@ export const CATEGORIES: CategorySeed[] = [
   { name: "Sourcing", tier: "DISPATCH", defaultPayModel: "FIXED" },
   { name: "Media", tier: "PROMO", defaultPayModel: "FIXED" },
   { name: "Store audit", tier: "TRADE", defaultPayModel: "FIXED" },
+  { name: "Delivery", tier: "DISPATCH", defaultPayModel: "FIXED" },
 ];
 
 export const TAX_RATES: TaxRateSeed[] = [

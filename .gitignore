@@ -32,6 +32,13 @@ app/mobile/.env
 app/mobile/.env.local
 app/mobile/credentials.json
 
+# ── Wrangler / Miniflare local state ──────────────────────────────────────────
+# The local D1 database, the KV/R2 emulation and wrangler's download cache. Never
+# committed: it is a developer's own copy of the data, it is large, and a stale
+# one checked in would be restored over somebody else's local database by a plain
+# `git pull`.
+.wrangler/
+
 # ── OS / editors ──────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db

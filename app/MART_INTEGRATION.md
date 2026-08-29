@@ -1,17 +1,34 @@
 # AfriZoneMart ↔ PartTime integration
 
-**Status: the inbound half is built on the PartTime side; everything Mart has to
-do, and everything outbound, is still proposal.**
+**Status: both halves are built on the PartTime side and neither has been
+exercised against a real Mart. Everything Mart has to do is still proposal.**
 
 Live today: `POST /api/integrations/mart/events` with the signature scheme in §2,
 the event ledger, per-type de-duplication, task generation for `stock.low`,
 `store.applied` and `listing.needs_media`, and an operations screen at
-Operations → Mart. `order.confirmed` is accepted and recorded DEFERRED, because
-delivery does not exist for it to generate; every one of those events replays the
-day it does.
+Operations → Mart.
 
-Not built: the outbound reporting in §4, the customer OTP in §5, and the
-settlement endpoint in §7. Sections marked **OPEN** are still open.
+**`order.confirmed` now creates a delivery** (§3.1), which the store accepts or
+refuses, which posts a credential-gated courier job when accepted, and which is
+completed only against a customer code Mart verifies (§5). The outbound reports
+in §4 are emitted, and the seven-day customer-data purge runs daily.
+
+TWO ENDPOINTS ARE NEEDED FROM MART BEFORE ANY OF THAT CARRIES TRAFFIC, and until
+they exist PartTime behaves as though the integration were switched off rather
+than broken: `POST {MART_BASE}/parttime/events` for the reports, and `POST
+{MART_BASE}/parttime/verify-delivery-otp` for the code check. With
+`MART_BASE_URL` and `MART_OUTBOUND_SECRET` unset, reports are skipped and a
+courier is told *we could not check this*, never *that is the wrong code* — so a
+delivery can be taken and collected, and cannot be completed.
+
+Not built: the settlement endpoint in §7. Sections marked **OPEN** are still
+open, and §6 D1 — what a courier does when the verifier cannot be reached — is
+now load-bearing rather than hypothetical.
+
+The events recorded DEFERRED before delivery shipped are still in the ledger and
+are still replayable. Nothing replays them automatically; that is a deliberate
+choice, because a batch of week-old orders arriving at real shops at once is a
+decision somebody should make rather than a side effect of a deploy.
 
 The contract two systems have to agree before either writes code against the
 other. Deliberately specific — an integration agreed in prose and discovered in

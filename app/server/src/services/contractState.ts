@@ -24,8 +24,9 @@
  * did - so it is derived at read time from `deadline`, exactly as credential
  * expiry is derived rather than stored (see ARCHITECTURE.md §12). A stored
  * EXPIRED needs a scheduled job, and a job that fails to run leaves a dead task
- * looking live. There is no cron in this codebase and this is not the feature
- * that should add one.
+ * looking live. There is now exactly one cron in this codebase - the delivery
+ * customer-data purge, which exists because absence of data cannot be derived -
+ * and this is still not a second reason to have one.
  */
 import type { Prisma } from "@prisma/client";
 import { auditData, type AuditActor } from "../util/audit";

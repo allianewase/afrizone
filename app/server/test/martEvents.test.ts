@@ -12,9 +12,10 @@
 //   emits stock.low every time the threshold is checked; without a per-type
 //   de-duplication rule, an hour of that is an hour of tasks.
 //
-//   Nothing may be silently dropped. order.confirmed creates nothing today
-//   because delivery is not built - it has to be recorded, not swallowed, or
-//   those orders are gone.
+//   Nothing may be silently dropped. order.confirmed used to create nothing at
+//   all, because delivery was not built; it was recorded DEFERRED rather than
+//   swallowed, and every one of those orders is still replayable. It now creates
+//   a Delivery - see delivery.test.ts for what happens to one after that.
 import { describe, it, expect, beforeAll } from "vitest";
 import crypto from "crypto";
 import { SELF } from "cloudflare:test";
@@ -275,26 +276,56 @@ describe("listing.needs_media becomes a photography task", () => {
 });
 
 describe("order.confirmed is recorded, not swallowed", () => {
-  it("defers it rather than dropping it", async () => {
+  it("records it and says which store it is waiting on", async () => {
+    const store = await prisma().organization.create({
+      data: {
+        kind: "STORE",
+        name: "Ikeja City Mart",
+        slug: `ikeja-city-mart-${Date.now()}`,
+        status: "ACTIVE",
+        address: "Ikeja City Mall, Alausa",
+      },
+    });
     const res = await postSigned(
       evt("order.confirmed", {
         martOrderId: `AZM-${Date.now()}`,
-        fulfilment: { storeSlug: "ikeja-city-mart", stockSource: "CONSIGNMENT" },
+        fulfilment: { storeSlug: store.slug, stockSource: "CONSIGNMENT" },
+        dropoff: { address: "14 Adeniran Ogunsanya, Surulere" },
       })
     );
-    // 202: understood, no work created. Mart must not read that as a failure.
-    expect(res.status).toBe(202);
-    expect(res.body.status).toBe("DEFERRED");
+    // 201: the order is live. No task yet - the shop has to accept first - so
+    // the note says what it is waiting on rather than leaving a null taskId to
+    // be read as nothing having happened.
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe("PROCESSED");
     expect(res.body.taskId).toBeNull();
+    expect(res.body.note).toContain(store.slug);
 
-    // The whole point of the ledger. Delivery does not exist yet, and answering
-    // 200 with nothing recorded would lose every order placed until it does.
     const row = await prisma().martEvent.findUnique({ where: { eventId: res.body.eventId } });
-    expect(row.status).toBe("DEFERRED");
+    expect(row.status).toBe("PROCESSED");
     // Stored base64 - see the note in martEvents.ts. Decoded here rather than
     // asserted on the raw column, so the test breaks if the encoding changes
     // rather than if the storage format does.
     expect(JSON.stringify(decodePayload(row.payload))).toContain("martOrderId");
+  });
+
+  it("still records one it cannot act on, rather than losing it", async () => {
+    // The ledger is not only for deferred work: an order naming a store that
+    // does not exist is refused, and the refusal is on the record with the
+    // reason, so "Mart never sent it" and "we could not place it" stay
+    // different answers.
+    const res = await postSigned(
+      evt("order.confirmed", {
+        martOrderId: `AZM-${Date.now()}`,
+        fulfilment: { storeSlug: "a-shop-that-does-not-exist", stockSource: "OWN_STOCK" },
+        dropoff: { address: "Somewhere" },
+      })
+    );
+    expect(res.status).toBe(400);
+
+    const rows = await prisma().martEvent.findMany({ where: { type: "order.confirmed", status: "FAILED" } });
+    expect(rows.length).toBeGreaterThan(0);
+    expect(String(rows[rows.length - 1].note)).toContain("a-shop-that-does-not-exist");
   });
 });
 
@@ -321,14 +352,21 @@ describe("a retry is free", () => {
 describe("what an operator can see", () => {
   it("lists events with a tally of what happened to them", async () => {
     const admin = await createUserWithToken("SUPER_ADMIN");
+    // An order naming no store at all: understood, and refused. The tally is
+    // what makes that visible as something other than silence.
     await postSigned(evt("order.confirmed", { martOrderId: `AZM-OPS-${Date.now()}` }));
 
     const res = await apiGet("/api/admin/mart/events", admin.token);
     expect(res.status).toBe(200);
     // Without this screen, "Mart never sent it", "we de-duplicated it" and
-    // "nothing is built to handle it" are indistinguishable - and each is a
-    // different bug with a different fix.
-    expect(res.body.counts.DEFERRED).toBeGreaterThanOrEqual(1);
+    // "we could not place it" are indistinguishable - and each is a different
+    // bug with a different fix.
+    //
+    // DEFERRED is no longer among the tallies any live event type produces,
+    // now that delivery is built. The status is deliberately still supported:
+    // the rows recorded under it before delivery shipped are real orders and
+    // are still replayable, and dropping the status would erase them.
+    expect(res.body.counts.FAILED).toBeGreaterThanOrEqual(1);
     expect(res.body.events.length).toBeGreaterThan(0);
   });
 

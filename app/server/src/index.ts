@@ -22,6 +22,7 @@ import contractsRouter from "./routes/contracts";
 import disputesRouter, { adminRouter as adminDisputesRouter } from "./routes/disputes";
 import organizationsRouter, { adminRouter as adminOrganizationsRouter } from "./routes/organizations";
 import martRouter, { adminRouter as adminMartRouter } from "./routes/martIntegration";
+import deliveriesRouter, { adminRouter as adminDeliveriesRouter } from "./routes/deliveries";
 import ratingsRouter from "./routes/ratings";
 import webhooksRouter from "./routes/webhooks";
 import kycDocumentsRouter, { handleKycUpload, handleKycFileGet } from "./routes/kycDocuments";
@@ -30,6 +31,8 @@ import credentialsRouter from "./routes/credentials";
 import searchRouter from "./routes/search";
 import healthRouter from "./routes/health";
 import fundingRouter from "./routes/funding";
+import { purgeCustomerData } from "./services/deliveryPurge";
+import { SYSTEM_ACTORS } from "./util/audit";
 
 const app = express();
 
@@ -218,6 +221,15 @@ app.use("/api/contracts", contractsRouter);
 // authenticated - Mart is a system, not a user.
 app.use("/api/integrations/mart", martRouter);
 app.use("/api/admin/mart", adminMartRouter);
+// Delivery spans three audiences - the store, the assigned courier and staff -
+// so its router owns paths under /api/organizations, /api/me and /api/deliveries
+// rather than being split across three files that would each re-implement the
+// same "may this caller touch this order?" check.
+//
+// MOUNTED BEFORE organizationsRouter deliberately. Express matches routers in
+// order, and /api/organizations/:id/deliveries has to reach this one.
+app.use("/api", deliveriesRouter);
+app.use("/api/admin/deliveries", adminDeliveriesRouter);
 app.use("/api/organizations", organizationsRouter);
 app.use("/api/admin/organizations", adminOrganizationsRouter);
 app.use("/api/disputes", adminDisputesRouter);
@@ -275,5 +287,40 @@ export default {
       return handleKycFileGet(request, fileMatch[1]);
     }
     return workersHandler.fetch!(request, env, ctx);
+  },
+
+  /**
+   * The only scheduled work in the platform, and it exists because
+   * MART_INTEGRATION.md §5 makes a deletion promise that nothing else can keep.
+   *
+   * Everything else that could have been a job is derived at read time instead -
+   * an expired posting, an expired credential - precisely so that a job failing
+   * to run cannot leave a stale record looking live (see
+   * services/contractState.ts). Retention is the case where that trick does not
+   * work: you cannot derive the absence of data, and a customer's address is not
+   * deleted by nobody looking at it.
+   *
+   * It is safe to miss a run. The sweep is idempotent, works from a cutoff
+   * rather than from "since last time", and drains a backlog over consecutive
+   * runs - so a Worker that was not invoked on Tuesday deletes Tuesday's rows on
+   * Wednesday rather than skipping them.
+   */
+  async scheduled(_controller, _env, ctx) {
+    ctx.waitUntil(
+      purgeCustomerData(SYSTEM_ACTORS.deliveryPurge)
+        .then((r) => {
+          console.log(
+            `[delivery-purge] cleared ${r.purged} order(s), ${r.remaining} still due`
+          );
+        })
+        // Never rethrown: a failed purge must be visible in the logs and in the
+        // absence of an audit row, not by the Worker reporting an unhandled
+        // rejection that says nothing about what it was doing.
+        .catch((e) => {
+          console.error(
+            `[delivery-purge] FAILED: ${e instanceof Error ? e.message : String(e)}`
+          );
+        })
+    );
   },
 } satisfies ExportedHandler<Env>;

@@ -74,7 +74,7 @@ describe("categories cover what the generators write", () => {
     // services/taskGenerator.ts sets these as free-text categories. One the
     // admin filter does not list is a task that appears to belong nowhere.
     const names = new Set(CATEGORIES.map((c) => c.name));
-    for (const generated of ["Sourcing", "Media", "Store audit"]) {
+    for (const generated of ["Sourcing", "Media", "Store audit", "Delivery"]) {
       expect(names.has(generated), `no category named "${generated}"`).toBe(true);
     }
   });

@@ -15,6 +15,7 @@ import { prisma } from "../prisma";
 import { generateTask } from "./taskGenerator";
 import { requestStoreAudit } from "./storeAudit";
 import { userActor, type AuditActor } from "../util/audit";
+import { parseOrder, recordOrder } from "./delivery";
 
 export const MART_EVENT_TYPES = [
   "order.confirmed",
@@ -212,7 +213,7 @@ async function handle(
     case "listing.needs_media":
       return handleNeedsMedia(data, actor);
     case "order.confirmed":
-      return handleOrderConfirmed();
+      return handleOrderConfirmed(data, actor);
   }
 }
 
@@ -308,19 +309,41 @@ async function handleNeedsMedia(data: Record<string, any>, actor: AuditActor) {
 }
 
 /**
- * An order was placed. Recorded, but nothing is generated yet.
+ * An order was placed. Record it and put it in front of the store.
  *
- * Delivery does not exist - no assignment path, no pickup and drop-off, no
- * customer OTP - so there is nothing correct to create. Answering 200 and
- * silently dropping it would lose the order; recording it DEFERRED means every
- * one of them can be replayed the day delivery ships. That is the whole reason
- * the event ledger exists rather than a bare idempotency key.
+ * This used to answer DEFERRED, because there was no assignment path, no pickup
+ * and drop-off and no customer OTP, and answering 200 while dropping the order
+ * would have lost real business. Every one of those deferred events is still in
+ * the ledger and can be replayed through this handler - which is the whole
+ * reason the ledger exists rather than a bare idempotency key.
+ *
+ * NO COURIER TASK IS POSTED HERE. The store has to accept first; see
+ * services/delivery.ts. A rider dispatched to collect from a shop that has not
+ * agreed to pack the order arrives at a closed door, and PartTime holds no stock
+ * data, so the store's answer is the only availability signal there is.
  */
-async function handleOrderConfirmed() {
+async function handleOrderConfirmed(data: Record<string, any>, actor: AuditActor) {
+  // Throws OrderRejected for a payload we understood well enough to refuse -
+  // notably a missing stockSource, which is never defaulted. intakeMartEvent
+  // catches it, records the event FAILED with the reason, and answers 400.
+  const order = parseOrder(data);
+  const result = await recordOrder(order, actor);
+
+  if (!result.created) {
+    return {
+      status: "IGNORED",
+      taskId: null,
+      note: `Order ${order.martOrderId} is already being fulfilled (${result.deliveryId})`,
+    };
+  }
+  // PROCESSED rather than DEFERRED: the order is recorded and live, and the
+  // thing it is waiting on is a shopkeeper rather than a missing feature. The
+  // taskId stays null until the store accepts, which is not the same as nothing
+  // having happened - hence the note.
   return {
-    status: "DEFERRED",
+    status: "PROCESSED",
     taskId: null,
-    note: "Delivery is not built yet. Recorded for replay.",
+    note: `Delivery ${result.deliveryId} recorded, waiting for ${order.storeSlug} to accept`,
   };
 }
 

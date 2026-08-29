@@ -4,6 +4,7 @@ import { requireAuth, requireRole, AuthedRequest } from "../auth";
 import { tiersToArray } from "../types";
 import { notifyWorker } from "../services/push";
 import { userActor, writeAudit } from "../util/audit";
+import { transitionDelivery } from "../services/delivery";
 import { commitForContract, committableAmount } from "../services/commitments";
 import {
   blockingBlockers,
@@ -191,6 +192,34 @@ router.post("/:id/approve", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGE
     committableAmount(app.task),
     userActor(req.user!.id)
   );
+
+  // A delivery posting has an order behind it, and the order has its own status
+  // axis that the store and AfriZoneMart both watch. Approval is the moment a
+  // courier is actually assigned, so it is the moment the order stops waiting.
+  //
+  // Hung off approval rather than duplicated into a delivery-specific claim
+  // route: there is one way work is assigned on this platform, and a second one
+  // would eventually disagree with this one about who holds a job.
+  if (app.task.kind === "DELIVERY") {
+    const delivery = await prisma.delivery.findUnique({
+      where: { taskId: app.taskId },
+      select: { id: true },
+    });
+    if (delivery) {
+      // Not awaited for its result and never fatal: the contract is already
+      // written, and refusing the approval because a status move failed would
+      // leave a courier assigned to a job the system says nobody took.
+      const moved = await transitionDelivery(
+        delivery.id,
+        "COURIER_ASSIGNED",
+        userActor(req.user!.id),
+        { meta: { contractId: contract.id, workerId: app.workerId } }
+      );
+      if (!moved.ok) {
+        console.error(`delivery ${delivery.id} could not be marked assigned: ${moved.error}`);
+      }
+    }
+  }
 
   // Notify worker: approved + contract ready
   await notifyWorker(

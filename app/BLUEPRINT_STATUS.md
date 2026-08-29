@@ -5,13 +5,17 @@ what exists, so nobody has to read 16 sections and 30 tables side by side to fin
 out what is done.
 
 **Headline: every one of the ten things Blueprint §15 lists for Phase 1 is
-built.** What remains is not Phase 1 — it is delivery, ranked matching, evidence
-capture and the rest of §14, plus the operational work of switching Mart on.
+built, and delivery — the first item of Phase 2 — is built on the server.** What
+remains is ranked matching, evidence capture and the rest of §14, the delivery
+screens for the three people who use one, and the operational work of switching
+Mart on.
 
-Two Phase 1 items are built to a deliberate limit, and pretending otherwise
-would be the more expensive mistake: **CAC verification is a manual check** until
-a registry provider is configured, and **the store map is an admin screen** —
-couriers see the network through the API, not a map on their phone.
+Three things are built to a deliberate limit, and pretending otherwise would be
+the more expensive mistake: **CAC verification is a manual check** until a
+registry provider is configured, **the store map is an admin screen** — couriers
+see the network through the API, not a map on their phone — and **a delivery
+cannot be completed until Mart exposes its code-verification endpoint**, because
+no courier tapping a button is allowed to produce a delivered order.
 
 Living document. When it stops matching the code, the code is right.
 
@@ -29,7 +33,7 @@ approved stores; two-way ratings.*
 | Courier sign-up & KYC | **Built** | A readiness checklist in both the portal and the app, `CourierProfile` for the vehicle and plate, and `Vehicle insurance` as the third credential type. What is asked for follows the vehicle: nobody on foot is asked for a licence |
 | Store sign-up & KYC | **Built** | `Organization`, membership, admin approval, `tin`, a premises audit raised as gated paid work (§8), and CAC registration with a four-state review. The registry lookup is env-gated: with no provider, it is a manual check and the screen says so |
 | Manual task creation | **Built** | Two-step admin form with a live qualifying-worker count |
-| Basic auto task creation | **Built** | One signed inbound endpoint, an event ledger, per-type de-duplication, and admin-editable generation rules. `order.confirmed` records DEFERRED — delivery does not exist to generate |
+| Basic auto task creation | **Built** | One signed inbound endpoint, an event ledger, per-type de-duplication, and admin-editable generation rules. All four event types now generate; `order.confirmed` creates a delivery the store answers for |
 | Contract lifecycle | **Built** | An explicit state machine — nine states and a table of legal moves, against the two it had. The blueprint names eleven; the two absent are stages this build reaches through the task, not the contract |
 | Wallet | **Built** | Derived balance, withdrawals, Paystack transfers, webhook settlement |
 | Escrow | **Built** | `Commitment` records the ring-fence — COMMITTED on a live contract, RELEASED on verified acceptance. Mart holds the money throughout; see §4 |
@@ -157,18 +161,86 @@ A `store.applied` event is Mart forwarding a lead, so the handler creates the
 `Organization` itself, PENDING, and raises the audit. Mart is not handing over a
 business.
 
-**Every event is recorded, including the ones nothing can act on yet.**
-`order.confirmed` is answered 202 and stored DEFERRED, because delivery has no
-assignment path, no pickup and drop-off and no customer OTP — there is nothing
-correct to create. Answering 200 and dropping it would lose real orders; the
-ledger means they can be replayed the day delivery ships. That distinction —
-between "Mart never sent it", "we de-duplicated it" and "nothing is built to
-handle it" — is the whole reason the ledger exists rather than a bare
-idempotency key, and it is what the admin screen shows.
+**Every event is recorded, including the ones nothing could act on.**
+`order.confirmed` was answered 202 and stored DEFERRED for as long as delivery
+did not exist, because there was nothing correct to create. Answering 200 and
+dropping it would have lost real orders. It now creates a delivery — see §6 —
+and the events banked under DEFERRED are still there and still replayable.
+Nothing replays them automatically, deliberately: a batch of week-old orders
+landing at real shops at once is a decision somebody makes, not a side effect of
+a deploy. The distinction the ledger exists for — between "Mart never sent it",
+"we de-duplicated it" and "we could not place it" — is what the admin screen
+shows, and it is why this is a ledger rather than a bare idempotency key.
 
 ---
 
-## 6. Substantial features not started
+## 6. Delivery — built on the server, no screens yet
+
+The first item of Phase 2, and the reason `order.confirmed` sat DEFERRED. Three
+things were missing and all three now exist.
+
+**A second location.** A task has one site; a delivery has a shop to collect from
+and a door to knock on, and the distance between them is the work. The new
+`Delivery` table holds both. The pickup is **copied** from the store rather than
+joined to it, so a shop that moves or is renamed does not rewrite where
+deliveries already made actually went.
+
+**A progress axis that is not the courier's.** This is the decision worth
+understanding before changing anything: there are now three status axes.
+`Task.status` is the posting. `Contract.status` is one person's engagement with
+it. `Delivery.status` is the ORDER, and it has to be separate because "the store
+has not accepted this yet" is a state that exists before any courier does and can
+end the order without one. Collapsing it into the courier's work lifecycle makes
+*did the rider fail, or did the store refuse?* unanswerable, and those need
+different people to act on them.
+
+Packing is a **timestamp, not a state**, for the same reason `Contract.signedAt`
+is one: a courier may well accept the job while the shopkeeper is still bagging
+it, and a state would force an order through a sequence real shops do not
+respect.
+
+**A customer OTP for somebody with no PartTime account.** Mart generates the
+code, delivers it and verifies it; PartTime never stores it and never sees it
+except in transit. That removes the problem outright rather than solving it —
+PartTime's own `OtpCode` model is keyed to a user, and a delivery customer has no
+user.
+
+What the flow is: Mart confirms an order → the store accepts or refuses it → an
+acceptance posts a credential-gated courier job through the same generator every
+other automatic task uses → approving an application assigns the courier and
+moves the order → the courier collects → the courier enters the customer's code,
+Mart verifies it, and only then is it delivered.
+
+Three things are deliberately absent:
+
+- **No screens.** The store answers, the courier collects and completes, and
+  operations watches — all through the API. The portal, the app and the admin
+  console have nothing for any of it yet.
+- **Assignment is still an admin approving an application.** That is the one way
+  work is assigned on this platform and a delivery-specific claim path would
+  eventually disagree with it about who holds a job. It is also too slow for real
+  delivery, and self-claim is the next decision, not an oversight.
+- **A delivery cannot complete until Mart exposes two endpoints.** Unconfigured,
+  a courier is told *we could not check this* — never *that is the wrong code*,
+  which would have them arguing with a customer about a check that never ran.
+
+`MART_INTEGRATION.md` §6 D1, D4 and D6 are open and now matter: what a courier
+does when the verifier cannot be reached, how long an unclaimed delivery waits
+before it escalates, and whether a failed attempt is paid. D5 — a courier who
+vanishes — is half-settled: an operator re-opens the posting from the board, and
+how long that should take before somebody notices is still open.
+
+**Customer data is deleted seven days after an order finishes**, per §5 — the
+name, the number, the door, the coordinates and the instructions, actually
+emptied rather than flagged. This is the platform's only scheduled job, and it
+exists because absence of data is the one thing that cannot be derived at read
+time the way expired postings and credentials are. Every run writes an audit row
+including a run that finds nothing, so a cron that stopped firing is
+distinguishable from a quiet week.
+
+---
+
+## 7. Substantial features not started
 
 - **Ranked matching** (§11). The build gates *qualified / not qualified*; the
   blueprint wants candidates **scored** on skill, proximity, reliability and
@@ -187,7 +259,7 @@ idempotency key, and it is what the admin screen shows.
 
 ---
 
-## 7. Terminology
+## 8. Terminology
 
 The blueprint's vocabulary should win, and the code does not use it yet.
 
@@ -205,34 +277,46 @@ migration touching them anyway.
 
 ---
 
-## 8. What is next
+## 9. What is next
 
-**Phase 1 is complete.** Everything below is Phase 2 or later, in the order it is
-worth doing:
+**Phase 1 is complete and delivery is built on the server.** Everything below is
+in the order it is worth doing:
 
-1. **Delivery.** It is the only reason `order.confirmed` sits DEFERRED, and every
-   deferred order replays the day it lands. It needs pickup and drop-off on a
-   task that has one location today, a work-progress axis distinct from the
-   posting's status, and a customer OTP for somebody who has no PartTime account.
-2. **Ranked matching** (§11). The build gates qualified / not qualified; the
+1. **Delivery, the screens.** The whole flow works and nobody can see it. A store
+   needs an inbox that shows an order and two buttons; a courier needs the job,
+   the door, and a field for the customer's code; operations needs the board.
+   Until those exist, delivery is an API a person cannot use.
+2. **Self-claim for deliveries.** Assignment is an admin approving an
+   application, which is the one way work is assigned here and correct for a
+   week-long task. For an order that has to move in the hour, it is too slow.
+   This is the decision that makes delivery real, and it is genuinely a policy
+   call — see §6 D4 on what happens when nobody takes it.
+3. **Ranked matching** (§11). The build gates qualified / not qualified; the
    blueprint wants candidates scored on skill, proximity, reliability and load.
-3. **Proof-of-work evidence** (§14) — geo-tagged photos, signatures, timestamps,
+   Delivery is what makes this urgent rather than nice: "who is nearest and
+   free?" is the question an order asks.
+4. **Proof-of-work evidence** (§14) — geo-tagged photos, signatures, timestamps,
    required per task type, so verification is largely automatic.
-4. **Reputation tiers and badges** (§9). Note this is a *third* meaning of
+5. **Reputation tiers and badges** (§9). Note this is a *third* meaning of
    "tier"; the naming needs settling before it is built.
-5. **Surge pay, crew contracts, referral loop** (§10, §14), **shared identity
+6. **Surge pay, crew contracts, referral loop** (§10, §14), **shared identity
    with AZM** (§13, blocked on Mart exposing an identity provider), and
    **offline-tolerant mobile flows** (§16).
 
-Two Phase 1 items have a deliberate ceiling worth revisiting when there is a
-reason:
+Three things have a deliberate ceiling worth revisiting when there is a reason:
 
 - **CAC verification is manual** until `CAC_LOOKUP_URL` and `CAC_API_KEY` are
   set. The lookup and the name comparison are built and dormant.
 - **The store map is admin-only.** A courier's in-app map needs a native map
-  component and a rebuild, and it belongs with delivery rather than ahead of it.
+  component and a rebuild. It now belongs WITH the delivery screens rather than
+  after them: a rider given a drop-off address and no map is being asked to do
+  the hard half on their own.
+- **A delivery cannot be completed** until `MART_BASE_URL` and
+  `MART_OUTBOUND_SECRET` are set and Mart exposes the code check. Built and
+  dormant, the same way the CAC lookup is.
 
 Still needed from the Mart team before any of this carries real traffic:
-agreement on `stockSource`, a staging environment, and the shared secret for
-`MART_INBOUND_SECRET`. The endpoint refuses every request until that secret is
-set, which is the intended behaviour rather than a fault to debug.
+agreement on `stockSource`, a staging environment, the shared secret for
+`MART_INBOUND_SECRET`, and now the two outbound endpoints in
+`MART_INTEGRATION.md` §4 and §5 with a secret of their own. Every one of those
+refusals is the intended behaviour rather than a fault to debug.

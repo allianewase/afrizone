@@ -163,6 +163,9 @@ model Task {
   credentialRequirements TaskCredentialRequirement[]
   organization           Organization?               @relation(fields: [organizationId], references: [id])
   storeAudits            StoreAudit[]
+  /// The order this posting exists to deliver, when it is a DELIVERY task.
+  /// At most one: a delivery posting has one slot and one order behind it.
+  delivery               Delivery?
 
   @@index([status])
   /// "Which audit tasks are open?" and "what is this store's task?" are both
@@ -763,6 +766,7 @@ model Organization {
   commitments Commitment[]
   tasks       Task[]
   audits      StoreAudit[]
+  deliveries  Delivery[]
 
   /// "Which stores are live?" and "which courier companies are waiting for
   /// approval?" are both list screens, and both filter on exactly this pair.
@@ -981,4 +985,107 @@ model CourierProfile {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+}
+
+
+/// One Mart order, from confirmed to delivered (MART_INTEGRATION.md §3.1, §4).
+///
+/// This is what `order.confirmed` becomes. Everything Mart sends about an order
+/// lands here; what the work is worth and who may do it comes from
+/// `rules.DELIVERY`, not from the payload - see services/taskRules.ts.
+///
+/// A THIRD STATUS AXIS, AND WHY IT HAS TO BE. `Task.status` is the posting.
+/// `Contract.status` is one person's engagement with it. Neither can hold "the
+/// store has not accepted this yet" - a state that exists before any courier
+/// does and can end the order without one. Overloading a courier's work
+/// lifecycle with a shop's decision would make "did the rider fail, or did the
+/// store refuse?" unanswerable, and those need different people to act on them.
+model Delivery {
+  id String @id @default(cuid())
+
+  /// Mart's order number, and the de-duplication key: one order, one fulfilment
+  /// job, forever. Deliberately not the event id - Mart may re-confirm an order
+  /// under a new one, and that must find this row rather than make a second.
+  martOrderId String @unique
+
+  /// The store fulfilling, resolved from `fulfilment.storeSlug` at intake.
+  organizationId String
+  /// The courier posting, once there is one. Null until the store accepts:
+  /// posting work to collect from a shop that has not agreed to pack it sends a
+  /// rider to a closed door.
+  taskId         String? @unique
+
+  /// CONSIGNMENT | OWN_STOCK - the field the integration document exists for.
+  /// It decides whether the store is owed a settlement line, PartTime cannot
+  /// infer it, and an absent value is rejected rather than defaulted.
+  stockSource String
+  /// The line items as sent, JSON, verbatim. PartTime never reasons about them;
+  /// it hands a courier a list.
+  items       String @default("[]")
+
+  /// Copied from the store at intake, not joined. A store that moves or is
+  /// renamed must not rewrite where deliveries already made actually went.
+  pickupAddress String?
+  pickupLat     Float?
+  pickupLng     Float?
+
+  /// Nullable, which is not the same as optional: an order with no destination
+  /// is refused at intake. It is nullable because §5 commits us to DELETING the
+  /// customer's door seven days after the order finishes, and a NOT NULL column
+  /// would force the purge to write a placeholder instead. The coordinates are
+  /// optional for a different reason - a rider can find a street name, and a
+  /// wrong pin is worse than no pin.
+  dropoffAddress      String?
+  dropoffLat          Float?
+  dropoffLng          Float?
+  dropoffInstructions String?
+
+  /// The whole of what §5 permits us to hold about somebody with no PartTime
+  /// account. Nullable because the purge empties them, not because they start
+  /// absent.
+  customerName     String?
+  customerPhone    String?
+  /// When the purge ran. Not a "hidden" flag - the columns above are actually
+  /// emptied - so a purge that never ran is distinguishable from one that ran
+  /// and found nothing.
+  customerPurgedAt DateTime?
+
+  /// Whole Naira. `deliveryFee` is what MART charged the customer and is NOT
+  /// what the courier is paid: that comes from `rules.DELIVERY.fee`, which an
+  /// admin sets. Mart changing its pricing must never change our payroll.
+  goodsTotal  Int       @default(0)
+  deliveryFee Int       @default(0)
+  expectedBy  DateTime?
+
+  /// RECEIVED | STORE_ACCEPTED | PREPARED | COURIER_ASSIGNED | PICKED_UP |
+  /// DELIVERED | STORE_REJECTED | FAILED | CANCELLED. Legal moves live in
+  /// services/delivery.ts.
+  status String @default("RECEIVED")
+
+  /// One timestamp per leg rather than a status-history table. "How long did
+  /// the store take" and "how long did it sit unclaimed" are the questions
+  /// operations actually asks, and they are arithmetic here. The full trail is
+  /// in AuditLog, which every transition writes to.
+  storeDecidedAt DateTime?
+  storeNote      String?
+  preparedAt     DateTime?
+  assignedAt     DateTime?
+  pickedUpAt     DateTime?
+  deliveredAt    DateTime?
+  failedAt       DateTime?
+  failureReason  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  task         Task?        @relation(fields: [taskId], references: [id])
+
+  /// "What is waiting on my store?" - the portal queue is exactly this pair.
+  @@index([organizationId, status])
+  /// "What is stuck?" - the operations board, across every store.
+  @@index([status])
+  /// The purge sweeps finished orders by age; without this it is a full scan
+  /// that grows for as long as the platform runs.
+  @@index([status, updatedAt])
 }

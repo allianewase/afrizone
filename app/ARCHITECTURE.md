@@ -300,7 +300,17 @@ admin web; a typecheck for mobile.
 **Credential expiry is derived, never stored.** There is no `EXPIRED` status.
 `isCredentialValid()` computes it against the clock at read time. Stored, it would
 depend on a scheduled job, whose failure mode is a lapsed licence still reading as
-valid. *There is no cron in this codebase at all, and that is deliberate.*
+valid. The same rule governs an expired posting — see `isTaskExpired()`.
+
+*There is exactly one cron in this codebase, and the exception proves the rule.*
+It deletes delivery customer data seven days after an order finishes
+(`MART_INTEGRATION.md` §5, `services/deliveryPurge.ts`), because absence of data
+is the one thing that cannot be derived at read time: a customer's address is not
+deleted by nobody looking at it. It is written so that missing a run is safe — it
+works from a cutoff rather than from "since last time" — and it writes an audit
+row on every run including one that finds nothing, so a job that silently stopped
+firing is distinguishable from a quiet week. Anything else that wants to be a
+scheduled job should be derived instead.
 
 **Skills carry no verification state.** No `verified` column on `WorkerSkill`. Skills
 are the worker's own word and unlock nothing; anything that must be guaranteed is a

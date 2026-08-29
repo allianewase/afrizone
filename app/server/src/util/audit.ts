@@ -27,6 +27,10 @@ export type AuditActor =
 export const SYSTEM_ACTORS = {
   paystackWebhook: { type: "WEBHOOK", ref: "paystack" },
   smileWebhook: { type: "WEBHOOK", ref: "smile-identity" },
+  /// The scheduled sweep that deletes delivery customer data (§5). A JOB rather
+  /// than a SYSTEM actor because it is a thing that runs on a clock and can
+  /// fail to run, which is exactly what its audit rows are read to check.
+  deliveryPurge: { type: "JOB", ref: "delivery-purge" },
 } as const satisfies Record<string, AuditActor>;
 
 export function userActor(userId: string): AuditActor {

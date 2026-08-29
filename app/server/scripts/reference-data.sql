@@ -38,6 +38,9 @@ WHERE NOT EXISTS (SELECT 1 FROM "Category" WHERE "name" = 'Media');
 INSERT INTO "Category" ("id", "name", "tier", "defaultPayModel", "active")
 SELECT 'ref_cat_store-audit', 'Store audit', 'TRADE', 'FIXED', 1
 WHERE NOT EXISTS (SELECT 1 FROM "Category" WHERE "name" = 'Store audit');
+INSERT INTO "Category" ("id", "name", "tier", "defaultPayModel", "active")
+SELECT 'ref_cat_delivery', 'Delivery', 'DISPATCH', 'FIXED', 1
+WHERE NOT EXISTS (SELECT 1 FROM "Category" WHERE "name" = 'Delivery');
 
 -- ------------------------------------------------------------------------
 -- Tax rates (keyed on jurisdiction + category)

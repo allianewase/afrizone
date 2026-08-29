@@ -24,6 +24,10 @@ const TABLES_CHILD_TO_PARENT = [
   "Commitment",
   // StoreAudit FKs Organization, Task AND User, so it clears before all three.
   "StoreAudit",
+  // Delivery FKs Organization AND Task, so it clears before both. Added with
+  // migration 0019 - see the CourierProfile note below for what leaving a new
+  // foreign-keyed table out of this list costs to diagnose.
+  "Delivery",
   // Task requirements, before Task and before the two catalogues they point at.
   "TaskSkillRequirement",
   "TaskCredentialRequirement",

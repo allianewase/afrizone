@@ -76,6 +76,18 @@
       "bucket_name": "afrizone-kyc-docs"
     }
   ],
+  // The platform's only scheduled work. MART_INTEGRATION.md §5 commits us to
+  // deleting a delivery customer's name, number and door seven days after the
+  // order finishes, and an absence of data is the one thing that cannot be
+  // derived at read time the way expired postings and credentials are.
+  //
+  // Daily, at an odd minute rather than on the hour: Cloudflare queues a great
+  // many crons at :00, and there is nothing about this that needs to be in that
+  // crowd. Missing a run is safe - the sweep works from a cutoff rather than
+  // from "since last time" - so an hour of drift costs nothing.
+  "triggers": {
+    "crons": ["17 3 * * *"]
+  },
   "observability": {
     "enabled": true
   }
