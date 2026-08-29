@@ -5,10 +5,9 @@ what exists, so nobody has to read 16 sections and 30 tables side by side to fin
 out what is done.
 
 **Headline: every one of the ten things Blueprint §15 lists for Phase 1 is
-built, and delivery — the first item of Phase 2 — is built on the server.** What
-remains is ranked matching, evidence capture and the rest of §14, the delivery
-screens for the three people who use one, and the operational work of switching
-Mart on.
+built, and delivery — the first item of Phase 2 — is built end to end.** What
+remains is self-claim, ranked matching, evidence capture and the rest of §14, and
+the operational work of switching Mart on.
 
 Three things are built to a deliberate limit, and pretending otherwise would be
 the more expensive mistake: **CAC verification is a manual check** until a
@@ -174,7 +173,7 @@ shows, and it is why this is a ledger rather than a bare idempotency key.
 
 ---
 
-## 6. Delivery — built on the server, no screens yet
+## 6. Delivery — built, and unexercised against a real Mart
 
 The first item of Phase 2, and the reason `order.confirmed` sat DEFERRED. Three
 things were missing and all three now exist.
@@ -211,18 +210,24 @@ other automatic task uses → approving an application assigns the courier and
 moves the order → the courier collects → the courier enters the customer's code,
 Mart verifies it, and only then is it delivered.
 
-Three things are deliberately absent:
+All three parties have a screen. A store answers its inbox in the portal; a
+courier works their jobs in the portal and in the app, where live deliveries also
+appear on the home screen because an order is the only work on this platform with
+somebody standing in a doorway; operations watches a board at Operations →
+Deliveries that says *who each order is waiting on* rather than only what state
+it is in.
 
-- **No screens.** The store answers, the courier collects and completes, and
-  operations watches — all through the API. The portal, the app and the admin
-  console have nothing for any of it yet.
+Two things are deliberately absent:
+
 - **Assignment is still an admin approving an application.** That is the one way
   work is assigned on this platform and a delivery-specific claim path would
   eventually disagree with it about who holds a job. It is also too slow for real
   delivery, and self-claim is the next decision, not an oversight.
 - **A delivery cannot complete until Mart exposes two endpoints.** Unconfigured,
   a courier is told *we could not check this* — never *that is the wrong code*,
-  which would have them arguing with a customer about a check that never ran.
+  which would have them arguing with a customer about a check that never ran. The
+  operations board says so at the top of the page, so an order that will not
+  complete is not mistaken for a courier who has not turned up.
 
 `MART_INTEGRATION.md` §6 D1, D4 and D6 are open and now matter: what a courier
 does when the verifier cannot be reached, how long an unclaimed delivery waits
@@ -279,27 +284,23 @@ migration touching them anyway.
 
 ## 9. What is next
 
-**Phase 1 is complete and delivery is built on the server.** Everything below is
-in the order it is worth doing:
+**Phase 1 is complete and delivery is built end to end.** Everything below is in
+the order it is worth doing:
 
-1. **Delivery, the screens.** The whole flow works and nobody can see it. A store
-   needs an inbox that shows an order and two buttons; a courier needs the job,
-   the door, and a field for the customer's code; operations needs the board.
-   Until those exist, delivery is an API a person cannot use.
-2. **Self-claim for deliveries.** Assignment is an admin approving an
+1. **Self-claim for deliveries.** Assignment is an admin approving an
    application, which is the one way work is assigned here and correct for a
    week-long task. For an order that has to move in the hour, it is too slow.
    This is the decision that makes delivery real, and it is genuinely a policy
    call — see §6 D4 on what happens when nobody takes it.
-3. **Ranked matching** (§11). The build gates qualified / not qualified; the
+2. **Ranked matching** (§11). The build gates qualified / not qualified; the
    blueprint wants candidates scored on skill, proximity, reliability and load.
    Delivery is what makes this urgent rather than nice: "who is nearest and
    free?" is the question an order asks.
-4. **Proof-of-work evidence** (§14) — geo-tagged photos, signatures, timestamps,
+3. **Proof-of-work evidence** (§14) — geo-tagged photos, signatures, timestamps,
    required per task type, so verification is largely automatic.
-5. **Reputation tiers and badges** (§9). Note this is a *third* meaning of
+4. **Reputation tiers and badges** (§9). Note this is a *third* meaning of
    "tier"; the naming needs settling before it is built.
-6. **Surge pay, crew contracts, referral loop** (§10, §14), **shared identity
+5. **Surge pay, crew contracts, referral loop** (§10, §14), **shared identity
    with AZM** (§13, blocked on Mart exposing an identity provider), and
    **offline-tolerant mobile flows** (§16).
 
@@ -308,9 +309,9 @@ Three things have a deliberate ceiling worth revisiting when there is a reason:
 - **CAC verification is manual** until `CAC_LOOKUP_URL` and `CAC_API_KEY` are
   set. The lookup and the name comparison are built and dormant.
 - **The store map is admin-only.** A courier's in-app map needs a native map
-  component and a rebuild. It now belongs WITH the delivery screens rather than
-  after them: a rider given a drop-off address and no map is being asked to do
-  the hard half on their own.
+  component and a rebuild. The delivery screens shipped without one, which means
+  a rider is given an address and a phone number and left to find the door — the
+  hard half, on their own. That is the most obvious gap in what was just built.
 - **A delivery cannot be completed** until `MART_BASE_URL` and
   `MART_OUTBOUND_SECRET` are set and Mart exposes the code check. Built and
   dormant, the same way the CAC lookup is.

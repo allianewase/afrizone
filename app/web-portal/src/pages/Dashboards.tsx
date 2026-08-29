@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import Shell, { ErrorNote } from './Shell'
+import { CourierJobs, StoreOrders } from './Deliveries'
 import { useAuth, homeFor } from '../lib/auth'
 import { api, ApiError } from '../lib/api'
 import type {
@@ -15,10 +16,11 @@ import type {
 /**
  * The three destinations.
  *
- * Every one of these is a SHELL. Orders, deliveries and settlement are not
- * built — the Mart connection they depend on is still a proposal. Each screen
- * says so in place of the section it will eventually hold, rather than
- * rendering an empty list that reads as a bug or a promise that reads as a lie.
+ * Orders and deliveries are real now: a store answers its own inbox here and a
+ * courier works the jobs they hold. SETTLEMENT is still a shell — Mart holds the
+ * money and the endpoint that reports what is owed does not exist yet — and it
+ * says so in place of the section it will eventually hold, rather than rendering
+ * an empty list that reads as a bug or a promise that reads as a lie.
  */
 
 function statusPill(status: Organization['status']) {
@@ -237,12 +239,11 @@ function OrgView({ kind }: { kind: OrgKind }) {
 
       {kind === 'STORE' && <CacCard org={org} onUpdated={(next) => setOrgs([next])} />}
 
-      <h2 className="sectitle">{kind === 'STORE' ? 'Orders' : 'Deliveries'}</h2>
-      <div className="note">
-        {kind === 'STORE'
-          ? 'Orders from AfriZoneMart will arrive here. That connection is not switched on yet.'
-          : 'Delivery jobs will arrive here. That connection is not switched on yet.'}
-      </div>
+      {/* Orders belong to the STORE, so they hang off the organization. A
+          courier's jobs do not: what makes a delivery theirs is holding the
+          contract, and a rider on their own bike has no company at all - so
+          those are rendered by CourierDashboard rather than from here. */}
+      {kind === 'STORE' && <StoreOrders orgId={org.id} />}
 
       <h2 className="sectitle">People</h2>
       <div className="card">
@@ -286,9 +287,14 @@ export function CourierDashboard() {
         <p className="eyebrow">Courier / Dispatch</p>
         <h1 className="pt">Deliveries</h1>
         <p className="lede">
-          Hello {user?.name?.split(' ')[0]}. Delivery jobs will appear here once the AfriZoneMart
-          connection is live.
+          Hello {user?.name?.split(' ')[0]}. Everything you are carrying, and everything you have
+          finished.
         </p>
+
+        {/* Above the checklist deliberately: a rider who is already working
+            should not have to scroll past a setup list to find the job they are
+            standing outside a shop for. */}
+        <CourierJobs />
         <CourierChecklist />
 
         {/* A courier riding on their own has no company behind them, so this
@@ -382,8 +388,7 @@ function CourierChecklist() {
       <div className="card">
         {data.ready ? (
           <p style={{ marginTop: 0 }}>
-            <b>You are set up.</b> Deliveries will appear here once the AfriZoneMart connection is
-            live.
+            <b>You are set up.</b> Deliveries you are given appear at the top of this page.
           </p>
         ) : (
           <p className="muted" style={{ marginTop: 0 }}>

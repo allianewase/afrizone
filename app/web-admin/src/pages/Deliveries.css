@@ -1,0 +1,74 @@
+/* ===== Deliveries: the operations board ===== */
+
+.dv-warn {
+  padding: 16px 20px;
+  margin-bottom: 18px;
+  border-left: 3px solid var(--gold);
+}
+.dv-warn b { display: block; margin-bottom: 6px; }
+.dv-warn p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.55; max-width: 720px; }
+.dv-warn code {
+  font-family: monospace;
+  font-size: 12px;
+  background: rgba(0, 0, 0, .05);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.dv-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.dv-order { font-weight: 600; font-size: 13px; font-family: monospace; }
+.dv-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* How long it has been sitting where it is. Set apart from the sentence rather
+   than appended to it: an operator scans this column for the big number. */
+.dv-age {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Wraps rather than clipping. The actions cell is last, so anything that
+   overflows disappears off the right edge of the table instead of scrolling -
+   which is how the "Task" link went missing at 1500px. */
+.dv-acts {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  min-width: 120px;
+}
+.dv-link { font-size: 11px; color: var(--clay-deep); font-weight: 600; white-space: nowrap; }
+
+.dv-purge-wrap { margin-top: 30px; }
+.dv-purge-wrap h2 { font-size: 18px; margin-bottom: 4px; }
+.dv-purge-wrap > p {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 16px;
+  max-width: 620px;
+  line-height: 1.55;
+}
+.dv-purge { padding: 20px; }
+.dv-purge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.dv-big { font-size: 26px; font-weight: 700; margin-top: 4px; }
+.dv-when { font-size: 14px; margin-top: 6px; }
+
+.dv-modal-acts { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+
+@media (max-width: 640px) {
+  .dv-purge-grid { grid-template-columns: 1fr; }
+}

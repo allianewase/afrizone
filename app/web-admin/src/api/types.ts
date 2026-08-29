@@ -632,6 +632,106 @@ export interface TaskRule {
 
 export type TaskRules = Record<string, TaskRule>
 
+/* ===== Deliveries ===== */
+
+/**
+ * Where one AfriZoneMart order has got to.
+ *
+ * A THIRD status axis, and not interchangeable with the other two. `TaskStatus`
+ * is the posting and a contract's status is one courier's engagement with it;
+ * this one belongs to the ORDER, starts before any courier exists and can end
+ * without one - which is exactly what "the store cannot fulfil" is.
+ */
+export type DeliveryStatus =
+  | 'RECEIVED'
+  | 'STORE_ACCEPTED'
+  | 'STORE_REJECTED'
+  | 'COURIER_ASSIGNED'
+  | 'PICKED_UP'
+  | 'DELIVERED'
+  | 'FAILED'
+  | 'CANCELLED'
+
+export interface DeliveryItem {
+  ref?: string
+  name?: string
+  qty?: number
+}
+
+export interface Delivery {
+  id: string
+  martOrderId: string
+  organizationId: string
+  storeName: string | null
+  taskId: string | null
+  /** CONSIGNMENT owes the store nothing extra; OWN_STOCK is a settlement line. */
+  stockSource: 'CONSIGNMENT' | 'OWN_STOCK'
+  items: DeliveryItem[]
+  pickupAddress: string | null
+  pickupLat: number | null
+  pickupLng: number | null
+  goodsTotal: number
+  /** What MART charged the customer. NOT what the courier is paid. */
+  deliveryFee: number
+  expectedBy: string | null
+  status: DeliveryStatus
+  /** Written by the server. No client composes this phrase. */
+  statusLabel: string
+  preparedAt: string | null
+  storeDecidedAt: string | null
+  storeNote: string | null
+  assignedAt: string | null
+  pickedUpAt: string | null
+  deliveredAt: string | null
+  failedAt: string | null
+  failureReason: string | null
+  createdAt: string
+
+  dropoffAddress: string | null
+  dropoffLat: number | null
+  dropoffLng: number | null
+  dropoffInstructions: string | null
+  customerName: string | null
+  customerPhone: string | null
+  /** True once the seven-day purge has run - not the same as never having had one. */
+  customerPurged: boolean
+}
+
+export interface DeliveriesResponse {
+  /**
+   * Whether MART_BASE_URL and MART_OUTBOUND_SECRET are set. An operator looking
+   * at an order that will not complete needs to tell an unconfigured verifier
+   * apart from a courier problem.
+   */
+  martConfigured: boolean
+  deliveries: Delivery[]
+}
+
+export interface DeliveryCourier {
+  contractId: string
+  status: string
+  workerId: string
+  name: string | null
+  phone: string | null
+}
+
+export interface DeliveryDetail extends Delivery {
+  task: { id: string; title: string; status: string } | null
+  couriers: DeliveryCourier[]
+  trail: { id: string; action: string; createdAt: string; meta: string | null }[]
+}
+
+/** Whether the seven-day customer-data deletion is actually being kept. */
+export interface PurgeStatus {
+  due: number
+  purgedTotal: number
+  oldestDue: string | null
+  /** Null means it has never run - which is a different problem from a backlog. */
+  lastRunAt: string | null
+  cutoff: string
+  retentionDays: number
+}
+
 /* ===== Store network map (Blueprint §8) ===== */
 
 /** One approved business, as something to travel to. */

@@ -11,6 +11,7 @@ import type {
   AccountType,
   AuthResponse,
   CourierReadiness,
+  Delivery,
   Organization,
   OrgKind,
   OrgMember,
@@ -128,4 +129,50 @@ export const api = {
       method: 'PUT',
       body: { vehicleType, plateNumber },
     }),
+
+  /* ── Deliveries ─────────────────────────────────────────────────────────
+     The store side and the courier side are the same order seen from two
+     places, and the server decides which fields each may read. Nothing here
+     filters anything for privacy: a client that hides a field still received
+     it. */
+
+  /** Every order for this store. Scoped server-side on membership. */
+  storeDeliveries: (orgId: string, signal?: AbortSignal) =>
+    request<Delivery[]>(`/organizations/${orgId}/deliveries`, { signal }),
+
+  /**
+   * The store will fulfil it. This is also what posts the courier job, which is
+   * why the response can carry a warning: the order is accepted either way, and
+   * an accepted order with no job behind it must not read as success.
+   */
+  acceptDelivery: (id: string) =>
+    request<Delivery>(`/deliveries/${id}/accept`, { method: 'POST' }),
+
+  /** A reason is required - it is the only unavailability signal Mart gets. */
+  rejectDelivery: (id: string, reason: string) =>
+    request<Delivery>(`/deliveries/${id}/reject`, { method: 'POST', body: { reason } }),
+
+  markPrepared: (id: string) =>
+    request<Delivery>(`/deliveries/${id}/prepared`, { method: 'POST' }),
+
+  /** The orders this courier is carrying, keyed on the contracts they hold. */
+  myDeliveries: (signal?: AbortSignal) =>
+    request<Delivery[]>('/me/deliveries', { signal }),
+
+  markPickedUp: (id: string) =>
+    request<Delivery>(`/deliveries/${id}/picked-up`, { method: 'POST' }),
+
+  /**
+   * The customer's code, checked with AfriZoneMart.
+   *
+   * A 503 from here means we could not ask, which is NOT a wrong code. The
+   * caller has to keep those apart on screen: a courier who tells a customer
+   * they typed it wrong, when nothing was checked, argues on a doorstep about
+   * something that never happened.
+   */
+  completeDelivery: (id: string, code: string) =>
+    request<Delivery>(`/deliveries/${id}/complete`, { method: 'POST', body: { code } }),
+
+  failDelivery: (id: string, reason: string) =>
+    request<Delivery>(`/deliveries/${id}/failed`, { method: 'POST', body: { reason } }),
 }

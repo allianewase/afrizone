@@ -19,6 +19,7 @@ import { NotificationBell } from '../../src/components/NotificationBell';
 import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
 import { api } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
+import { CourierDeliveryBanner } from '../../src/components/CourierDeliveryBanner';
 import { useAuth } from '../../src/auth/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Task, Wallet, Tier } from '../../src/api/types';
@@ -210,6 +211,11 @@ export default function HomeScreen() {
       onRefresh={() => { tasks.reload(); walletQ.reload(); }}
       refreshing={tasks.loading && !!tasks.data}
     >
+      {/* Above the money, above the search: a delivery is the only work here
+          with a customer waiting on it, and it renders nothing at all when
+          there is none. */}
+      <CourierDeliveryBanner />
+
       {/* Dashboard-style KPI grid, echoing web-admin's dashboard: a worker's
           own equivalent of "active tasks / fill rate / spend" is what's
           already fetched here (wallet) plus identity stats (rating,

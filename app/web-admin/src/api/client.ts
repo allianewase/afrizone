@@ -54,6 +54,11 @@ import type {
   CacStatus,
   MartEventStatus,
   TaskRules,
+  Delivery,
+  DeliveryDetail,
+  DeliveryStatus,
+  DeliveriesResponse,
+  PurgeStatus,
 } from './types'
 
 const TOKEN_KEY = 'afz_token'
@@ -441,6 +446,38 @@ export const api = {
     return request<MartEventsResponse>(`/admin/mart/events${qs ? `?${qs}` : ''}`, { signal })
   },
   martRules: (signal?: AbortSignal) => request<TaskRules>('/admin/mart/rules', { signal }),
+
+  // ===== Deliveries =====
+  /** `stuck` narrows to orders that are live and waiting on somebody. */
+  deliveries: (
+    filter: { status?: DeliveryStatus | 'ALL'; storeId?: string; stuck?: boolean },
+    signal?: AbortSignal,
+  ) => {
+    const q = new URLSearchParams()
+    if (filter.status && filter.status !== 'ALL') q.set('status', filter.status)
+    if (filter.storeId) q.set('storeId', filter.storeId)
+    if (filter.stuck) q.set('stuck', '1')
+    const qs = q.toString()
+    return request<DeliveriesResponse>(`/admin/deliveries${qs ? `?${qs}` : ''}`, { signal })
+  },
+  delivery: (id: string, signal?: AbortSignal) =>
+    request<DeliveryDetail>(`/admin/deliveries/${id}`, { signal }),
+  /** Terminal, and a reason is required. Mart is not told - see §4. */
+  cancelDelivery: (id: string, reason: string) =>
+    request<Delivery>(`/admin/deliveries/${id}/cancel`, { method: 'POST', body: { reason } }),
+  /** The courier vanished: put the posting back on the board. */
+  reopenDelivery: (id: string, reason: string) =>
+    request<Delivery>(`/admin/deliveries/${id}/reopen`, { method: 'POST', body: { reason } }),
+
+  /** Is the seven-day customer-data deletion being kept? */
+  purgeStatus: (signal?: AbortSignal) =>
+    request<PurgeStatus>('/admin/deliveries/purge', { signal }),
+  /** Run the sweep now. SUPER_ADMIN only, server-side. */
+  runPurge: () =>
+    request<{ purged: number; remaining: number; retentionDays: number }>(
+      '/admin/deliveries/purge',
+      { method: 'POST' },
+    ),
 
   // ===== CAC registration (stores) =====
   cacDecision: (id: string, decision: 'VERIFIED' | 'REJECTED', note?: string) =>

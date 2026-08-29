@@ -180,13 +180,22 @@ export default function ProfileScreen() {
               what it takes - but a row about vehicles on a photographer's
               profile is noise. */}
           {user?.accountType === 'COURIER' && (
-            <ListRow
-              icon="map-pin"
-              title="Courier setup"
-              subtitle="Your vehicle, licence and insurance"
-              onPress={() => router.push('/profile/courier')}
-              chevron
-            />
+            <>
+              <ListRow
+                icon="cart"
+                title="Deliveries"
+                subtitle="Orders you are carrying"
+                onPress={() => router.push('/deliveries')}
+                chevron
+              />
+              <ListRow
+                icon="map-pin"
+                title="Courier setup"
+                subtitle="Your vehicle, licence and insurance"
+                onPress={() => router.push('/profile/courier')}
+                chevron
+              />
+            </>
           )}
         </Card>
       </Section>

@@ -86,3 +86,75 @@ export interface CourierReadiness {
   vehicle: { type: string; label: string; plateNumber: string | null } | null
   vehicleTypes: { value: string; label: string; requiresPlate: boolean }[]
 }
+
+/* ===== Delivery ===== */
+
+/**
+ * Where an AfriZoneMart order has got to.
+ *
+ * A THIRD AXIS, and not the same thing as a task's status or a contract's. This
+ * one belongs to the ORDER: it starts before any courier is involved and can end
+ * without one, which is exactly what "the store cannot fulfil" is.
+ */
+export type DeliveryStatus =
+  | 'RECEIVED'
+  | 'STORE_ACCEPTED'
+  | 'STORE_REJECTED'
+  | 'COURIER_ASSIGNED'
+  | 'PICKED_UP'
+  | 'DELIVERED'
+  | 'FAILED'
+  | 'CANCELLED'
+
+export interface DeliveryItem {
+  ref?: string
+  name?: string
+  qty?: number
+}
+
+export interface Delivery {
+  id: string
+  martOrderId: string
+  organizationId: string
+  storeName: string | null
+  taskId: string | null
+  stockSource: 'CONSIGNMENT' | 'OWN_STOCK'
+  items: DeliveryItem[]
+  pickupAddress: string | null
+  pickupLat: number | null
+  pickupLng: number | null
+  goodsTotal: number
+  deliveryFee: number
+  expectedBy: string | null
+  status: DeliveryStatus
+  /** Written by the server. No client composes this phrase. */
+  statusLabel: string
+  preparedAt: string | null
+  storeDecidedAt: string | null
+  storeNote: string | null
+  assignedAt: string | null
+  pickedUpAt: string | null
+  deliveredAt: string | null
+  failedAt: string | null
+  failureReason: string | null
+  createdAt: string
+
+  /** Only ever sent to the store, the assigned courier, and staff. */
+  dropoffAddress: string | null
+  dropoffLat: number | null
+  dropoffLng: number | null
+  dropoffInstructions: string | null
+  customerName: string | null
+  customerPhone: string | null
+  /**
+   * True once the seven-day purge has run. Distinct from the fields simply
+   * being null: "we deleted this, as promised" and "this order never had a
+   * contact" are different facts and an empty field says neither.
+   */
+  customerPurged: boolean
+
+  contractId?: string | null
+  /** Returned by the accept call - the order is accepted either way. */
+  posted?: boolean
+  warning?: string
+}

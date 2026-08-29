@@ -30,8 +30,13 @@ import './Mart.css'
  *
  * This is the screen somebody opens when a task they expected does not exist.
  * The whole value of it is separating three answers that look identical from
- * the outside: Mart never sent it, we de-duplicated it, or nothing is built to
- * handle it yet.
+ * the outside: Mart never sent it, we de-duplicated it, or we could not place
+ * it.
+ *
+ * "Held for replay" is no longer produced by anything. It is the status every
+ * order.confirmed carried before delivery was built, and those rows are real
+ * orders that can still be replayed - so the filter stays. An empty count there
+ * is the expected reading, not a broken one.
  */
 
 type StatusFilter = MartEventStatus | 'ALL'
@@ -47,7 +52,7 @@ const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
 /** Plain English for each status, shown under its count. */
 const STATUS_MEANING: Record<MartEventStatus, string> = {
   PROCESSED: 'A task was created',
-  DEFERRED: 'Understood and kept, waiting on work that is not built',
+  DEFERRED: 'Understood and kept before delivery was built — still replayable',
   IGNORED: 'A duplicate, or no rule matched',
   FAILED: 'Could not be processed — these need a person',
 }
@@ -69,7 +74,7 @@ const RULE_KINDS: { kind: string; label: string; from: string }[] = [
   { kind: 'SOURCING', label: 'Sourcing', from: 'stock.low' },
   { kind: 'STORE_AUDIT', label: 'Store audit', from: 'store.applied' },
   { kind: 'MEDIA', label: 'Photography', from: 'listing.needs_media' },
-  { kind: 'DELIVERY', label: 'Delivery', from: 'order.confirmed — not generated yet' },
+  { kind: 'DELIVERY', label: 'Delivery', from: 'order.confirmed — once the store accepts' },
   { kind: 'GENERAL', label: 'General', from: 'fallback' },
 ]
 

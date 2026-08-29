@@ -39,6 +39,7 @@ import type {
   Credential,
   CredentialInput,
   CourierReadiness,
+  Delivery,
 } from './types';
 
 export class ApiError extends Error {
@@ -605,6 +606,38 @@ export const api = {
       method: 'PUT',
       body: { vehicleType, plateNumber },
     });
+  },
+
+  /**
+   * GET /api/me/deliveries: the orders this rider is carrying.
+   *
+   * Keyed on the contracts they hold, not on their account type. What makes a
+   * delivery theirs is having been given the job.
+   */
+  myDeliveries(signal?: AbortSignal): Promise<Delivery[]> {
+    return request<Delivery[]>('/me/deliveries', { signal });
+  },
+
+  /** POST /api/deliveries/:id/picked-up: the goods have left the shop. */
+  markPickedUp(id: string): Promise<Delivery> {
+    return request<Delivery>(`/deliveries/${id}/picked-up`, { method: 'POST' });
+  },
+
+  /**
+   * POST /api/deliveries/:id/complete: the customer's code, checked with Mart.
+   *
+   * A 503 means we could not ASK, which is not a wrong code, and the screen has
+   * to keep those apart. A rider who tells a customer they read it out wrong,
+   * when nothing was checked, argues on a doorstep about something that never
+   * happened.
+   */
+  completeDelivery(id: string, code: string): Promise<Delivery> {
+    return request<Delivery>(`/deliveries/${id}/complete`, { method: 'POST', body: { code } });
+  },
+
+  /** POST /api/deliveries/:id/failed: attempted and not completed. */
+  failDelivery(id: string, reason: string): Promise<Delivery> {
+    return request<Delivery>(`/deliveries/${id}/failed`, { method: 'POST', body: { reason } });
   },
 
   /** GET /api/me/credentials: this worker's credentials, newest first. */

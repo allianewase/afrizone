@@ -17,6 +17,7 @@ import Settings from './pages/Settings'
 import Disputes from './pages/Disputes'
 import Verification from './pages/Verification'
 import Mart from './pages/Mart'
+import Deliveries from './pages/Deliveries'
 import Network from './pages/Network'
 
 export default function App() {
@@ -43,6 +44,7 @@ export default function App() {
         <Route path="/organizations" element={<Organizations />} />
         <Route path="/network" element={<Network />} />
         <Route path="/mart" element={<Mart />} />
+        <Route path="/deliveries" element={<Deliveries />} />
         <Route path="/hiring" element={<Hiring />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />

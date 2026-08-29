@@ -599,3 +599,65 @@ export interface CourierReadiness {
   vehicle: { type: string; label: string; plateNumber: string | null } | null;
   vehicleTypes: { value: string; label: string; requiresPlate: boolean }[];
 }
+
+/* ===== Deliveries ===== */
+
+/**
+ * Where an AfriZoneMart order has got to.
+ *
+ * A THIRD status axis, and not the same thing as a task's or a contract's. This
+ * one belongs to the ORDER: it starts before any courier is involved and can
+ * end without one, which is exactly what "the store cannot fulfil" is.
+ */
+export type DeliveryStatus =
+  | 'RECEIVED'
+  | 'STORE_ACCEPTED'
+  | 'STORE_REJECTED'
+  | 'COURIER_ASSIGNED'
+  | 'PICKED_UP'
+  | 'DELIVERED'
+  | 'FAILED'
+  | 'CANCELLED';
+
+export interface DeliveryItem {
+  ref?: string;
+  name?: string;
+  qty?: number;
+}
+
+export interface Delivery {
+  id: string;
+  martOrderId: string;
+  storeName: string | null;
+  taskId: string | null;
+  items: DeliveryItem[];
+  pickupAddress: string | null;
+  pickupLat: number | null;
+  pickupLng: number | null;
+  goodsTotal: number;
+  deliveryFee: number;
+  expectedBy: string | null;
+  status: DeliveryStatus;
+  /** Written by the server. No client composes this phrase. */
+  statusLabel: string;
+  preparedAt: string | null;
+  pickedUpAt: string | null;
+  deliveredAt: string | null;
+  failedAt: string | null;
+  failureReason: string | null;
+  createdAt: string;
+
+  /** Only ever sent to the courier holding this job, and to staff. */
+  dropoffAddress: string | null;
+  dropoffLat: number | null;
+  dropoffLng: number | null;
+  dropoffInstructions: string | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  /**
+   * True once the seven-day purge has run. Not the same as never having had a
+   * contact, which is why it is a flag rather than an inference from nulls.
+   */
+  customerPurged: boolean;
+  contractId?: string | null;
+}
