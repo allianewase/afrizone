@@ -26,8 +26,23 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest } from "../auth";
-import { userActor } from "../util/audit";
+import { userActor, writeAudit } from "../util/audit";
 import { requireOrgAccess } from "../util/organization";
+import { formatDistance } from "../util/geo";
+import { assignWorker } from "../services/assignment";
+import {
+  minutesUntilInRange,
+  offerRule,
+  offerStateAt,
+  reach,
+} from "../services/deliveryOffer";
+import {
+  blockingBlockers,
+  decide,
+  isEnforcing,
+  loadTaskRequirements,
+  loadWorkerProfile,
+} from "../services/eligibility";
 import {
   DELIVERY_STATES,
   completeDelivery,
@@ -255,6 +270,217 @@ router.post("/deliveries/:id/prepared", requireAuth, async (req: AuthedRequest, 
   res.json(withCustomer(fresh));
 });
 
+// ── The courier, before the job is theirs ────────────────────────────────────
+
+/**
+ * GET /api/me/delivery-offers?lat=&lng= → what this courier can take right now.
+ *
+ * MART_INTEGRATION.md §6 D4. An order is offered in a circle around the shop
+ * that widens as it waits; a courier says where they are and is told what is
+ * within it. The position is used to answer this request and is never stored -
+ * see the note at the top of services/deliveryOffer.ts for why the radius is a
+ * property of the posting rather than a query over couriers.
+ *
+ * COORDINATES ARE OPTIONAL AND THE LIST IS STILL USEFUL WITHOUT THEM. A courier
+ * whose phone refused location gets every offer with `claimable: false` and a
+ * reason saying so, rather than an empty screen that looks like there is no work
+ * - which is the same screen a courier sees on a quiet afternoon, and telling
+ * the two apart matters to somebody deciding whether to go home.
+ *
+ * THE CUSTOMER IS NOT IN THIS RESPONSE. §5: the name, number and door go only to
+ * the courier who holds the job. A list of jobs nobody has taken is not that.
+ */
+router.get("/me/delivery-offers", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const now = new Date();
+  const rule = await offerRule(prisma);
+
+  const open = await prisma.delivery.findMany({
+    where: { status: "STORE_ACCEPTED", offeredAt: { not: null }, taskId: { not: null } },
+    include: { organization: true },
+    orderBy: { offeredAt: "asc" },
+  });
+  if (open.length === 0) return res.json({ selfClaim: rule.selfClaim, offers: [] });
+
+  // Eligibility for every posting in one pass, the way the task feed does it.
+  // Deciding per delivery would be a query per row on a screen a courier pulls
+  // to refresh.
+  const tasks = await prisma.task.findMany({
+    where: { id: { in: open.map((d) => d.taskId!) }, status: "OPEN" },
+  });
+  const byTaskId = new Map(tasks.map((t) => [t.id, t]));
+
+  const [profile, requirements, enforcing] = await Promise.all([
+    loadWorkerProfile(prisma, req.user!.id, now),
+    loadTaskRequirements(prisma, tasks),
+    isEnforcing(prisma),
+  ]);
+  if (!profile) return res.status(404).json({ error: "Worker not found" });
+
+  const offers = open.flatMap((d) => {
+    const task = byTaskId.get(d.taskId!);
+    // The posting is gone or already filled. The delivery row lags by one write
+    // in that window, and showing a job that cannot be taken is worse than
+    // showing one fewer.
+    if (!task) return [];
+
+    const state = offerStateAt(d.offeredAt, now, rule);
+    if (!state) return [];
+
+    const eligibility = decide(profile, requirements.get(task.id)!);
+    const blockers = blockingBlockers(eligibility.blockers, enforcing);
+    const near = reach(
+      { lat: d.pickupLat, lng: d.pickupLng },
+      { lat: req.query.lat, lng: req.query.lng },
+      state
+    );
+
+    // One reason, and the most fixable one first. A courier looking at a job
+    // they cannot take needs to know which single thing to do about it, not a
+    // ranked list of everything wrong.
+    let reason: string | null = null;
+    if (!rule.selfClaim) reason = "Jobs are being assigned by the team just now";
+    else if (blockers.length > 0) reason = blockers[0].message;
+    else if (!near.inRange) {
+      reason = Number.isFinite(near.distanceMetres)
+        ? `You are ${formatDistance(near.distanceMetres)} away; this job is open to couriers within ${formatDistance(near.radiusMetres)}`
+        : "Turn on location to take jobs near you";
+    }
+
+    const waiting =
+      near.inRange || !Number.isFinite(near.distanceMetres)
+        ? null
+        : minutesUntilInRange(near.distanceMetres, d.offeredAt!, now, rule);
+
+    return [
+      {
+        ...publicDelivery({ ...d, organization: d.organization }),
+        fee: task.budget,
+        offer: state,
+        distanceMetres: near.distanceMetres,
+        distance:
+          near.distanceMetres !== null && Number.isFinite(near.distanceMetres)
+            ? formatDistance(near.distanceMetres)
+            : null,
+        claimable: rule.selfClaim && blockers.length === 0 && near.inRange,
+        reason,
+        blockers,
+        // Null when they are outside even the widest circle this order will
+        // reach. "Wait four minutes" keeps a courier on the app; a promise that
+        // never comes true does not.
+        opensToYouInMinutes: waiting,
+      },
+    ];
+  });
+
+  res.json({ selfClaim: rule.selfClaim, offers });
+});
+
+/**
+ * POST /api/deliveries/:id/claim → this courier is taking it. Body {lat, lng}.
+ *
+ * The change this whole file was waiting for. Assignment on this platform has
+ * always been an admin approving an application, which is correct for a
+ * week-long task and much too slow for an order that has to move within the
+ * hour.
+ *
+ * It goes through services/assignment.ts, the same function the admin approval
+ * runs, and that is the point rather than an implementation detail: the comment
+ * this replaced said a delivery-specific claim route "would eventually disagree
+ * with this one about who holds a job". Sharing the body is how that stays
+ * untrue - one contract, one commitment, one order status move, written once.
+ *
+ * EVERY REFUSAL HERE NAMES ITSELF. Too far, not qualified, already taken and
+ * switched off are four different problems with four different things to do
+ * about them, and a courier who taps Claim and gets one flat "cannot claim" will
+ * try again, and again, on a job that will never be theirs.
+ */
+router.post("/deliveries/:id/claim", requireAuth, async (req: AuthedRequest, res: Response) => {
+  const now = new Date();
+  const rule = await offerRule(prisma);
+  if (!rule.selfClaim) {
+    return res.status(409).json({
+      error: "Jobs are being assigned by the team just now",
+      code: "SELF_CLAIM_OFF",
+    });
+  }
+
+  const delivery = await prisma.delivery.findUnique({ where: { id: req.params.id } });
+  if (!delivery || !delivery.taskId) return res.status(404).json({ error: "Not found" });
+  if (delivery.status !== "STORE_ACCEPTED") {
+    return res.status(409).json({
+      error:
+        delivery.status === "COURIER_ASSIGNED"
+          ? "Somebody else took this job just now"
+          : `This order is "${stateLabel(delivery.status)}"`,
+      code: "NOT_AVAILABLE",
+    });
+  }
+
+  const state = offerStateAt(delivery.offeredAt, now, rule);
+  if (!state) {
+    return res.status(409).json({ error: "This job is not on the board", code: "NOT_OFFERED" });
+  }
+
+  // The distance gate, before the assignment. This is the only check the shared
+  // assignment path does not make - it knows about qualifications and slots, and
+  // nothing about where anybody is standing.
+  const near = reach(
+    { lat: delivery.pickupLat, lng: delivery.pickupLng },
+    { lat: req.body?.lat, lng: req.body?.lng },
+    state
+  );
+  if (!near.inRange) {
+    if (!Number.isFinite(near.distanceMetres)) {
+      return res.status(400).json({
+        error: "Turn on location to take jobs near you",
+        code: "NO_LOCATION",
+      });
+    }
+    const opensIn = minutesUntilInRange(near.distanceMetres, delivery.offeredAt!, now, rule);
+    return res.status(403).json({
+      error: `You are ${formatDistance(near.distanceMetres)} from the shop; this job is open to couriers within ${formatDistance(near.radiusMetres)}`,
+      code: "TOO_FAR",
+      distanceMetres: near.distanceMetres,
+      radiusMetres: near.radiusMetres,
+      opensToYouInMinutes: opensIn,
+    });
+  }
+
+  const result = await assignWorker({
+    taskId: delivery.taskId,
+    workerId: req.user!.id,
+    actor: userActor(req.user!.id),
+    source: "SELF_CLAIM",
+    now,
+  });
+
+  if (!result.ok) {
+    return res.status(result.status).json({
+      error: result.error,
+      code: result.status === 409 ? "TAKEN" : "NOT_QUALIFIED",
+      ...(result.blockers ? { blockers: result.blockers } : {}),
+      ...(result.eligibility ? { eligibility: result.eligibility } : {}),
+    });
+  }
+
+  await writeAudit(userActor(req.user!.id), "delivery.claimed", "Delivery", delivery.id, {
+    martOrderId: delivery.martOrderId,
+    taskId: delivery.taskId,
+    contractId: result.contractId,
+    waitingMinutes: state.waitingMinutes,
+    radiusMetres: state.radiusMetres,
+    distanceMetres: near.distanceMetres,
+  });
+
+  // The full view, customer included - it is theirs now, and the next thing they
+  // need is the door they are taking it to.
+  const fresh = await prisma.delivery.findUnique({
+    where: { id: delivery.id },
+    include: { organization: true },
+  });
+  res.status(201).json({ ...withCustomer(fresh), contractId: result.contractId });
+});
+
 // ── The courier ──────────────────────────────────────────────────────────────
 
 /**
@@ -392,6 +618,13 @@ router.post("/deliveries/:id/failed", requireAuth, async (req: AuthedRequest, re
  * The operations board. `stuck=1` narrows it to orders that are live and are
  * waiting on somebody - which is the list an operator actually works from,
  * rather than every order ever placed.
+ *
+ * `escalated=1` is the answer to the second half of MART_INTEGRATION.md §6 D4:
+ * the circle has widened as far as it is going to and nobody has taken the job,
+ * so a person has to. Derived from how long the posting has been up rather than
+ * flagged by a sweep - there is no timer here and nothing to fall behind, which
+ * matters because an escalation that quietly stops firing is an order nobody is
+ * told about.
  */
 adminRouter.get(
   "/",
@@ -401,6 +634,7 @@ adminRouter.get(
     const status = typeof req.query.status === "string" ? req.query.status : undefined;
     const storeId = typeof req.query.storeId === "string" ? req.query.storeId : undefined;
     const stuck = req.query.stuck === "1" || req.query.stuck === "true";
+    const escalatedOnly = req.query.escalated === "1" || req.query.escalated === "true";
 
     const rows = await prisma.delivery.findMany({
       where: {
@@ -409,21 +643,53 @@ adminRouter.get(
         ...(stuck
           ? { status: { in: ["RECEIVED", "STORE_ACCEPTED", "COURIER_ASSIGNED", "PICKED_UP"] } }
           : {}),
+        // Unclaimed only. An order a courier is already carrying is not waiting
+        // for one, however long ago it was posted.
+        ...(escalatedOnly ? { status: "STORE_ACCEPTED", offeredAt: { not: null } } : {}),
       },
       include: { organization: true },
       orderBy: { createdAt: "desc" },
       take: 200,
     });
 
+    const now = new Date();
+    const rule = await offerRule(prisma);
+    const decorated = rows.map((d) => ({
+      ...withCustomer(d),
+      // Null for anything not on the board, which is most of them.
+      offer: offerStateAt(d.offeredAt, now, rule),
+    }));
+
     res.json({
       // Whether the other half of the integration is wired up. An operator
       // looking at an order that will not complete needs to know the difference
       // between a courier problem and an unconfigured verifier.
       martConfigured: isMartOutboundConfigured(),
-      deliveries: rows.map(withCustomer),
+      // Off means couriers cannot take jobs themselves and every order is
+      // waiting on an approval. The board is where somebody would notice.
+      selfClaim: rule.selfClaim,
+      // The count an operator acts on, and it is over the whole board rather
+      // than this page of it - a filtered view must not report "nothing is
+      // escalated" because the escalated ones are on page two.
+      escalatedCount: await countEscalated(now, rule),
+      deliveries: escalatedOnly ? decorated.filter((d) => d.offer?.escalated) : decorated,
     });
   }
 );
+
+/**
+ * How many unclaimed orders have waited past the escalation threshold.
+ *
+ * Counted with a date bound in the query rather than by loading rows and
+ * filtering them, so it stays one indexed count no matter how busy the platform
+ * gets. `Delivery_status_offeredAt_idx` is what makes it cheap.
+ */
+async function countEscalated(now: Date, rule: { escalateAfterMinutes: number }): Promise<number> {
+  const threshold = new Date(now.getTime() - rule.escalateAfterMinutes * 60_000);
+  return prisma.delivery.count({
+    where: { status: "STORE_ACCEPTED", offeredAt: { not: null, lte: threshold } },
+  });
+}
 
 /**
  * GET /api/admin/deliveries/purge → is the retention promise being kept?

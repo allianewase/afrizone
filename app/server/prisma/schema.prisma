@@ -1069,6 +1069,15 @@ model Delivery {
   storeDecidedAt DateTime?
   storeNote      String?
   preparedAt     DateTime?
+  /// When this order went onto the board for couriers, and NULL once one holds
+  /// it. Not derivable from anything else: `Task.createdAt` is when the posting
+  /// was first minted, and a re-opened order (§6 D5) reuses that same posting,
+  /// so after one courier vanishes `createdAt` would say the order had been
+  /// waiting since before the courier who abandoned it ever took it. Every
+  /// escalation number in services/deliveryOffer.ts is arithmetic on this, so a
+  /// wrong value here is a circle that opens too wide and an operations board
+  /// flagging orders that only just arrived.
+  offeredAt      DateTime?
   assignedAt     DateTime?
   pickedUpAt     DateTime?
   deliveredAt    DateTime?
@@ -1088,4 +1097,7 @@ model Delivery {
   /// The purge sweeps finished orders by age; without this it is a full scan
   /// that grows for as long as the platform runs.
   @@index([status, updatedAt])
+  /// "What is on the board, and how long has it been there?" - the operations
+  /// board's escalation view, and the same reasoning about scans applies.
+  @@index([status, offeredAt])
 }

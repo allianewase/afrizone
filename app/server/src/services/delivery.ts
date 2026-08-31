@@ -372,7 +372,16 @@ export async function transitionDelivery(
   // Going back to STORE_ACCEPTED means the courier is gone. Clearing the stamp
   // keeps "how long has this been waiting for a rider?" honest - otherwise the
   // board shows an assignment time for an order nobody is holding.
-  if (to === "STORE_ACCEPTED" && from === "COURIER_ASSIGNED") data.assignedAt = null;
+  //
+  // And the wait starts again from now, rather than from when the order was
+  // first posted. The courier who vanished did take it, and counting the time
+  // they held it as time nobody wanted the job would put a re-opened order
+  // straight into escalation at its widest circle - see §6 D4 and the note on
+  // `offeredAt` in the schema.
+  if (to === "STORE_ACCEPTED" && from === "COURIER_ASSIGNED") {
+    data.assignedAt = null;
+    data.offeredAt = new Date();
+  }
 
   await prisma.$transaction([
     prisma.delivery.update({ where: { id: deliveryId }, data }),
@@ -472,14 +481,19 @@ export async function postCourierTask(deliveryId: string, actor: AuditActor): Pr
       // than making a second.
       await prisma.delivery.update({
         where: { id: deliveryId },
-        data: { taskId: result.taskId },
+        data: { taskId: result.taskId, offeredAt: delivery.offeredAt ?? new Date() },
       });
       return { posted: false, reason: "ALREADY_POSTED", taskId: result.taskId };
     }
     return { posted: false, reason: result.reason, taskId: null };
   }
 
-  await prisma.delivery.update({ where: { id: deliveryId }, data: { taskId: result.taskId } });
+  // The moment the wait starts. Every escalation number in
+  // services/deliveryOffer.ts is measured from here.
+  await prisma.delivery.update({
+    where: { id: deliveryId },
+    data: { taskId: result.taskId, offeredAt: new Date() },
+  });
   await writeAudit(actor, "delivery.posted", "Delivery", deliveryId, {
     martOrderId: delivery.martOrderId,
     taskId: result.taskId,

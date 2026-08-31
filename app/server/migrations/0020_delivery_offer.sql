@@ -1,0 +1,39 @@
+-- Self-claim for deliveries: when an order went on the board (MART_INTEGRATION.md
+-- §6 D4).
+--
+-- Assignment on this platform has always been an admin approving an
+-- application. That is right for a week-long task and far too slow for an order
+-- that has to move within the hour, so a qualified courier may now take a
+-- delivery posting themselves. D4 - what happens when nobody does - is answered
+-- by widening the circle the posting is offered in, and then flagging it for a
+-- person. See services/deliveryOffer.ts.
+--
+-- ONE COLUMN, AND EVERYTHING ELSE IS ARITHMETIC ON IT. The radius at any moment,
+-- how many times it has widened, and whether operations should be looking at the
+-- order are all computed from how long it has been waiting. Nothing is swept,
+-- stored or scheduled: there is no second cron, no queue, and no state that can
+-- go stale or stop firing. It is the same posture as expired postings and lapsed
+-- credentials, which are also decided at read time.
+--
+-- WHY NOT `Task.createdAt`. A re-opened order - §6 D5, the courier who accepts
+-- and vanishes - reuses its existing posting rather than minting a second one.
+-- Read from `createdAt`, such an order would appear to have been waiting since
+-- before the courier who abandoned it ever took it: the circle would open to its
+-- maximum immediately and the board would flag it as escalated the moment it
+-- came back. `offeredAt` is set when the posting goes up and cleared when
+-- somebody takes it, so a re-opened order starts its wait again, which is what
+-- actually happened.
+--
+-- NULL FOR EVERY EXISTING ROW, and that is correct rather than a backfill that
+-- was skipped. NULL means "not on the board", which is true of every delivery
+-- that is already assigned, already delivered, or still waiting on the store.
+-- The only rows that would want a value are ones sitting STORE_ACCEPTED and
+-- unclaimed, and production has none: the Delivery table has zero rows, because
+-- MART_INBOUND_SECRET is unset and signed Mart events are the only thing that
+-- creates one.
+ALTER TABLE "Delivery" ADD COLUMN "offeredAt" DATETIME;
+
+-- The operations board asks "what is on the board, and how long has it been
+-- there?" - which is this pair, and without the index it is a scan that grows
+-- for as long as the platform runs.
+CREATE INDEX "Delivery_status_offeredAt_idx" ON "Delivery"("status", "offeredAt");

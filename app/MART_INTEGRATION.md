@@ -323,14 +323,43 @@ with coordinates, and delivery instructions. That is the whole list.
 ## 6. Failure paths
 
 None is an edge case; each is a normal Tuesday, and delivery cannot ship without
-answers. **All OPEN.**
+answers. **D4 is now decided and built; the rest are OPEN.**
 
 **D3 — a store rejects an order.** Because PartTime holds no stock data, rejection
 is the *only* unavailability signal. Another store, a sourcing task, or a refund?
 Working assumption, consistent with §1: **Mart decides, PartTime only reports.**
 
-**D4 — nobody accepts a delivery.** How long before it escalates, and to what — a
-wider radius, a higher fee, a human, back to Mart?
+**D4 — nobody accepts a delivery. SETTLED: a widening circle, then a person.**
+A qualified courier may now take a delivery posting themselves rather than
+waiting for an admin to approve an application — assignment by approval is right
+for a week-long task and much too slow for an order that has to move within the
+hour. The posting opens to couriers within **3 km** of the shop, the circle
+**doubles every 5 minutes** to a **15 km** ceiling, and at **20 minutes**
+unclaimed the operations board flags it for a human. Every number is a
+`rules.DELIVERY.*` setting, because the right ones are an operational fact
+nobody knows before the first week of real orders.
+
+*No automatic fee increase.* Surge pricing is a real cost exposure, it belongs
+to Blueprint §10, and none of it is built. Raising a fee stays a human decision.
+
+*Escalation does not close the offer.* The board asking somebody to look and the
+job still being claimable are not in tension — stopping couriers from taking an
+order at the exact moment it is agreed nobody has taken it would be perverse.
+
+*Nothing is swept or scheduled.* The radius, the stage and the escalation flag
+are arithmetic on `Delivery.offeredAt`, computed when someone asks. There is no
+second cron and no state that can go stale, which matters because an escalation
+that quietly stops firing is an order nobody is ever told about.
+
+*The radius belongs to the posting, not to a query over couriers.* PartTime
+stores no courier location and this decision does not introduce one: a courier
+says where they are when they ask what they can take, and the position is used
+to answer and never written down. Pushing offers to nearby riders would need
+stored live positions — a standing privacy liability and a §5-shaped retention
+problem — and is a separate decision nobody has had to make yet.
+
+Off-switch: `rules.DELIVERY.selfClaim = "off"` falls the platform back to
+admin approval without a deploy. See `services/deliveryOffer.ts`.
 
 **D5 — a courier accepts, then disappears.** Settled: a timeout re-opens it. Open:
 how long, and whether the customer is told.

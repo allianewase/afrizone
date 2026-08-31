@@ -3,16 +3,14 @@ import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest } from "../auth";
 import { tiersToArray } from "../types";
 import { notifyWorker } from "../services/push";
-import { userActor, writeAudit } from "../util/audit";
-import { transitionDelivery } from "../services/delivery";
-import { commitForContract, committableAmount } from "../services/commitments";
+import { userActor } from "../util/audit";
+import { assignWorker } from "../services/assignment";
 import {
   blockingBlockers,
   decide,
   isEnforcing,
   loadTaskRequirements,
   loadWorkerProfile,
-  snapshot,
 } from "../services/eligibility";
 
 const router = Router();
@@ -107,130 +105,40 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
 // Admin-only. Approving flips the task to FILLED and auto-creates a signed
 // contract, so an unguarded version let a worker onboard themselves onto any
 // task by approving their own application.
+//
+// The body of this used to live here. It is now services/assignment.ts, shared
+// with the courier self-claim route, because a delivery a rider takes and an
+// application an admin approves have to produce the same contract, the same
+// commitment and the same order status - and two copies of that would drift.
 router.post("/:id/approve", requireAuth, requireRole("SUPER_ADMIN", "TASK_MANAGER"), async (req: AuthedRequest, res: Response) => {
   const app = await prisma.application.findUnique({ where: { id: req.params.id }, include: { task: true } });
   if (!app) return res.status(404).json({ error: "Application not found" });
   if (app.status === "APPROVED") return res.status(400).json({ error: "Application already approved" });
-
-  // Re-checked at approval, not only at application. Days pass between the two,
-  // and a licence that expires in between is exactly the case this gate exists
-  // for: the worker was eligible when they applied and is not now.
-  const now = new Date();
-  const [profile, requirements, enforcing] = await Promise.all([
-    loadWorkerProfile(prisma, app.workerId, now),
-    loadTaskRequirements(prisma, [app.task]),
-    isEnforcing(prisma),
-  ]);
-  if (!profile) return res.status(404).json({ error: "Worker not found" });
-  const reqs = requirements.get(app.taskId)!;
-  const eligibility = decide(profile, reqs);
-  const blocking = blockingBlockers(eligibility.blockers, enforcing);
 
   // An admin may still approve someone the gate refuses. They can see context
   // the rules cannot, and a platform where a human can never override is a
   // platform that strands people. But they have to say so explicitly, and the
   // override is audited: refusing silently and refusing unoverridably are both
   // worse than refusing loudly.
-  const override = req.body?.override === true;
-  if (blocking.length > 0 && !override) {
-    return res.status(400).json({
-      error: `${profile.name} no longer meets the requirements for this task`,
-      blockers: blocking,
-      eligibility,
-      requiresOverride: true,
-    });
-  }
-
-  const updated = await prisma.application.update({
-    where: { id: app.id },
-    data: {
-      status: "APPROVED",
-      reason: null,
-      // What was true at approval, frozen. Credentials expire and skills can be
-      // un-declared, so "were they eligible at the time?" is unanswerable from
-      // current state later - and that is exactly the question asked when
-      // something goes wrong on a job weeks afterwards.
-      eligibilitySnapshot: snapshot(profile, reqs, eligibility, now),
-    },
+  const result = await assignWorker({
+    taskId: app.taskId,
+    workerId: app.workerId,
+    applicationId: app.id,
+    actor: userActor(req.user!.id),
+    source: "ADMIN_APPROVAL",
+    override: req.body?.override === true,
   });
 
-  if (blocking.length > 0) {
-    await writeAudit(userActor(req.user!.id), "application.approved.override", "Application", app.id, {
-      workerId: app.workerId,
-      taskId: app.taskId,
-      blockers: blocking.map((b) => ({ code: b.code, ref: b.ref })),
+  if (!result.ok) {
+    return res.status(result.status).json({
+      error: result.error,
+      ...(result.blockers ? { blockers: result.blockers } : {}),
+      ...(result.eligibility ? { eligibility: result.eligibility } : {}),
+      ...(result.requiresOverride ? { requiresOverride: true } : {}),
     });
   }
 
-  // Recompute filled count and flip task to FILLED when slots are full.
-  const filledCount = await prisma.application.count({ where: { taskId: app.taskId, status: "APPROVED" } });
-  if (filledCount >= app.task.slots && app.task.status === "OPEN") {
-    await prisma.task.update({ where: { id: app.taskId }, data: { status: "FILLED" } });
-  }
-
-  // Approval is what assigns the work, so it mints the contract - the record
-  // that binds this Tasker to this Task (Blueprint §12) and carries the work
-  // lifecycle from here on. It starts CLAIMED: assigned, not yet started.
-  const existingContract = await prisma.contract.findFirst({
-    where: { taskId: app.taskId, workerId: app.workerId },
-  });
-  const contract =
-    existingContract ??
-    (await prisma.contract.create({
-      data: { taskId: app.taskId, workerId: app.workerId, status: "CLAIMED" },
-    }));
-
-  // The contract going live is what ring-fences the pay (Blueprint §10). Mart
-  // holds the money; this records that it is set aside for this person.
-  //
-  // A FIXED task commits its budget. An HOURLY one commits no figure at all -
-  // it is not knowable until hours are submitted, and an invented estimate is a
-  // number nobody promised. It gets trued up when the work is accepted.
-  await commitForContract(
-    contract.id,
-    app.workerId,
-    committableAmount(app.task),
-    userActor(req.user!.id)
-  );
-
-  // A delivery posting has an order behind it, and the order has its own status
-  // axis that the store and AfriZoneMart both watch. Approval is the moment a
-  // courier is actually assigned, so it is the moment the order stops waiting.
-  //
-  // Hung off approval rather than duplicated into a delivery-specific claim
-  // route: there is one way work is assigned on this platform, and a second one
-  // would eventually disagree with this one about who holds a job.
-  if (app.task.kind === "DELIVERY") {
-    const delivery = await prisma.delivery.findUnique({
-      where: { taskId: app.taskId },
-      select: { id: true },
-    });
-    if (delivery) {
-      // Not awaited for its result and never fatal: the contract is already
-      // written, and refusing the approval because a status move failed would
-      // leave a courier assigned to a job the system says nobody took.
-      const moved = await transitionDelivery(
-        delivery.id,
-        "COURIER_ASSIGNED",
-        userActor(req.user!.id),
-        { meta: { contractId: contract.id, workerId: app.workerId } }
-      );
-      if (!moved.ok) {
-        console.error(`delivery ${delivery.id} could not be marked assigned: ${moved.error}`);
-      }
-    }
-  }
-
-  // Notify worker: approved + contract ready
-  await notifyWorker(
-    prisma,
-    app.workerId,
-    "Application approved 🎉",
-    `You've been selected for "${app.task.title}". A contract is ready to sign.`,
-    { screen: "tasks" },
-    "notifTasks"
-  );
-
+  const updated = await prisma.application.findUnique({ where: { id: result.applicationId } });
   res.json(updated);
 });
 
