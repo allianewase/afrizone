@@ -5,9 +5,11 @@ what exists, so nobody has to read 16 sections and 30 tables side by side to fin
 out what is done.
 
 **Headline: every one of the ten things Blueprint §15 lists for Phase 1 is
-built, and delivery — the first item of Phase 2 — is built end to end.** What
-remains is self-claim, ranked matching, evidence capture and the rest of §14, and
-the operational work of switching Mart on.
+built, delivery — the first item of Phase 2 — is built end to end, and a courier
+can claim an order without waiting for an admin.** All of it is deployed and was
+exercised against the live API on 2 September 2026; see §10. What remains is
+ranked matching, evidence capture and the rest of §14, and the operational work
+of switching Mart on.
 
 Three things are built to a deliberate limit, and pretending otherwise would be
 the more expensive mistake: **CAC verification is a manual check** until a
@@ -173,7 +175,7 @@ shows, and it is why this is a ledger rather than a bare idempotency key.
 
 ---
 
-## 6. Delivery — built, and unexercised against a real Mart
+## 6. Delivery — built and exercised, never against a real Mart
 
 The first item of Phase 2, and the reason `order.confirmed` sat DEFERRED. Three
 things were missing and all three now exist.
@@ -327,7 +329,70 @@ Three things have a deliberate ceiling worth revisiting when there is a reason:
   dormant, the same way the CAC lookup is.
 
 Still needed from the Mart team before any of this carries real traffic:
-agreement on `stockSource`, a staging environment, the shared secret for
-`MART_INBOUND_SECRET`, and now the two outbound endpoints in
-`MART_INTEGRATION.md` §4 and §5 with a secret of their own. Every one of those
-refusals is the intended behaviour rather than a fault to debug.
+agreement on `stockSource`, a staging environment, and the two outbound endpoints
+in `MART_INTEGRATION.md` §4 and §5 with a secret of their own. The inbound shared
+secret is half-settled — PartTime's side is set and verified, and Mart has to be
+configured with the identical string or every event it sends is refused. Every
+one of those refusals is the intended behaviour rather than a fault to debug.
+
+---
+
+## 10. What is actually running in production
+
+A separate axis from everything above. The rest of this file reconciles the
+blueprint against the code; this section reconciles the code against what is
+deployed, because those drift apart in a way that is invisible from the repo and
+expensive to guess at. Verified 2 September 2026 against the live account and
+database rather than against documentation — see the warning about `README.md`
+below for why that distinction is not pedantry.
+
+**Everything described in this document is deployed.** D1 is at migration
+`0020_delivery_offer.sql`; the API worker is version
+`07ff447c-3d15-4dad-9b75-2107ad782159` (roll back to
+`cb6dadec-48f3-4455-8b64-cdc5087231dd`); the admin console is built from the
+current commit. The nightly customer-data purge from §5 is registered as
+`17 3 * * *`.
+
+**`README.md` is wrong about how the API deploys.** It claims Workers Builds
+auto-deploys `app/server` on a push to `main`. It does not, and never has —
+Workers Builds lists zero builds for this Worker and the account reports its last
+deploy came from `wrangler`. **`app/server` must be deployed by hand with
+`npx wrangler deploy`, and it must go BEFORE the push**, or the admin console
+rebuilds against an API that has not learned the routes it is about to call.
+`app/web-admin` is the opposite: GitHub-connected, so pushing is the deploy and
+deploying by hand is wrong. `app/web-portal` is direct-upload only.
+
+**`app/mobile` deploys nowhere.** It ships in an EAS build that has not been
+made, which has a consequence worth stating plainly: **the courier's self-claim
+screen is not in anybody's hands.** The endpoints behind it are live and a claim
+is an API call; the button is not. Operations can watch orders arrive and
+escalate; a rider cannot yet take one from a phone.
+
+**Secrets on the worker are `JWT_SECRET`, `TERMII_API_KEY` and
+`MART_INBOUND_SECRET`.** The inbound secret was set and verified on 2 September:
+a tampered signature is refused, a timestamp older than the five-minute window is
+refused, and a correctly signed event reaches the domain. `MART_BASE_URL` and
+`MART_OUTBOUND_SECRET` are still unset, so the completion refusal in §6 is live
+behaviour today, not a hypothetical.
+
+**There are no `rules.DELIVERY.*` rows in `Setting`**, so every offer number is
+its code default — 3 km, doubling every five minutes, 15 km ceiling, escalation
+at twenty. An empty table here is the configured state, not a migration that
+half-ran.
+
+**Delivery was proven end to end against the live API**, using a throwaway store
+and courier that have since been deleted: a signed `order.confirmed` created the
+order, the store accepted it, the posting appeared in the courier's offers, and
+the claim moved `Task` to FILLED, `Contract` to CLAIMED and `Delivery` to
+COURIER_ASSIGNED with the eligibility snapshot frozen. The refusals behaved —
+too far, no location, already taken. **Widening was observed on live data;
+escalation was not.** The unclaimed order reached nine minutes and one doubling
+before the test data was removed, so the twenty-minute escalation is proven by
+the test suite alone.
+
+**The database holds no stores and no orders** — five users, two tasks, one
+contract. That is the real remaining blocker, and it is not a code one:
+`order.confirmed` resolves `fulfilment.storeSlug` against `Organization`, so
+until a real store exists on this side, every order Mart sends is refused with
+`No store with slug`. The feature is live and inert, and both halves of that
+sentence are deliberate.
