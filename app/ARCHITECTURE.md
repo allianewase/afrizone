@@ -404,9 +404,10 @@ so the decision stays cheap.
 - The admin Organizations page can view members but cannot add or remove them; only
   the first owner can be seeded, at creation
 - `Contract` is 1:1 with `Task`, which will not hold for a standing courier agreement
-- **A courier gets an address and a phone number, and no map.** The store map is
-  an admin screen; putting one in the app needs a native map component and a
-  rebuild. It is the most obvious gap in what has been built
+- No map inside the apps: navigation hands off to Google Maps via
+  `src/lib/directions.ts` (duplicated in mobile and web-portal on purpose - two
+  builds, no shared package). What is missing is at-a-glance context, several
+  jobs on one map, which would cost a map SDK and an API key
 - **The courier's self-claim screen exists only in `app/mobile`**, which ships
   nowhere until an EAS build. The endpoints are live; the button is in nobody's
   hands

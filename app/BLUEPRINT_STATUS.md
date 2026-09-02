@@ -13,10 +13,11 @@ of switching Mart on.
 
 Three things are built to a deliberate limit, and pretending otherwise would be
 the more expensive mistake: **CAC verification is a manual check** until a
-registry provider is configured, **the store map is an admin screen** — couriers
-see the network through the API, not a map on their phone — and **a delivery
-cannot be completed until Mart exposes its code-verification endpoint**, because
-no courier tapping a button is allowed to produce a delivered order.
+registry provider is configured, **there is no map inside the apps** — the store
+map is an admin screen, and a courier is handed to their own navigation app
+rather than shown a pin in ours — and **a delivery cannot be completed until
+Mart exposes its code-verification endpoint**, because no courier tapping a
+button is allowed to produce a delivered order.
 
 Living document. When it stops matching the code, the code is right.
 
@@ -320,10 +321,14 @@ Three things have a deliberate ceiling worth revisiting when there is a reason:
 
 - **CAC verification is manual** until `CAC_LOOKUP_URL` and `CAC_API_KEY` are
   set. The lookup and the name comparison are built and dormant.
-- **The store map is admin-only.** A courier's in-app map needs a native map
-  component and a rebuild. The delivery screens shipped without one, which means
-  a rider is given an address and a phone number and left to find the door — the
-  hard half, on their own. That is the most obvious gap in what was just built.
+- **There is no map inside the apps, by choice.** A courier taps "Directions to
+  the shop" or "Directions to the door" and is handed to Google Maps, which has
+  the traffic, the one-way system, voice guidance and their offline tiles. An
+  embedded map would have shown a pin; a rider does not need to be shown where
+  the door is, they need to be taken there. What is still absent is at-a-glance
+  context — seeing several jobs on one map before choosing — and that is a
+  different job from finding a door. It would cost a map SDK, an API key and a
+  billing account, and should wait until somebody asks for it.
 - **A delivery cannot be completed** until `MART_BASE_URL` and
   `MART_OUTBOUND_SECRET` are set and Mart exposes the code check. Built and
   dormant, the same way the CAC lookup is.
