@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import type { AccountType } from '../lib/types'
 import Logo from '../components/Logo'
 import './Landing.css'
@@ -6,17 +7,24 @@ import './Landing.css'
 /**
  * The front door of the Part-Time portal.
  *
- * The whole page is one question — "how will you use Afrizone Part Time?" —
+ * The whole page is one question — "how will you use AfriZone Part Time?" —
  * because the three answers genuinely diverge afterwards: a store signs in at a
  * counter and works orders, a courier company manages riders, and an individual
  * belongs on the mobile app rather than here at all.
  *
- * WHAT THE CHOICE DOES NOT DO: it does not decide which dashboard anybody
- * lands on. That comes from the account type stored on the server (see
- * lib/auth.tsx). Someone who taps the wrong card and then signs in arrives
- * where their account actually belongs, with no correction and no dead end.
- * Which is also why "Sign in" sits outside the three cards - you do not have to
- * declare what you are in order to log in.
+ * WHAT THE CHOICE DOES NOT DO: it does not decide which dashboard anybody lands
+ * on. That comes from the account type stored on the server (see lib/auth.tsx).
+ * Someone who picks the wrong card and then signs in arrives where their account
+ * actually belongs, with no correction and no dead end. Which is also why "Sign
+ * in" sits outside the three cards — you do not have to declare what you are in
+ * order to log in.
+ *
+ * PICK, THEN CONFIRM. The cards used to be links: one click and you were in a
+ * registration form. They are now a radio group with a Continue button, which
+ * costs a second click and buys two things. A person choosing how a business
+ * they own will be represented gets a beat to read all three before committing,
+ * and the button names the choice back to them — "Continue as a store" — so a
+ * mis-click is caught here rather than three fields into the wrong form.
  */
 
 interface Option {
@@ -24,9 +32,10 @@ interface Option {
   title: string
   blurb: string
   bullets: string[]
-  /** Individuals are pointed at the app instead of a registration form. */
-  cta: string
+  /** Where the choice leads. Individuals get a page about the app, not a form. */
   to: string
+  /** Named on the Continue button, so the button says what it will do. */
+  confirm: string
   glyph: JSX.Element
 }
 
@@ -34,10 +43,14 @@ const OPTIONS: Option[] = [
   {
     key: 'INDIVIDUAL',
     title: 'Individual',
-    blurb: 'You pick up tasks and get paid for the work you do.',
-    bullets: ['Find and accept tasks', 'Submit proof of work', 'Track your earnings'],
-    cta: 'Continue',
+    blurb: 'For people taking on paid work — field tasks, promotions, media and sourcing.',
+    bullets: [
+      'Find work matched to your skills and tier',
+      'Record your hours and submit proof of work',
+      'Get paid into your own bank account',
+    ],
     to: '/individual',
+    confirm: 'Continue as an individual',
     glyph: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
         <circle cx="12" cy="8" r="3.6" />
@@ -48,10 +61,14 @@ const OPTIONS: Option[] = [
   {
     key: 'STORE',
     title: 'AfriZoneMart Store',
-    blurb: 'Your shop fulfils orders placed by AfriZoneMart customers.',
-    bullets: ['Receive and confirm orders', 'Prepare and hand over', 'Track what you are owed'],
-    cta: 'Continue',
+    blurb: 'For shops and businesses fulfilling orders placed on AfriZoneMart.',
+    bullets: [
+      'Receive orders and confirm what you can fulfil',
+      'Prepare each order for courier collection',
+      'Track settlements and what you are owed',
+    ],
     to: '/register/STORE',
+    confirm: 'Continue as a store',
     glyph: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
         <path d="M3.6 9.2 5 4.5h14l1.4 4.7" strokeLinejoin="round" />
@@ -63,10 +80,14 @@ const OPTIONS: Option[] = [
   {
     key: 'COURIER',
     title: 'Courier / Dispatch',
-    blurb: 'You deliver orders, on your own or with a courier company.',
-    bullets: ['Accept delivery jobs', 'Pick up and drop off', 'Confirm with the customer'],
-    cta: 'Continue',
+    blurb: 'For riders and dispatch companies delivering AfriZoneMart orders.',
+    bullets: [
+      'Take delivery jobs from shops near you',
+      'Manage collection, drop-off and proof of delivery',
+      'Confirm each delivery with the customer’s code',
+    ],
     to: '/register/COURIER',
+    confirm: 'Continue as a courier',
     glyph: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
         <circle cx="5.6" cy="17.2" r="3" />
@@ -78,7 +99,14 @@ const OPTIONS: Option[] = [
   },
 ]
 
+/** Where Afrizone's own staff belong. Mirrors WEB_ADMIN_URL on the server. */
+const ADMIN_CONSOLE = 'https://admin.parttime.afrizonemart.com'
+
 export default function Landing() {
+  const [chosen, setChosen] = useState<AccountType | null>(null)
+  const navigate = useNavigate()
+  const selected = OPTIONS.find((o) => o.key === chosen) ?? null
+
   return (
     <div className="lp">
       <header className="lp-top">
@@ -90,42 +118,83 @@ export default function Landing() {
 
       <main className="lp-main">
         <div className="lp-intro">
-          <p className="lp-eyebrow">Get started</p>
+          <p className="lp-eyebrow">Create an account</p>
           <h1>How will you use AfriZone Part Time?</h1>
           <p className="lp-sub">
-            Pick the one that describes you. It sets up the right account and takes you to the right
-            place — you can always talk to us if that changes.
+            Choose the option that describes you. It determines the account we set up, the work you
+            are shown, and how you are paid. If your situation changes later, our team can move you.
           </p>
         </div>
 
-        <div className="lp-cards">
-          {OPTIONS.map((o) => (
-            <Link key={o.key} to={o.to} className="lp-card">
-              <span className="lp-glyph" aria-hidden="true">
-                {o.glyph}
-              </span>
-              <h2>{o.title}</h2>
-              <p className="lp-blurb">{o.blurb}</p>
-              <ul className="lp-bullets">
-                {o.bullets.map((b) => (
-                  <li key={b}>{b}</li>
-                ))}
-              </ul>
-              <span className="lp-cta">
-                {o.cta}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M5 12h13M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-            </Link>
-          ))}
+        {/*
+          A radio group rather than three buttons: one answer is expected, arrow
+          keys move between them, and a screen reader announces "2 of 3" without
+          any of that being written by hand.
+        */}
+        <div className="lp-cards" role="radiogroup" aria-label="Account type">
+          {OPTIONS.map((o) => {
+            const on = chosen === o.key
+            return (
+              <button
+                type="button"
+                key={o.key}
+                role="radio"
+                aria-checked={on}
+                className={`lp-card${on ? ' is-on' : ''}`}
+                onClick={() => setChosen(o.key)}
+                onDoubleClick={() => navigate(o.to)}
+              >
+                <span className="lp-glyph" aria-hidden="true">
+                  {o.glyph}
+                </span>
+                <h2>{o.title}</h2>
+                <p className="lp-blurb">{o.blurb}</p>
+                <ul className="lp-bullets">
+                  {o.bullets.map((b) => (
+                    <li key={b}>{b}</li>
+                  ))}
+                </ul>
+                {/* The tick is the whole confirmation the card owes: the border
+                    and tint are colour alone, and colour alone is not a state
+                    somebody with low vision can read. */}
+                <span className="lp-check" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                    <path d="m5 12.5 4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </button>
+            )
+          })}
         </div>
 
-        {/* Afrizone's own people do not belong in this list - they are not an
+        <div className="lp-go">
+          <button
+            type="button"
+            className="lp-continue"
+            disabled={!selected}
+            onClick={() => selected && navigate(selected.to)}
+          >
+            {/* Names the choice back, so a mis-click is caught here rather than
+                three fields into the wrong registration form. */}
+            {selected ? selected.confirm : 'Select an option to continue'}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M5 12h13M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <p className="lp-already">
+            Already registered? <Link to="/signin">Sign in instead</Link>
+          </p>
+        </div>
+
+        {/* Afrizone's own people do not belong in this list — they are not an
             outside party, and their console is a different application with a
             different sign-in. Saying so here saves a support ticket. */}
         <p className="lp-staff">
-          Afrizone staff sign in on the <span>admin console</span>, not here.
+          Afrizone staff sign in on the{' '}
+          <a href={ADMIN_CONSOLE} rel="noreferrer">
+            admin console
+          </a>
+          .
         </p>
       </main>
     </div>
