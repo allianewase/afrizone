@@ -38,6 +38,22 @@ function when(iso: string | null): string {
   })
 }
 
+/**
+ * How long until it is due, or how long ago it was.
+ *
+ * A clock time alone makes a shopkeeper do arithmetic to answer the only
+ * question they have - is this late? Returns null past a day, where the
+ * relative form stops being useful and the date is the better answer.
+ */
+function relative(iso: string | null): string | null {
+  if (!iso) return null
+  const mins = Math.round((new Date(iso).getTime() - Date.now()) / 60000)
+  const abs = Math.abs(mins)
+  if (abs > 60 * 24) return null
+  const span = abs < 60 ? `${abs} min` : `${Math.round(abs / 60)} hr`
+  return mins >= 0 ? `in ${span}` : `${span} ago`
+}
+
 /** Live orders first, finished ones after, newest within each. */
 const LIVE: DeliveryStatus[] = ['RECEIVED', 'STORE_ACCEPTED', 'COURIER_ASSIGNED', 'PICKED_UP']
 function byUrgency(a: Delivery, b: Delivery): number {
@@ -78,16 +94,35 @@ const PILL: Record<DeliveryStatus, string> = {
   CANCELLED: 'bad',
 }
 
-/** The line items, as Mart sent them. */
+/**
+ * The line items, as Mart sent them.
+ *
+ * A LIST, NOT A SENTENCE. These were joined with commas, which reads fine for
+ * two items and becomes unusable at six - and this is literally the packing
+ * list somebody works down while filling a bag. The quantity leads each line
+ * for the same reason: it is the number they are counting out.
+ */
 function Items({ d }: { d: Delivery }) {
   if (d.items.length === 0) return <span className="muted">No items listed</span>
   return (
-    <span>
-      {d.items
-        .map((i) => `${i.qty ? `${i.qty} × ` : ''}${i.name ?? i.ref ?? 'Item'}`)
-        .join(', ')}
-    </span>
+    <ul className="items">
+      {d.items.map((i, n) => (
+        <li key={n}>
+          <span className="qty">{i.qty ?? 1}</span>
+          {i.name ?? i.ref ?? 'Item'}
+        </li>
+      ))}
+    </ul>
   )
+}
+
+/** What the order is, in the words of the thing being carried. */
+function summarise(d: Delivery): string {
+  if (d.items.length === 0) return 'Order'
+  const first = d.items[0]
+  const name = first.name ?? first.ref ?? 'Item'
+  const rest = d.items.length - 1
+  return rest > 0 ? `${name} and ${rest} more` : name
 }
 
 // ── The store ────────────────────────────────────────────────────────────────
@@ -131,16 +166,22 @@ function StoreOrderCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
   }
 
   return (
-    <div className="card" style={{ marginBottom: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <b>{d.martOrderId}</b>
-        <span className={`pill ${PILL[d.status]}`}>{d.statusLabel}</span>
-        {d.preparedAt && d.status === 'STORE_ACCEPTED' && (
-          <span className="pill ok">Packed</span>
-        )}
-        <span className="muted" style={{ marginLeft: 'auto', fontSize: 13 }}>
-          {when(d.createdAt)}
-        </span>
+    // An order awaiting a decision is marked, because in a list of eight it is
+    // the only one that needs a person. Everything else is there to be read.
+    <div className={`card ord${d.status === 'RECEIVED' ? ' needs-you' : ''}`}>
+      <div className="ord-head">
+        <div className="ord-title">
+          <b>{summarise(d)}</b>
+          <span className="ord-ref">
+            {d.martOrderId} &middot; {relative(d.createdAt) ?? when(d.createdAt)}
+          </span>
+        </div>
+        <div className="ord-pills">
+          <span className={`pill ${PILL[d.status]}`}>{d.statusLabel}</span>
+          {d.preparedAt && d.status === 'STORE_ACCEPTED' && (
+            <span className="pill ok">Packed</span>
+          )}
+        </div>
       </div>
 
       <div className="rows" style={{ marginTop: 10 }}>
@@ -150,7 +191,7 @@ function StoreOrderCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
         </div>
         <div className="row">
           <span className="row-l">Goods</span>
-          <span className="row-v">{naira(d.goodsTotal)}</span>
+          <span className="row-v"><b className="money">{naira(d.goodsTotal)}</b></span>
         </div>
         <div className="row">
           <span className="row-l">Deliver to</span>
@@ -170,7 +211,12 @@ function StoreOrderCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
         {d.expectedBy && (
           <div className="row">
             <span className="row-l">Expected by</span>
-            <span className="row-v">{when(d.expectedBy)}</span>
+            <span className="row-v">
+              {when(d.expectedBy)}
+              {relative(d.expectedBy) && (
+                <span className="muted"> &middot; {relative(d.expectedBy)}</span>
+              )}
+            </span>
           </div>
         )}
         {d.storeNote && (
@@ -375,12 +421,20 @@ function CourierJobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
   }
 
   return (
-    <div className="card" style={{ marginBottom: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <b>{d.martOrderId}</b>
-        <span className={`pill ${PILL[d.status]}`}>{d.statusLabel}</span>
-        {d.preparedAt && d.status === 'COURIER_ASSIGNED' && <span className="pill ok">Ready to collect</span>}
-        <span className="muted" style={{ marginLeft: 'auto', fontSize: 13 }}>{when(d.createdAt)}</span>
+    // A job whose goods are packed and waiting is the one the rider should ride
+    // to next, so it is the one that looks different.
+    <div className={`card ord${d.preparedAt && d.status === 'COURIER_ASSIGNED' ? ' needs-you' : ''}`}>
+      <div className="ord-head">
+        <div className="ord-title">
+          <b>{d.storeName ?? summarise(d)}</b>
+          <span className="ord-ref">
+            {d.martOrderId} &middot; {relative(d.createdAt) ?? when(d.createdAt)}
+          </span>
+        </div>
+        <div className="ord-pills">
+          <span className={`pill ${PILL[d.status]}`}>{d.statusLabel}</span>
+          {d.preparedAt && d.status === 'COURIER_ASSIGNED' && <span className="pill ok">Ready to collect</span>}
+        </div>
       </div>
 
       <div className="rows" style={{ marginTop: 10 }}>

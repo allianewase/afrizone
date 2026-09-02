@@ -172,3 +172,48 @@ h1.pt {
     to { transform: none; }
   }
 }
+
+/* ── An order ────────────────────────────────────────────────────────────── */
+.ord-head {
+  display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+/* The ITEMS lead, not the order number. `PROBE-1788386139` means nothing to
+   somebody filling a bag; "Rice and 2 more" is what they are looking for when
+   they scan eight cards. The reference is still there, demoted to where you
+   look only when quoting it back to Afrizone. */
+.ord-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ord-title > b {
+  font-family: var(--display); font-size: 1.02rem; font-weight: 700;
+  letter-spacing: -.01em; overflow-wrap: anywhere;
+}
+.ord-ref {
+  font-size: 12px; color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.ord-pills { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* The one card in the list that needs a person. A left edge rather than a
+   filled background: a tinted card competes with the "Just in" ring on a new
+   arrival, and an order can be both. */
+.card.needs-you {
+  border-left: 3px solid var(--gold);
+  border-top-left-radius: var(--r-sm);
+  border-bottom-left-radius: var(--r-sm);
+}
+
+/* ── The packing list ────────────────────────────────────────────────────── */
+.items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.items li { display: flex; align-items: baseline; gap: 9px; }
+/* Fixed width and tabular figures so the quantities form a column the eye can
+   run down, which is how somebody counts a bag out. */
+.qty {
+  flex: none; min-width: 26px; text-align: center;
+  padding: 1px 6px; border-radius: 6px;
+  background: var(--bg2); border: 1px solid var(--line);
+  font-size: 12px; font-weight: 700; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Money reads as a figure, not as prose. */
+.money { font-variant-numeric: tabular-nums; font-weight: 700; }
