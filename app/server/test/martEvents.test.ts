@@ -374,8 +374,12 @@ describe("what an operator can see", () => {
     const admin = await createUserWithToken("SUPER_ADMIN");
     const res = await apiGet("/api/admin/mart/rules", admin.token);
     expect(res.status).toBe(200);
-    expect(res.body.SOURCING.fee).toBeGreaterThan(0);
-    expect(res.body.STORE_AUDIT.credentialSlug).toBe("auditor-accreditation");
+    expect(res.body.kinds.SOURCING.fee).toBeGreaterThan(0);
+    expect(res.body.kinds.STORE_AUDIT.credentialSlug).toBe("auditor-accreditation");
+    // Delivery-only, and deliberately its own block rather than folded into
+    // the per-kind rules - see the note on the route.
+    expect(res.body.offer.baseRadiusMetres).toBeGreaterThan(0);
+    expect(res.body.offer.selfClaim).toBe(true);
   });
 
   it("keeps the operations screen away from workers", async () => {

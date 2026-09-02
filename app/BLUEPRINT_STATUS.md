@@ -206,9 +206,10 @@ user.
 
 What the flow is: Mart confirms an order → the store accepts or refuses it → an
 acceptance posts a credential-gated courier job through the same generator every
-other automatic task uses → approving an application assigns the courier and
-moves the order → the courier collects → the courier enters the customer's code,
-Mart verifies it, and only then is it delivered.
+other automatic task uses → a courier claims it, or an admin approves an
+application, and the same code assigns them either way → the courier collects →
+the courier enters the customer's code, Mart verifies it, and only then is it
+delivered.
 
 All three parties have a screen. A store answers its inbox in the portal; a
 courier works their jobs in the portal and in the app, where live deliveries also
@@ -217,23 +218,36 @@ somebody standing in a doorway; operations watches a board at Operations →
 Deliveries that says *who each order is waiting on* rather than only what state
 it is in.
 
-Two things are deliberately absent:
+**A courier can take a delivery without waiting for anybody.** An accepted order
+is offered inside a circle around the shop that widens on a timer — three
+kilometres at first, doubling every five minutes to a fifteen-kilometre ceiling —
+and any qualified courier standing inside it can claim it from the app. There is
+still only one assignment path: self-claim and admin approval both run
+`assignWorker()`, so the two can never disagree about who holds a job, and a
+claim takes the posting with a conditional update, so two couriers tapping at
+once produce one contract and one refusal.
 
-- **Assignment is still an admin approving an application.** That is the one way
-  work is assigned on this platform and a delivery-specific claim path would
-  eventually disagree with it about who holds a job. It is also too slow for real
-  delivery, and self-claim is the next decision, not an oversight.
+Nothing about a courier's position is stored. The app sends a location with the
+request and the platform forgets it, which is why the radius belongs to the
+posting rather than to a query over couriers. If an order is still unclaimed
+after twenty minutes it is flagged for a person on the operations board — the fee
+never moves on its own, and the order stays claimable while it is flagged. Every
+number is a Setting an admin edits at Mart → Delivery offer, and
+`rules.DELIVERY.selfClaim = "off"` puts assignment back to approval only.
+
+One thing is deliberately absent:
+
 - **A delivery cannot complete until Mart exposes two endpoints.** Unconfigured,
   a courier is told *we could not check this* — never *that is the wrong code*,
   which would have them arguing with a customer about a check that never ran. The
   operations board says so at the top of the page, so an order that will not
   complete is not mistaken for a courier who has not turned up.
 
-`MART_INTEGRATION.md` §6 D1, D4 and D6 are open and now matter: what a courier
-does when the verifier cannot be reached, how long an unclaimed delivery waits
-before it escalates, and whether a failed attempt is paid. D5 — a courier who
-vanishes — is half-settled: an operator re-opens the posting from the board, and
-how long that should take before somebody notices is still open.
+`MART_INTEGRATION.md` §6 D1 and D6 are open and now matter: what a courier does
+when the verifier cannot be reached, and whether a failed attempt is paid. D4 —
+how long an unclaimed delivery waits — is settled and built, above. D5 — a
+courier who vanishes — is half-settled: an operator re-opens the posting from
+the board, and how long that should take before somebody notices is still open.
 
 **Customer data is deleted seven days after an order finishes**, per §5 — the
 name, the number, the door, the coordinates and the instructions, actually
@@ -284,23 +298,19 @@ migration touching them anyway.
 
 ## 9. What is next
 
-**Phase 1 is complete and delivery is built end to end.** Everything below is in
-the order it is worth doing:
+**Phase 1 is complete, delivery is built end to end, and a courier can claim an
+order themselves.** Everything below is in the order it is worth doing:
 
-1. **Self-claim for deliveries.** Assignment is an admin approving an
-   application, which is the one way work is assigned here and correct for a
-   week-long task. For an order that has to move in the hour, it is too slow.
-   This is the decision that makes delivery real, and it is genuinely a policy
-   call — see §6 D4 on what happens when nobody takes it.
-2. **Ranked matching** (§11). The build gates qualified / not qualified; the
+1. **Ranked matching** (§11). The build gates qualified / not qualified; the
    blueprint wants candidates scored on skill, proximity, reliability and load.
-   Delivery is what makes this urgent rather than nice: "who is nearest and
-   free?" is the question an order asks.
-3. **Proof-of-work evidence** (§14) — geo-tagged photos, signatures, timestamps,
+   The delivery offer answers a crude version of proximity — inside the circle or
+   not — and nothing orders the couriers inside it. "Who is nearest and free?" is
+   the question an order asks, and it is still first-come.
+2. **Proof-of-work evidence** (§14) — geo-tagged photos, signatures, timestamps,
    required per task type, so verification is largely automatic.
-4. **Reputation tiers and badges** (§9). Note this is a *third* meaning of
+3. **Reputation tiers and badges** (§9). Note this is a *third* meaning of
    "tier"; the naming needs settling before it is built.
-5. **Surge pay, crew contracts, referral loop** (§10, §14), **shared identity
+4. **Surge pay, crew contracts, referral loop** (§10, §14), **shared identity
    with AZM** (§13, blocked on Mart exposing an identity provider), and
    **offline-tolerant mobile flows** (§16).
 

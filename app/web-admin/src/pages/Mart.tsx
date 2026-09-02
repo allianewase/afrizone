@@ -3,7 +3,7 @@ import { api, ApiError } from '../api/client'
 import { useApi } from '../lib/useApi'
 import { useAuth } from '../auth/AuthContext'
 import { formatDateTime, formatNaira, martEventPill } from '../lib/format'
-import type { MartEventStatus, TaskRule, TaskRules } from '../api/types'
+import type { DeliveryOfferRule, MartEventStatus, TaskRule } from '../api/types'
 import PageHeader from '../components/PageHeader'
 import Glass from '../components/ui/Glass'
 import Button from '../components/ui/Button'
@@ -265,11 +265,12 @@ export default function Mart() {
                 kind={k.kind}
                 label={k.label}
                 from={k.from}
-                rule={(rules.data as TaskRules)[k.kind]}
+                rule={rules.data!.kinds[k.kind]}
                 canEdit={canEdit}
                 onSaved={rules.reload}
               />
             ))}
+            <OfferCard rule={rules.data!.offer} canEdit={canEdit} onSaved={rules.reload} />
           </div>
         )}
       </div>
@@ -430,6 +431,180 @@ function RuleCard({
       ) : (
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 14 }}>
           Only a super admin can change these.
+        </div>
+      )}
+    </Glass>
+  )
+}
+
+/**
+ * How a delivery is offered to couriers, and when it stops being their problem
+ * (MART_INTEGRATION.md §6 D4).
+ *
+ * These sit beside the generation rules because they are the same kind of thing
+ * — Blueprint §5 asks that what the platform does with an event stays editable
+ * by an admin rather than needing a deploy — but they are their own card,
+ * because they apply to delivery alone. A claim radius means nothing for a
+ * remote media task.
+ *
+ * THE RIGHT NUMBERS ARE NOT KNOWABLE YET. They are sized for a city motorcycle
+ * courier, and nobody will know what they should be until a week of real orders
+ * has been through. That is the whole reason they are on a screen.
+ */
+function OfferCard({
+  rule,
+  canEdit,
+  onSaved,
+}: {
+  rule: DeliveryOfferRule
+  canEdit: boolean
+  onSaved: () => void
+}) {
+  const [draft, setDraft] = useState<DeliveryOfferRule | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const value = draft ?? rule
+  const dirty = draft !== null && JSON.stringify(draft) !== JSON.stringify(rule)
+
+  function set<K extends keyof DeliveryOfferRule>(key: K, v: DeliveryOfferRule[K]) {
+    setDraft({ ...value, [key]: v })
+  }
+
+  async function save() {
+    if (!draft) return
+    setBusy(true)
+    setErr(null)
+    try {
+      // Only what changed, so a field left alone keeps falling back to its code
+      // default rather than being frozen into a Setting row by the act of
+      // saving a neighbouring one.
+      const writes: Promise<unknown>[] = []
+      if (draft.baseRadiusMetres !== rule.baseRadiusMetres)
+        writes.push(api.putRule('DELIVERY', 'baseRadiusMetres', String(draft.baseRadiusMetres)))
+      if (draft.stepMinutes !== rule.stepMinutes)
+        writes.push(api.putRule('DELIVERY', 'radiusStepMinutes', String(draft.stepMinutes)))
+      if (draft.maxRadiusMetres !== rule.maxRadiusMetres)
+        writes.push(api.putRule('DELIVERY', 'maxRadiusMetres', String(draft.maxRadiusMetres)))
+      if (draft.escalateAfterMinutes !== rule.escalateAfterMinutes)
+        writes.push(
+          api.putRule('DELIVERY', 'escalateAfterMinutes', String(draft.escalateAfterMinutes)),
+        )
+      await Promise.all(writes)
+      setDraft(null)
+      onSaved()
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Could not save')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // The two numbers together rather than separately: neither the step nor the
+  // ceiling means much on its own, and "reaches 15 km after 15 min" is the
+  // sentence somebody is actually trying to tune.
+  const doublings = Math.max(
+    0,
+    Math.ceil(Math.log2(value.maxRadiusMetres / Math.max(1, value.baseRadiusMetres))),
+  )
+  const km = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`)
+
+  return (
+    <Glass reveal className="mart-rule">
+      <div
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}
+      >
+        <h3 style={{ fontSize: 15, margin: 0 }}>Delivery offer</h3>
+        <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace' }}>
+          order.confirmed
+        </span>
+      </div>
+
+      {!rule.selfClaim && (
+        <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10 }}>
+          Self-claim is switched off, so none of this is in force and every delivery waits for an
+          approval. The switch is on Settings &rarr; Requirements.
+        </p>
+      )}
+
+      <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
+        <div>
+          <Label htmlFor="offer-base">Opening radius</Label>
+          <Input
+            id="offer-base"
+            type="number"
+            min={1}
+            value={String(value.baseRadiusMetres)}
+            disabled={!canEdit}
+            onChange={(ev) => set('baseRadiusMetres', Number(ev.target.value))}
+          />
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+            {km(value.baseRadiusMetres)} around the shop, at first
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="offer-step">Widens every</Label>
+          <Input
+            id="offer-step"
+            type="number"
+            min={1}
+            value={String(value.stepMinutes)}
+            disabled={!canEdit}
+            onChange={(ev) => set('stepMinutes', Number(ev.target.value))}
+          />
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+            Doubles every {value.stepMinutes} min &mdash; reaches {km(value.maxRadiusMetres)} after{' '}
+            {doublings * value.stepMinutes} min
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="offer-max">Widest it gets</Label>
+          <Input
+            id="offer-max"
+            type="number"
+            min={1}
+            value={String(value.maxRadiusMetres)}
+            disabled={!canEdit}
+            onChange={(ev) => set('maxRadiusMetres', Number(ev.target.value))}
+          />
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+            Past {km(value.maxRadiusMetres)} the answer is a person, not a wider circle
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="offer-escalate">Flag it after</Label>
+          <Input
+            id="offer-escalate"
+            type="number"
+            min={1}
+            value={String(value.escalateAfterMinutes)}
+            disabled={!canEdit}
+            onChange={(ev) => set('escalateAfterMinutes', Number(ev.target.value))}
+          />
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+            An unclaimed order shows on the deliveries board after {value.escalateAfterMinutes} min.
+            It stays claimable while it is flagged.
+          </div>
+        </div>
+      </div>
+
+      {err && (
+        <div className="login-error" role="alert" style={{ marginTop: 12 }}>
+          {err}
+        </div>
+      )}
+
+      {canEdit && dirty && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <Button size="sm" loading={busy} onClick={save}>
+            Save
+          </Button>
+          <Button size="sm" variant="glass" onClick={() => setDraft(null)}>
+            Cancel
+          </Button>
         </div>
       )}
     </Glass>

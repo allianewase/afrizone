@@ -15,9 +15,20 @@
  * read it out wrong, when in fact nothing was checked, ends up arguing on a
  * doorstep about a check that never ran - so the unreachable case is worded as
  * ours, and says not to leave the goods.
+ *
+ * AVAILABLE WORK SITS ABOVE CARRIED WORK (MART_INTEGRATION.md §6 D4). A courier
+ * may now take a delivery themselves rather than applying and waiting for an
+ * admin, and the first question somebody opens this screen with on a slow
+ * afternoon is "what can I pick up", not "what am I holding".
+ *
+ * A JOB THAT CANNOT BE CLAIMED IS STILL SHOWN, with the reason on it. An empty
+ * screen looks the same whether there is no work or the phone would not say
+ * where it is, and a rider deciding whether to go home needs those to look
+ * different. The reason is the server's sentence, never one composed here.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput, Linking } from 'react-native';
+import * as Location from 'expo-location';
 import { Screen } from '../src/components/Screen';
 import { Card } from '../src/components/Card';
 import { Button } from '../src/components/Button';
@@ -26,7 +37,7 @@ import { LoadingState, ErrorState, EmptyState } from '../src/components/Feedback
 import { colors, spacing, type, radii, fontFamily } from '../src/theme';
 import { api, ApiError } from '../src/api/client';
 import { useAsync } from '../src/lib/useAsync';
-import type { Delivery, DeliveryStatus } from '../src/api/types';
+import type { Delivery, DeliveryOffer, DeliveryStatus } from '../src/api/types';
 
 /** Whole Naira. There is no currency field anywhere in this platform. */
 function naira(n: number): string {
@@ -260,9 +271,146 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
   );
 }
 
+/**
+ * One order nobody has taken yet.
+ *
+ * The fee is the loudest thing on it, because that is what a courier is
+ * deciding on. Everything that would stop them taking it is stated as one
+ * sentence rather than a checklist - somebody standing on a kerb needs the next
+ * action, not an audit.
+ */
+function OfferCard({
+  o,
+  at,
+  onTaken,
+}: {
+  o: DeliveryOffer;
+  at: { lat: number; lng: number } | null;
+  onTaken: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function claim() {
+    if (!at) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.claimDelivery(o.id, at);
+      onTaken();
+    } catch (e) {
+      // The server's sentence, whatever the refusal was. Somebody else taking
+      // it first is the common one and reads as an ordinary fact, not a fault.
+      setError(e instanceof ApiError ? e.message : 'Could not take this job. Try again.');
+      onTaken();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card style={styles.card}>
+      <View style={styles.cardTop}>
+        <Text style={styles.order} numberOfLines={1}>
+          {o.storeName ?? 'Pickup'}
+        </Text>
+        <Text style={styles.fee}>{naira(o.fee)}</Text>
+      </View>
+
+      <Line label="Collect">
+        <Text style={styles.body}>{o.pickupAddress ?? 'Address not set'}</Text>
+        {o.distance ? <Text style={styles.muted}>{o.distance} away</Text> : null}
+      </Line>
+
+      {o.items.length > 0 ? (
+        <Line label="Items">
+          <Text style={styles.muted}>
+            {o.items.length} {o.items.length === 1 ? 'item' : 'items'}
+          </Text>
+        </Line>
+      ) : null}
+
+      {/* The server writes this. It says how long the order has waited and
+          whether the circle has widened - a job nobody has taken for twenty
+          minutes is worth knowing about before riding to it. */}
+      {o.offer.stage !== 'OFFERED' ? (
+        <Text style={styles.waiting}>{o.offer.label}</Text>
+      ) : null}
+
+      {o.claimable ? (
+        <Button label="Take this job" onPress={claim} loading={busy} style={styles.action} />
+      ) : (
+        <View style={styles.blocked}>
+          <Text style={styles.blockedText}>{o.reason}</Text>
+          {o.opensToYouInMinutes !== null && o.opensToYouInMinutes > 0 ? (
+            <Text style={styles.blockedHint}>
+              Opens to you in about {o.opensToYouInMinutes} min if nobody takes it.
+            </Text>
+          ) : null}
+        </View>
+      )}
+
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+    </Card>
+  );
+}
+
 export default function DeliveriesScreen() {
   const load = useAsync((signal) => api.myDeliveries(signal));
   const [jobs, setJobs] = useState<Delivery[] | null>(null);
+
+  // Where the courier is, asked once when the screen opens. Not watched: this
+  // is a list of shops to ride to, not a geofence, and a subscription would run
+  // the GPS for as long as somebody leaves the screen open.
+  const [at, setAt] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationAsked, setLocationAsked] = useState(false);
+  const [offers, setOffers] = useState<DeliveryOffer[] | null>(null);
+  const [selfClaim, setSelfClaim] = useState(true);
+
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const pos = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          if (live) setAt({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        }
+      } catch {
+        // Refused, or no fix. The offers call is still made - see the note at
+        // the top of this file about why an empty screen is the wrong answer.
+      } finally {
+        if (live) setLocationAsked(true);
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const loadOffers = useCallback(async () => {
+    if (!locationAsked) return;
+    try {
+      const res = await api.deliveryOffers(at);
+      setOffers(res.offers);
+      setSelfClaim(res.selfClaim);
+    } catch {
+      // A failed offers call must not take the carried jobs down with it. What
+      // a rider is already holding is the more important half of this screen.
+      setOffers([]);
+    }
+  }, [at, locationAsked]);
+
+  useEffect(() => {
+    void loadOffers();
+  }, [loadOffers]);
+
+  function refreshAll() {
+    load.reload();
+    void loadOffers();
+  }
 
   useEffect(() => {
     if (load.data) setJobs(load.data);
@@ -290,21 +438,39 @@ export default function DeliveriesScreen() {
   const all = jobs ?? [];
   const live = all.filter((j) => LIVE.includes(j.status));
   const done = all.filter((j) => !LIVE.includes(j.status));
+  const available = offers ?? [];
 
   return (
     <Screen
       title="Deliveries"
       subtitle={live.length > 0 ? `${live.length} on the go` : undefined}
       back
-      onRefresh={load.reload}
+      onRefresh={refreshAll}
       refreshing={load.loading}
     >
-      {all.length === 0 ? (
+      {available.length > 0 ? (
+        <>
+          <Text style={styles.sectionFirst}>Available now</Text>
+          {available.map((o) => (
+            <OfferCard key={o.id} o={o} at={at} onTaken={refreshAll} />
+          ))}
+        </>
+      ) : null}
+
+      {all.length === 0 && available.length === 0 ? (
         <EmptyState
           icon="map-pin"
           title="Nothing to carry yet"
-          message="Delivery jobs are posted like any other work. Apply for one, and it appears here once Afrizone assigns it to you."
+          message={
+            selfClaim
+              ? 'Orders appear here as stores accept them. Take one and it is yours straight away.'
+              : 'Delivery jobs are being assigned by the Afrizone team just now. Apply for one and it appears here once it is yours.'
+          }
         />
+      ) : null}
+
+      {live.length > 0 && available.length > 0 ? (
+        <Text style={styles.sectionTitle}>Carrying</Text>
       ) : null}
 
       {live.map((j) => (
@@ -412,4 +578,22 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.md,
   },
+  sectionFirst: {
+    fontSize: type.size.md,
+    fontFamily: fontFamily.bold,
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+
+  // What the courier is paid, and the thing they are deciding on.
+  fee: { fontSize: type.size.lg, fontFamily: fontFamily.bold, color: colors.moneyInk },
+  waiting: { fontSize: type.size.sm, color: colors.goldInk, marginTop: spacing.sm },
+  blocked: {
+    backgroundColor: colors.surfaceSand,
+    borderRadius: radii.input,
+    padding: spacing.md,
+    marginTop: spacing.md,
+  },
+  blockedText: { fontSize: type.size.sm, color: colors.text, lineHeight: 19 },
+  blockedHint: { fontSize: type.size.xs, color: colors.textMuted, marginTop: 4 },
 });

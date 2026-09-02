@@ -527,6 +527,14 @@ function TemplateCard({
 /* ===================== Requirements gate ===================== */
 
 const ENFORCE_KEY = 'eligibility.enforce'
+/**
+ * MART_INTEGRATION.md §6 D4. Off falls delivery back to what the platform did
+ * before self-claim existed - an admin approving an application - rather than
+ * leaving orders unassignable. It sits beside the requirements gate because
+ * both answer the same question, "how does work get assigned right now", and
+ * the moment either is needed is the worst moment to be hunting for it.
+ */
+const SELF_CLAIM_KEY = 'rules.DELIVERY.selfClaim'
 
 /**
  * The one switch that turns the requirements gate off without a deploy.
@@ -544,22 +552,25 @@ function RequirementsTab({ canEdit }: { canEdit: boolean }) {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // Absent means ON. The server defaults the same way, and the two must agree:
-  // a screen that reads "off" for a gate the server is enforcing would be worse
-  // than no screen at all.
-  const row = (data ?? []).find((t) => t.key === ENFORCE_KEY)
-  const enforcing = row ? String(row.value).toLowerCase() !== 'off' : true
+  // Absent means ON for both of these. The server defaults the same way, and
+  // the two must agree: a screen reading "off" for a gate the server is
+  // enforcing would be worse than no screen at all.
+  const isOn = (key: string) => {
+    const row = (data ?? []).find((t) => t.key === key)
+    return row ? String(row.value).toLowerCase() !== 'off' : true
+  }
+  const enforcing = isOn(ENFORCE_KEY)
+  const selfClaim = isOn(SELF_CLAIM_KEY)
 
-  async function setEnforcing(next: boolean) {
+  async function setSwitch(key: string, next: boolean) {
     setSaving(true)
     setSaveError(null)
-    const value = next ? 'on' : 'off'
     try {
-      const saved = await api.putTemplate(ENFORCE_KEY, value)
+      const saved = await api.putTemplate(key, next ? 'on' : 'off')
       setData((prev) => {
         const list = prev ?? []
-        return list.some((t) => t.key === ENFORCE_KEY)
-          ? list.map((t) => (t.key === ENFORCE_KEY ? saved : t))
+        return list.some((t) => t.key === key)
+          ? list.map((t) => (t.key === key ? saved : t))
           : [...list, saved]
       })
     } catch (e) {
@@ -568,6 +579,8 @@ function RequirementsTab({ canEdit }: { canEdit: boolean }) {
       setSaving(false)
     }
   }
+
+  const setEnforcing = (next: boolean) => setSwitch(ENFORCE_KEY, next)
 
   if (loading) return <LoadingState label="Loading…" />
   if (error) return <ErrorState message={error} onRetry={reload} />
@@ -612,6 +625,39 @@ function RequirementsTab({ canEdit }: { canEdit: boolean }) {
         <p className="gate-note">
           Tier is always enforced, on or off. It is an older rule than this switch, and
           turning the gate down must not quietly delete it.
+        </p>
+      </Glass>
+
+      <Glass style={{ marginTop: 16 }}>
+        <div className="gate-row">
+          <div>
+            <b>Let couriers take deliveries themselves</b>
+            <span>
+              On: a qualified courier near the shop takes an order straight from their app,
+              and the circle it is offered in widens as it waits. Off: every delivery waits
+              for somebody to approve an application, which is how all other work is
+              assigned.
+            </span>
+          </div>
+          <Switch
+            checked={selfClaim}
+            onChange={(next) => setSwitch(SELF_CLAIM_KEY, next)}
+            disabled={!canEdit || saving}
+            label="Let couriers take deliveries themselves"
+          />
+        </div>
+        {!selfClaim && (
+          <div className="login-error" role="status" style={{ marginTop: 14 }}>
+            <Icon name="alert" size={15} />
+            Couriers cannot take deliveries. Every order will sit on the board until somebody
+            approves an application for it, and an order that has to move within the hour will
+            not.
+          </div>
+        )}
+        <p className="gate-note">
+          The radius, how fast it widens and when an unclaimed order is flagged for a person
+          are the other <code>rules.DELIVERY</code> settings. They are numbers rather than
+          switches, so they are edited on the Mart rules screen.
         </p>
       </Glass>
     </>

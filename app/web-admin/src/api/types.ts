@@ -632,6 +632,26 @@ export interface TaskRule {
 
 export type TaskRules = Record<string, TaskRule>
 
+/**
+ * The delivery offer knobs (MART_INTEGRATION.md §6 D4).
+ *
+ * Its own block rather than fields on TaskRule: a claim radius means nothing
+ * for a remote media task, and folding it in would put dead fields on four
+ * cards. Same `rules.DELIVERY.*` prefix, separate concern.
+ */
+export interface DeliveryOfferRule {
+  selfClaim: boolean
+  baseRadiusMetres: number
+  stepMinutes: number
+  maxRadiusMetres: number
+  escalateAfterMinutes: number
+}
+
+export interface MartRules {
+  kinds: TaskRules
+  offer: DeliveryOfferRule
+}
+
 /* ===== Deliveries ===== */
 
 /**
@@ -695,6 +715,27 @@ export interface Delivery {
   customerPhone: string | null
   /** True once the seven-day purge has run - not the same as never having had one. */
   customerPurged: boolean
+  /**
+   * Where this order stands in the offer to couriers (MART_INTEGRATION.md §6
+   * D4), or null when it is not on the board - already taken, not yet accepted,
+   * or finished. Derived by the server from how long the posting has waited, so
+   * it is current at the moment it was read rather than as of some sweep.
+   */
+  offer: OfferState | null
+}
+
+export type OfferStage = 'OFFERED' | 'WIDENED' | 'ESCALATED'
+
+export interface OfferState {
+  stage: OfferStage
+  /** The circle the posting is currently open in, in metres. */
+  radiusMetres: number
+  waitingMinutes: number
+  widenings: number
+  atMaxRadius: boolean
+  escalated: boolean
+  /** The server writes this. No screen composes it. */
+  label: string
 }
 
 export interface DeliveriesResponse {
@@ -704,6 +745,18 @@ export interface DeliveriesResponse {
    * apart from a courier problem.
    */
   martConfigured: boolean
+  /**
+   * False when an admin has switched self-claim off. Every delivery is then
+   * waiting on an approval, which is worth knowing before chasing couriers who
+   * are not being offered anything.
+   */
+  selfClaim: boolean
+  /**
+   * Unclaimed orders past the escalation threshold, across the WHOLE board
+   * rather than the current filter - so a filtered view cannot report nothing
+   * is escalated because the escalated ones are on another page.
+   */
+  escalatedCount: number
   deliveries: Delivery[]
 }
 

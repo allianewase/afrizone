@@ -53,7 +53,7 @@ import type {
   OrgMap,
   CacStatus,
   MartEventStatus,
-  TaskRules,
+  MartRules,
   Delivery,
   DeliveryDetail,
   DeliveryStatus,
@@ -445,18 +445,30 @@ export const api = {
     const qs = q.toString()
     return request<MartEventsResponse>(`/admin/mart/events${qs ? `?${qs}` : ''}`, { signal })
   },
-  martRules: (signal?: AbortSignal) => request<TaskRules>('/admin/mart/rules', { signal }),
+  martRules: (signal?: AbortSignal) => request<MartRules>('/admin/mart/rules', { signal }),
 
   // ===== Deliveries =====
-  /** `stuck` narrows to orders that are live and waiting on somebody. */
+  /**
+   * `stuck` narrows to orders that are live and waiting on somebody.
+   * `escalated` narrows further, to unclaimed postings that have waited past
+   * the threshold in `rules.DELIVERY.escalateAfterMinutes` - MART_INTEGRATION.md
+   * §6 D4, the point at which the widening circle has done all it can and a
+   * person has to.
+   */
   deliveries: (
-    filter: { status?: DeliveryStatus | 'ALL'; storeId?: string; stuck?: boolean },
+    filter: {
+      status?: DeliveryStatus | 'ALL'
+      storeId?: string
+      stuck?: boolean
+      escalated?: boolean
+    },
     signal?: AbortSignal,
   ) => {
     const q = new URLSearchParams()
     if (filter.status && filter.status !== 'ALL') q.set('status', filter.status)
     if (filter.storeId) q.set('storeId', filter.storeId)
     if (filter.stuck) q.set('stuck', '1')
+    if (filter.escalated) q.set('escalated', '1')
     const qs = q.toString()
     return request<DeliveriesResponse>(`/admin/deliveries${qs ? `?${qs}` : ''}`, { signal })
   },

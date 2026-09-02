@@ -661,3 +661,67 @@ export interface Delivery {
   customerPurged: boolean;
   contractId?: string | null;
 }
+
+/**
+ * An order on the board that nobody has taken yet (MART_INTEGRATION.md §6 D4).
+ *
+ * DELIBERATELY NOT A `Delivery`. The offer carries no drop-off address, no
+ * customer name and no phone number, because §5 gives those to the courier
+ * holding the job and a list of jobs nobody has taken is not that. Typing it as
+ * a Delivery would put four fields on this object that the server never sends
+ * and that a screen could then read as blank rather than absent.
+ */
+export type OfferStage = 'OFFERED' | 'WIDENED' | 'ESCALATED';
+
+export interface OfferState {
+  stage: OfferStage;
+  /** The circle the posting is currently open in, in metres. */
+  radiusMetres: number;
+  waitingMinutes: number;
+  widenings: number;
+  atMaxRadius: boolean;
+  escalated: boolean;
+  /** Written by the server. No client composes this phrase. */
+  label: string;
+}
+
+export interface DeliveryOffer {
+  id: string;
+  martOrderId: string;
+  storeName: string | null;
+  taskId: string | null;
+  items: DeliveryItem[];
+  pickupAddress: string | null;
+  pickupLat: number | null;
+  pickupLng: number | null;
+  goodsTotal: number;
+  deliveryFee: number;
+  expectedBy: string | null;
+  status: DeliveryStatus;
+  statusLabel: string;
+  createdAt: string;
+
+  /** What the COURIER is paid, from `rules.DELIVERY.fee`. Not `deliveryFee`,
+   *  which is what Mart charged the customer - Mart changing its pricing must
+   *  never change our payroll. */
+  fee: number;
+  offer: OfferState;
+  /** Null when the shop has no coordinates, which is not the same as zero. */
+  distanceMetres: number | null;
+  /** Already formatted by the server: "800 m", "2.4 km". */
+  distance: string | null;
+  claimable: boolean;
+  /** One reason, the most fixable one, or null when it is claimable. */
+  reason: string | null;
+  blockers: Blocker[];
+  /** Minutes until the widening circle reaches this courier, or null if it
+   *  never will. A countdown that never ends is worse than being told no. */
+  opensToYouInMinutes: number | null;
+}
+
+export interface DeliveryOffers {
+  /** False when an admin has switched self-claim off; jobs are then assigned by
+   *  approval, as they were before self-claim existed. */
+  selfClaim: boolean;
+  offers: DeliveryOffer[];
+}

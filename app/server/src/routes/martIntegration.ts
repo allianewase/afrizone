@@ -15,6 +15,7 @@ import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest } from "../auth";
 import { intakeMartEvent, verifyMartSignature } from "../services/martEvents";
 import { allRules } from "../services/taskRules";
+import { offerRule } from "../services/deliveryOffer";
 
 const router = Router();
 export const adminRouter = Router();
@@ -122,13 +123,19 @@ adminRouter.get(
  * Blueprint §5 asks that these stay Admin-editable. They are Settings, written
  * through the existing PUT /api/settings/templates/:key, so this is the read
  * side that makes them discoverable rather than folklore.
+ *
+ * TWO SHAPES, NOT ONE FLAT OBJECT. `kinds` is per task kind and every kind has
+ * an answer for every field. `offer` is delivery only - a claim radius means
+ * nothing for a remote media task - and folding it in would put dead fields on
+ * four cards. It is the same split as services/deliveryOffer.ts keeping its
+ * parameters out of TaskRule while sharing the rules.DELIVERY.* prefix.
  */
 adminRouter.get(
   "/rules",
   requireAuth,
   requireRole("SUPER_ADMIN", "TASK_MANAGER"),
   async (_req: AuthedRequest, res: Response) => {
-    res.json(await allRules());
+    res.json({ kinds: await allRules(), offer: await offerRule(prisma) });
   }
 );
 

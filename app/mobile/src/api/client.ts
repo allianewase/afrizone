@@ -40,6 +40,7 @@ import type {
   CredentialInput,
   CourierReadiness,
   Delivery,
+  DeliveryOffers,
 } from './types';
 
 export class ApiError extends Error {
@@ -616,6 +617,33 @@ export const api = {
    */
   myDeliveries(signal?: AbortSignal): Promise<Delivery[]> {
     return request<Delivery[]>('/me/deliveries', { signal });
+  },
+
+  /**
+   * GET /api/me/delivery-offers: orders on the board this courier could take.
+   *
+   * COORDINATES ARE OPTIONAL AND THE CALL IS STILL WORTH MAKING WITHOUT THEM.
+   * A courier whose phone refused location gets the jobs back with
+   * `claimable: false` and a reason saying so, rather than an empty list - which
+   * looks exactly like a quiet afternoon, and the difference matters to somebody
+   * deciding whether to go home.
+   */
+  deliveryOffers(at?: { lat: number; lng: number } | null, signal?: AbortSignal): Promise<DeliveryOffers> {
+    const query = at ? `?lat=${at.lat}&lng=${at.lng}` : '';
+    return request<DeliveryOffers>(`/me/delivery-offers${query}`, { signal });
+  },
+
+  /**
+   * POST /api/deliveries/:id/claim: this courier is taking it.
+   *
+   * The position is sent with the request and never stored - the radius is a
+   * property of the posting, not a query over where couriers are. Every refusal
+   * carries a `code`, because too far, not qualified, already taken and
+   * switched off are four different problems and a rider given one flat
+   * "cannot claim" will tap it again on a job that will never be theirs.
+   */
+  claimDelivery(id: string, at: { lat: number; lng: number }): Promise<Delivery> {
+    return request<Delivery>(`/deliveries/${id}/claim`, { method: 'POST', body: at });
   },
 
   /** POST /api/deliveries/:id/picked-up: the goods have left the shop. */

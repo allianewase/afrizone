@@ -72,3 +72,10 @@
 @media (max-width: 640px) {
   .dv-purge-grid { grid-template-columns: 1fr; }
 }
+
+/* The escalation banner's inline action. Sits in the sentence rather than
+   below it: the operator is already reading the reason to press it. */
+.dv-inline {
+  margin-left: 8px;
+  vertical-align: baseline;
+}

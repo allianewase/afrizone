@@ -37,10 +37,13 @@ import './Deliveries.css'
  * belongs to somebody — the shop, the rider, or the customer's code.
  */
 
-type StatusFilter = DeliveryStatus | 'ALL' | 'LIVE'
+type StatusFilter = DeliveryStatus | 'ALL' | 'LIVE' | 'ESCALATED'
 
 const FILTERS: { key: StatusFilter; label: string }[] = [
   { key: 'LIVE', label: 'Live' },
+  // MART_INTEGRATION.md §6 D4: the circle has widened as far as it is going to
+  // and nobody has taken the job. This is the list an operator acts on.
+  { key: 'ESCALATED', label: 'Nobody has taken it' },
   { key: 'RECEIVED', label: 'Waiting for the store' },
   { key: 'STORE_ACCEPTED', label: 'Waiting for a courier' },
   { key: 'PICKED_UP', label: 'Out for delivery' },
@@ -87,6 +90,10 @@ function waitingOn(d: Delivery): string {
     case 'RECEIVED':
       return `${d.storeName ?? 'The store'} has not answered`
     case 'STORE_ACCEPTED':
+      // The offer label is the server's sentence and says how long it has been
+      // on the board. It is more use than "waiting for a courier", which an
+      // operator can already see from the state column.
+      if (d.offer?.escalated) return d.offer.label
       return d.preparedAt ? 'Packed and waiting for a courier' : 'The store is packing it'
     case 'COURIER_ASSIGNED':
       return 'The courier has not collected yet'
@@ -132,7 +139,11 @@ export default function Deliveries() {
   const { data, loading, error, reload } = useApi(
     (signal) =>
       api.deliveries(
-        filter === 'LIVE' ? { stuck: true } : { status: filter === 'ALL' ? 'ALL' : filter },
+        filter === 'LIVE'
+          ? { stuck: true }
+          : filter === 'ESCALATED'
+            ? { escalated: true }
+            : { status: filter === 'ALL' ? 'ALL' : filter },
         signal,
       ),
     [filter],
@@ -186,6 +197,38 @@ export default function Deliveries() {
         </Glass>
       )}
 
+      {/* The other half of D4. A widening circle can only do so much, and past
+          the threshold the answer is a person - so the board says so, with the
+          count over the whole board rather than the current filter. */}
+      {data && data.escalatedCount > 0 && filter !== 'ESCALATED' && (
+        <Glass className="dv-warn" reveal>
+          <b>
+            {data.escalatedCount} {data.escalatedCount === 1 ? 'order has' : 'orders have'} been
+            waiting too long for a courier.
+          </b>
+          <p>
+            Nobody has taken {data.escalatedCount === 1 ? 'it' : 'them'} and the circle
+            {data.escalatedCount === 1 ? ' it is' : ' they are'} offered in has stopped widening.
+            <button className="btn btn-sm btn-glass dv-inline" onClick={() => setFilter('ESCALATED')}>
+              Show {data.escalatedCount === 1 ? 'it' : 'them'}
+            </button>
+          </p>
+        </Glass>
+      )}
+
+      {/* Worth knowing before chasing riders who are not being offered
+          anything: with self-claim off, every order waits on an approval. */}
+      {data && !data.selfClaim && (
+        <Glass className="dv-warn" reveal>
+          <b>Couriers cannot take jobs themselves.</b>
+          <p>
+            Self-claim is switched off, so every delivery waits for somebody to approve an
+            application. Turn it back on in Settings &rarr; Requirements
+            (<code>rules.DELIVERY.selfClaim</code>).
+          </p>
+        </Glass>
+      )}
+
       <div className="dv-filters">
         {FILTERS.map((f) => (
           <button
@@ -206,11 +249,19 @@ export default function Deliveries() {
         <Glass>
           <EmptyState
             icon="send"
-            title={filter === 'LIVE' ? 'Nothing is waiting' : 'No orders match that'}
+            title={
+              filter === 'LIVE'
+                ? 'Nothing is waiting'
+                : filter === 'ESCALATED'
+                  ? 'Every order has found a courier'
+                  : 'No orders match that'
+            }
             sub={
               filter === 'LIVE'
                 ? 'Every order has either been delivered or closed. This being empty is the good outcome.'
-                : 'Try a different filter, or All.'
+                : filter === 'ESCALATED'
+                  ? 'Nothing has been sitting on the board past its escalation window. This being empty is the good outcome.'
+                  : 'Try a different filter, or All.'
             }
           />
         </Glass>
