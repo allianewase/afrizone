@@ -8,6 +8,9 @@
 }
 
 /* ── Top bar ─────────────────────────────────────────────────────────────── */
+/* The brand lockup itself lives in components/Logo; the landing page only
+   says how big it is here. */
+.lp-brand .az-word { font-size: 16px; }
 .lp-top {
   display: flex;
   align-items: center;
@@ -15,28 +18,6 @@
   gap: 16px;
   padding: 20px clamp(20px, 5vw, 56px);
 }
-.lp-brand { display: flex; align-items: center; gap: 11px; }
-.lp-mark {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  border-top-right-radius: var(--cut);
-  background: var(--navy);
-  color: var(--gold);
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 19px;
-  display: grid;
-  place-items: center;
-}
-.lp-word {
-  font-family: var(--display);
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  color: var(--text);
-}
-.lp-word b { font-weight: 800; }
 .lp-signin {
   font-size: 14px;
   font-weight: 600;

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { AccountType } from '../lib/types'
+import Logo from '../components/Logo'
 import './Landing.css'
 
 /**
@@ -81,12 +82,7 @@ export default function Landing() {
   return (
     <div className="lp">
       <header className="lp-top">
-        <div className="lp-brand">
-          <span className="lp-mark" aria-hidden="true">A</span>
-          <span className="lp-word">
-            AfriZone <b>Part Time</b>
-          </span>
-        </div>
+        <Logo size={34} className="lp-brand" />
         <Link className="lp-signin" to="/signin">
           Sign in
         </Link>

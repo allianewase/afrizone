@@ -186,10 +186,10 @@ function StoreOrderCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
 
       {d.status === 'RECEIVED' && !rejecting && (
         <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-          <button className="btn" style={{ width: 'auto', padding: '0 20px' }} disabled={busy !== null} onClick={() => run('accept')}>
+          <button className="btn inline"  disabled={busy !== null} onClick={() => run('accept')}>
             {busy === 'accept' ? 'Accepting…' : 'We will fulfil this'}
           </button>
-          <button className="btn ghost" style={{ width: 'auto', padding: '0 20px' }} disabled={busy !== null} onClick={() => setRejecting(true)}>
+          <button className="btn ghost inline"  disabled={busy !== null} onClick={() => setRejecting(true)}>
             We cannot
           </button>
         </div>
@@ -212,14 +212,14 @@ function StoreOrderCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button
-              className="btn"
-              style={{ width: 'auto', padding: '0 20px' }}
+              className="btn inline"
+              
               disabled={busy !== null || reason.trim().length === 0}
               onClick={() => run('reject')}
             >
               {busy === 'reject' ? 'Sending…' : 'Send refusal'}
             </button>
-            <button className="btn ghost" style={{ width: 'auto', padding: '0 20px' }} onClick={() => setRejecting(false)}>
+            <button className="btn ghost inline"  onClick={() => setRejecting(false)}>
               Back
             </button>
           </div>
@@ -228,7 +228,7 @@ function StoreOrderCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
 
       {d.status !== 'RECEIVED' && !d.preparedAt && LIVE.includes(d.status) && (
         <div style={{ marginTop: 12 }}>
-          <button className="btn ghost" style={{ width: 'auto', padding: '0 20px' }} disabled={busy !== null} onClick={() => run('prepared')}>
+          <button className="btn ghost inline"  disabled={busy !== null} onClick={() => run('prepared')}>
             {busy === 'prepared' ? 'Saving…' : 'Packed and ready'}
           </button>
         </div>
@@ -455,7 +455,7 @@ function CourierJobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
 
       {d.status === 'COURIER_ASSIGNED' && (
         <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-          <button className="btn" style={{ width: 'auto', padding: '0 20px' }} disabled={busy !== null} onClick={pickUp}>
+          <button className="btn inline"  disabled={busy !== null} onClick={pickUp}>
             {busy === 'pickup' ? 'Saving…' : 'Collected from the store'}
           </button>
         </div>
@@ -479,13 +479,13 @@ function CourierJobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
             </span>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn" style={{ width: 'auto', padding: '0 20px' }} disabled={busy !== null || code.trim().length === 0}>
+            <button className="btn inline"  disabled={busy !== null || code.trim().length === 0}>
               {busy === 'complete' ? 'Checking…' : 'Complete delivery'}
             </button>
             <button
               type="button"
-              className="btn ghost"
-              style={{ width: 'auto', padding: '0 20px' }}
+              className="btn ghost inline"
+              
               onClick={() => setFailing(true)}
             >
               Could not deliver
@@ -511,14 +511,14 @@ function CourierJobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button
-              className="btn"
-              style={{ width: 'auto', padding: '0 20px' }}
+              className="btn inline"
+              
               disabled={busy !== null || reason.trim().length === 0}
               onClick={fail}
             >
               {busy === 'fail' ? 'Saving…' : 'Report it'}
             </button>
-            <button className="btn ghost" style={{ width: 'auto', padding: '0 20px' }} onClick={() => setFailing(false)}>
+            <button className="btn ghost inline"  onClick={() => setFailing(false)}>
               Back
             </button>
           </div>

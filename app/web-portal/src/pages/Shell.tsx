@@ -1,7 +1,15 @@
 import { Link } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { useAuth } from '../lib/auth'
+import Logo from '../components/Logo'
 import './Shell.css'
+
+/** What kind of account is signed in, in the words the portal uses elsewhere. */
+const ACCOUNT_LABEL: Record<string, string> = {
+  STORE: 'Store',
+  COURIER: 'Courier',
+  INDIVIDUAL: 'Individual',
+}
 
 /** Chrome shared by every screen after the landing page. */
 export default function Shell({ children }: { children: ReactNode }) {
@@ -10,15 +18,15 @@ export default function Shell({ children }: { children: ReactNode }) {
     <div className="sh">
       <header className="sh-top">
         <Link className="sh-brand" to="/">
-          <span className="sh-mark" aria-hidden="true">A</span>
-          <span className="sh-word">
-            AfriZone <b>Part Time</b>
-          </span>
+          <Logo size={30} />
         </Link>
         {user ? (
           <div className="sh-who">
-            <span>{user.name}</span>
-            <button className="btn ghost" style={{ width: 'auto', height: 36, padding: '0 14px' }} onClick={signOut}>
+            <span className="sh-me">
+              <b>{user.name}</b>
+              <span>{(user.accountType && ACCOUNT_LABEL[user.accountType]) ?? 'Signed in'}</span>
+            </span>
+            <button className="btn ghost inline sm" onClick={signOut}>
               Sign out
             </button>
           </div>

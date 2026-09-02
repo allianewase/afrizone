@@ -1,26 +1,45 @@
-/* Shared chrome for every screen after the landing page. */
-.sh { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+/* Shared chrome for every screen after the landing page.
+   It carries the SAME warm wash as the landing page. Signing in used to drop
+   you onto a flat grey document, which read as arriving at a different, older
+   product than the one that sold you a minute earlier. */
+.sh {
+  min-height: 100vh; display: flex; flex-direction: column;
+  background:
+    radial-gradient(900px 380px at 50% -200px, rgba(251, 172, 52, 0.13), transparent 70%),
+    var(--bg);
+}
+
+/* Sticky, because a shopkeeper scrolling a day of orders should never lose the
+   way out. Translucent so the wash shows through rather than being cut off by
+   a hard white band. */
 .sh-top {
+  position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 16px clamp(20px, 5vw, 40px);
-  border-bottom: 1px solid var(--line); background: var(--surface);
+  padding: 14px clamp(20px, 5vw, 40px);
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
 }
-.sh-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
-.sh-mark {
-  width: 30px; height: 30px; border-radius: 9px; border-top-right-radius: var(--cut);
-  background: var(--navy); color: var(--gold);
-  font-family: var(--display); font-weight: 800; font-size: 16px;
-  display: grid; place-items: center;
+.sh-brand { display: flex; align-items: center; text-decoration: none; color: inherit; }
+
+.sh-who { display: flex; align-items: center; gap: 14px; }
+/* Name over role. Two people share a counter login often enough that saying
+   which account is signed in is worth the second line. */
+.sh-me { display: flex; flex-direction: column; line-height: 1.25; text-align: right; }
+.sh-me b { font-size: 13.5px; font-weight: 700; }
+.sh-me span { font-size: 11.5px; color: var(--faint); }
+
+.sh-body {
+  flex: 1; width: 100%; max-width: 980px; margin: 0 auto;
+  padding: clamp(24px,5vw,44px) clamp(16px,5vw,40px) 80px;
 }
-.sh-word { font-family: var(--display); font-size: 15px; font-weight: 500; }
-.sh-word b { font-weight: 800; }
-.sh-who { display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: var(--muted); }
-.sh-body { flex: 1; width: 100%; max-width: 980px; margin: 0 auto; padding: clamp(26px,5vw,48px) clamp(20px,5vw,40px) 72px; }
 
 /* ── Forms ───────────────────────────────────────────────────────────────── */
 .card {
   background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--r); border-top-right-radius: var(--cut); padding: 28px;
+  border-radius: var(--r); border-top-right-radius: var(--cut); padding: 24px 26px;
+  box-shadow: 0 1px 2px rgba(28, 25, 23, 0.04), 0 8px 24px -16px rgba(28, 25, 23, 0.18);
+  margin-bottom: 14px;
 }
 .form-narrow { max-width: 430px; margin: 0 auto; }
 .eyebrow {
@@ -53,6 +72,9 @@ h1.pt {
 .btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.04); }
 .btn:disabled { opacity: .55; cursor: not-allowed; }
 .btn.ghost { background: transparent; border: 1px solid var(--line-2); font-weight: 600; }
+/* Sits in a row with other buttons rather than filling the form. */
+.btn.inline { width: auto; padding: 0 20px; }
+.btn.sm { height: 38px; font-size: 14px; }
 
 .alt { margin: 16px 0 0; text-align: center; font-size: 13.5px; color: var(--muted); }
 .alt a { color: var(--gold-ink); font-weight: 700; }
@@ -94,12 +116,28 @@ h1.pt {
 .row { display: flex; gap: 14px; padding: 11px 0; border-top: 1px solid var(--line); font-size: 14px; }
 .row:first-child { border-top: 0; }
 .row-l { width: 130px; flex: none; color: var(--faint); }
-.row-v { flex: 1; }
+.row-v { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
 .sectitle {
-  font-family: var(--display); font-weight: 700; font-size: 1.05rem;
-  margin: 30px 0 12px; letter-spacing: -.01em;
+  font-family: var(--display); font-weight: 700; font-size: 1.15rem;
+  margin: 34px 0 14px; letter-spacing: -.015em;
+  display: flex; align-items: center; gap: 10px;
+}
+/* A short gold rule before the title. The page is a single column of cards, so
+   without it every section begins identically and the eye finds no anchor when
+   scanning back up. */
+.sectitle::before {
+  content: ''; flex: none; width: 3px; height: 1em; border-radius: 2px;
+  background: var(--gold);
 }
 .muted { color: var(--muted); }
+
+@media (max-width: 560px) {
+  .card { padding: 20px 18px; }
+  .row { flex-direction: column; gap: 3px; padding: 10px 0; }
+  .row-l { width: auto; font-size: 12px; font-weight: 600; letter-spacing: .01em; }
+  .sh-me span { display: none; }
+}
 
 /* ── Freshness, and orders that arrive while you are looking ─────────────── */
 /* Quiet on purpose. This line is reassurance, not information: it earns its

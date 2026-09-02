@@ -1,0 +1,36 @@
+/* The mark sits in a box of its own exact size so the wordmark's baseline does
+   not shift when the image is still loading. A logo that jumps on first paint
+   is the cheapest possible way to look unfinished. */
+.az-mark {
+  display: inline-block;
+  flex: none;
+  line-height: 0;
+}
+.az-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.az-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Regular weight for "AfriZone", heavy for "Part Time" — the part that
+   distinguishes this product from the shop is the part that should carry the
+   weight. */
+.az-word {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--text);
+  white-space: nowrap;
+}
+.az-word b {
+  font-weight: 800;
+}
