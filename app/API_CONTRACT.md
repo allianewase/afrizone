@@ -1,6 +1,14 @@
 # Afrizone Part Time: API Contract v1 (MVP slice)
 
-Shared source of truth for the backend (`server/`) and admin frontend (`web-admin/`).
+**This file stopped being the source of truth and is kept as a record of the v1-v3
+slices.** It is an append log of three early slices and covers none of what came
+after: organizations and stores, courier profiles, credentials, store audits, CAC,
+the Mart event bus, or deliveries and self-claim - the last of which is roughly a
+quarter of the API. Read the route files under `app/server/src/routes/` for what
+exists, `MART_INTEGRATION.md` for the Mart contract, and `BLUEPRINT_STATUS.md` for
+what is built and deployed. Nothing below is wrong; there is simply a great deal
+missing, and treating it as complete is how an endpoint gets reinvented.
+
 Backend runs on **http://localhost:4000**, all routes prefixed **`/api`**. Frontend dev server proxies `/api` → `:4000`.
 
 Auth: `Authorization: Bearer <jwt>`. Money is in **kobo** is NOT used: all amounts are **whole Naira integers** (e.g. `18000` = ₦18,000). WHT default rate **5%** (`0.05`), configurable per task category later. `net = round(gross - gross*whtRate)`.

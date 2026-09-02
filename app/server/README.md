@@ -30,7 +30,7 @@ Demo workers log in with `<firstname>.<lastname>@afrizone.work` / `worker123`
 | Script | What it does |
 |---|---|
 | `npm run dev` | `wrangler dev` - local Worker with emulated D1/R2 |
-| `npm run deploy` | `wrangler deploy` - what Workers Builds also runs on push to `main` |
+| `npm run deploy` | `wrangler deploy` - **the only way this Worker ships.** Not git-connected; pushing to `main` deploys nothing here |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | `vitest run` via `@cloudflare/vitest-pool-workers` - runs inside real `workerd`, real D1/R2 |
 | `npm run seed` | Seed admin + workers + tasks + applications + payments (writes to `prisma/dev.db`, then dumps + applies the same data to `wrangler dev`'s local D1 emulation) |

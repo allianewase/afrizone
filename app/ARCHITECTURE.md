@@ -5,7 +5,7 @@ it safely**. Section 12 is the one that matters most for the third — it lists 
 decisions that look like mistakes and explains why they are not, so nobody "fixes"
 one back into a bug.
 
-Accurate as of migration `0011`. When something here stops matching the code, the
+Accurate as of migration `0020`. When something here stops matching the code, the
 code is right and this file is stale — say so in the PR that made it stale.
 
 ---
@@ -253,15 +253,31 @@ Hand-written SQL under `app/server/migrations/`, applied with
 | 0009 | Stores *(superseded by 0011)* |
 | 0010 | `User.accountType` |
 | 0011 | Store → `Organization { kind }` |
+| 0012 | Contract lifecycle |
+| 0013 | Two-way ratings |
+| 0014 | Commitments — the escrow ring-fence |
+| 0015 | Store audits |
+| 0016 | Mart event ledger |
+| 0017 | Store CAC registration |
+| 0018 | Courier profile |
+| 0019 | `Delivery` |
+| 0020 | `Delivery.offeredAt` — when the wait for a courier started |
 
-> **Outstanding: 0008–0011 have not been applied to production.** Everything built
-> on them is inert until they are.
+> **Production is at `0020`; nothing is outstanding.** Migrations are applied by
+> hand with `wrangler d1 migrations apply afrizone-db --remote`, and a
+> `--file` execution is atomic — a failed statement rolls the whole thing back,
+> so a half-applied migration is not a state you have to reason about.
+>
+> One thing the migration folder does NOT contain: the reference data in
+> `scripts/reference-data.sql` (categories, skills, credential types). `d1
+> migrations apply` will never add it, so a fresh database gets the schema and
+> none of the rows the task rules point at.
 
 ---
 
 ## 10. Testing
 
-**236 tests across 23 files**, run with `vitest` under `vitest-pool-workers` — tests
+**443 tests across 33 files**, run with `vitest` under `vitest-pool-workers` — tests
 execute inside a real Workers runtime against real D1, dispatched through the actual
 exported handler rather than an imported Express app.
 
@@ -276,6 +292,11 @@ inversion.
 - Default per-test timeout is 5s, and a loaded full run occasionally trips it. An
   unexplained single-test failure has recurred a few times and has **not** been
   diagnosed.
+- **Two concurrent `SELF.fetch()` calls that both write to D1 are not
+  survivable.** The run hangs to timeout and then reports "The Workers runtime
+  crashed unexpectedly", leaving node processes to kill by hand. Test a race at
+  the service layer with `Promise.all` and test the route sequentially — see
+  `test/deliveryClaim.test.ts`.
 
 ---
 
@@ -285,11 +306,24 @@ CI (`.github/workflows/ci.yml`) runs on every push to `main`: `prisma generate`,
 `tsc --noEmit`, and the full test suite for the server; a production build for the
 admin web; a typecheck for mobile.
 
+**The surfaces do not deploy the same way, and that is the thing to get right.**
+`web-admin` is git-connected: pushing to `main` IS its deploy. `app/server` is
+NOT — Workers Builds has never built it, and it ships only by hand.
+`web-portal` is direct-upload and has no CI job at all.
+
 **Order of operations for a release:**
-1. Apply outstanding migrations to production D1.
-2. `wrangler deploy` the API.
-3. Build and publish the admin web.
-4. Build and distribute the mobile app if it changed.
+1. Back up production D1 (`wrangler d1 export`).
+2. Apply outstanding migrations to production D1.
+3. `npx wrangler deploy` the API, by hand, from `app/server`.
+4. `git push` — which is what rebuilds the admin web. It goes AFTER the Worker,
+   or the new console calls routes the live API has not learned yet.
+5. Publish `web-portal` by hand if it changed, after checking the bundle.
+6. Build and distribute the mobile app if it changed.
+
+**Verify a frontend by grepping the served bundle for a string only the new
+build contains.** Watching the filename hash change does not work — a Pages
+build can finish before you capture the "before" value, and then you are waiting
+for a change that already happened.
 
 ---
 
@@ -358,22 +392,37 @@ so the decision stays cheap.
 ## 13. Known gaps
 
 **Not built at all**
-- Orders, and the entire AfriZoneMart integration (specified in `MART_INTEGRATION.md`)
-- Delivery: assignment, pickup/drop-off, OTP, the standing courier agreement
+- Ranked matching — the build gates qualified / not qualified and nothing orders
+  the candidates who pass
+- Proof-of-work evidence: geo-tagged photos, signatures, timestamps
+- The standing courier agreement
 - Store/organization settlement
-- Product sourcing (parked — the money flow is an open product decision)
+- Product sourcing's money flow (parked — an open product decision; the task
+  generation itself is built)
 
 **Built but incomplete**
 - The admin Organizations page can view members but cannot add or remove them; only
   the first owner can be seeded, at creation
 - `Contract` is 1:1 with `Task`, which will not hold for a standing courier agreement
-- No scheduler exists; the retainer and the customer-data purge will both need one
+- **A courier gets an address and a phone number, and no map.** The store map is
+  an admin screen; putting one in the app needs a native map component and a
+  rebuild. It is the most obvious gap in what has been built
+- **The courier's self-claim screen exists only in `app/mobile`**, which ships
+  nowhere until an EAS build. The endpoints are live; the button is in nobody's
+  hands
+- The retainer still needs a scheduler. One now exists — `17 3 * * *`, added for
+  the §5 customer-data purge — so this is wiring, not new machinery
 
 **Configuration**
 - `PAYSTACK_SECRET` unset → payouts simulated, withdrawals cannot complete in production
 - `SMTP_URL` unset → password-reset tokens are logged, never emailed
 - Smile Identity unset → all KYC is manual
-- Migrations 0008–0011 not applied to production
+- `MART_BASE_URL` / `MART_OUTBOUND_SECRET` unset → a courier at the door is told
+  *we could not check this code*, and the order stays PICKED_UP. Deliberate:
+  never *that is the wrong code* for a check that never ran
+- **Production holds no stores.** `order.confirmed` resolves
+  `fulfilment.storeSlug` against `Organization`, so every order is refused with
+  `No store with slug` until one exists. This is a data gap, not a code one
 
 **Unresolved**
 - The intermittent single-test failure in full suite runs (§10)

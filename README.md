@@ -23,7 +23,7 @@ afrizone/
 | Layer | Tech | Notes |
 |---|---|---|
 | **Database** | Prisma ORM over **D1** (Cloudflare's SQLite-based database), locally and in production | Same SQLite schema everywhere, via `@prisma/adapter-d1`; see `server/README.md`. |
-| **Backend** | Express + TypeScript + JWT + bcrypt, on **Cloudflare Workers** | REST API under `/api`, deployed via Workers Builds on push to `main`. |
+| **Backend** | Express + TypeScript + JWT + bcrypt, on **Cloudflare Workers** | REST API under `/api`, deployed BY HAND with `npx wrangler deploy` - not on push. |
 | **Admin web** | Vite + React + TypeScript + React Router | SPA on `:5173`, dark glassmorphism UI (clay/gold/forest brand, Bricolage Grotesque + Inter). |
 | **Mobile** | Expo (expo-router) + TypeScript | Worker-facing app: onboarding/KYC, task feed, clock-in/geofence, wallet, contracts. |
 
@@ -92,11 +92,19 @@ See each app's own README for details: [`server/README.md`](app/server/README.md
 
 ## Production deployment
 
-Both the API and web-admin run on Cloudflare, auto-deploying on push to `main`:
+Everything runs on Cloudflare, but **the surfaces deploy differently and the
+order matters**. Only `web-admin` deploys on push; the API does not and never
+has, whatever an earlier version of this file said.
 
-- **API**: Cloudflare Workers (`app/server`), via Workers Builds - runs
-  `wrangler deploy`, which reads `app/server/wrangler.jsonc` (D1 + R2 bindings,
-  non-secret config). Secrets (`JWT_SECRET`, `PAYSTACK_SECRET`, etc.) are set
+**Release order: migrations, then the API by hand, then push.** The push
+rebuilds the admin console, and an admin console built ahead of the Worker calls
+routes the live API has not learned yet.
+
+- **API**: Cloudflare Workers (`app/server`). **Deployed by hand with
+  `npx wrangler deploy`** from `app/server` - it is NOT git-connected, Workers
+  Builds has never built it, and pushing changes nothing. `wrangler deploy`
+  reads `app/server/wrangler.jsonc` (D1 + R2 bindings, non-secret config,
+  and the `17 3 * * *` cron for the customer-data purge). Secrets (`JWT_SECRET`, `PAYSTACK_SECRET`, etc.) are set
   via `wrangler secret put` or the dashboard's Settings → Variables and
   Secrets, listed in `app/server/.env.production.example`. Live at
   `https://api.parttime.afrizonemart.com` - **never `api.afrizonemart.com`**,
@@ -108,6 +116,15 @@ Both the API and web-admin run on Cloudflare, auto-deploying on push to `main`:
   `https://admin.parttime.afrizonemart.com` (`https://afrizone.pages.dev`
   still works) - **never `admin.afrizonemart.com`**, Afrizoma's own admin
   domain.
+- **web-portal**: Cloudflare Pages (`app/web-portal`), project
+  `afrizone-portal`, **direct upload only** - no Git integration, so it is
+  published by hand. It also has no CI job, so nothing typechecks it on a push;
+  check it yourself before publishing. Build it with `VITE_API_URL` set
+  explicitly and grep the emitted JS for the API host first: the code falls back
+  to a relative `/api`, which on Pages is swallowed by the SPA catch-all and
+  returns index HTML with a 200 rather than failing.
 - **mobile**: not hosted - `EXPO_PUBLIC_API_URL` is injected at build time via
   `app/mobile/eas.json`'s `preview`/`production` profiles for EAS builds; local
-  dev still points at your LAN IP via `app/mobile/.env` (gitignored).
+  dev still points at your LAN IP via `app/mobile/.env` (gitignored). Nothing
+  reaches a phone without an EAS build, so a mobile-only feature is not live
+  merely because it is merged.
