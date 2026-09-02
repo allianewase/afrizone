@@ -20,6 +20,7 @@ import { useEffect, useState } from 'react'
 import { ErrorNote } from './Shell'
 import { api, ApiError } from '../lib/api'
 import type { Delivery, DeliveryStatus } from '../lib/types'
+import { directionsUrl, type Place } from '../lib/directions'
 
 /** Whole Naira everywhere - there is no currency field in this platform. */
 function naira(n: number): string {
@@ -43,6 +44,26 @@ function byUrgency(a: Delivery, b: Delivery): number {
   const liveB = LIVE.includes(b.status) ? 0 : 1
   if (liveA !== liveB) return liveA - liveB
   return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+}
+
+/**
+ * Renders nothing when there is nowhere to point.
+ *
+ * A store whose owner never set coordinates is a real row - the admin network
+ * map counts them - and a dead "Directions" link is worse than none to somebody
+ * standing on a kerb deciding which way to ride.
+ */
+function Directions({ to, label }: { to: Place; label: string }) {
+  const href = directionsUrl(to)
+  if (!href) return null
+  return (
+    <>
+      <br />
+      <a href={href} target="_blank" rel="noreferrer">
+        {label} &rarr;
+      </a>
+    </>
+  )
 }
 
 const PILL: Record<DeliveryStatus, string> = {
@@ -340,6 +361,14 @@ function CourierJobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
           <span className="row-v">
             <b>{d.storeName ?? 'the store'}</b>
             {d.pickupAddress ? <><br />{d.pickupAddress}</> : null}
+            {/* Only until the goods are in the bag. After that the shop is
+                behind them and the customer's door is the only address left. */}
+            {d.status !== 'PICKED_UP' ? (
+              <Directions
+                to={{ lat: d.pickupLat, lng: d.pickupLng, address: d.pickupAddress }}
+                label="Directions to the shop"
+              />
+            ) : null}
           </span>
         </div>
         <div className="row">
@@ -352,6 +381,10 @@ function CourierJobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
                 {d.customerName ? <><b>{d.customerName}</b><br /></> : null}
                 {d.dropoffAddress ?? '—'}
                 {d.dropoffInstructions ? <><br /><span className="muted">{d.dropoffInstructions}</span></> : null}
+                <Directions
+                  to={{ lat: d.dropoffLat, lng: d.dropoffLng, address: d.dropoffAddress }}
+                  label="Directions to the door"
+                />
                 {d.customerPhone ? (
                   <><br /><a href={`tel:${d.customerPhone}`}>{d.customerPhone}</a></>
                 ) : null}

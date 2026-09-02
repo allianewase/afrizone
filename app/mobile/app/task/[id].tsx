@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, TextInput, Linking } from 'react-native';
+import { View, Text, StyleSheet, Modal, Pressable, TextInput } from 'react-native';
+import { directionsLabel, openDirections } from '../../src/lib/directions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
@@ -115,15 +116,13 @@ export default function TaskDetailScreen() {
           {!remote && t.lat != null && t.lng != null ? (
             <Pressable
               style={styles.directions}
-              onPress={() =>
-                Linking.openURL(
-                  `https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`
-                )
-              }
+              // Was a map SEARCH, which drops a pin and stops. The button has
+              // always said "Get directions"; now it gives them.
+              onPress={() => void openDirections({ lat: t.lat, lng: t.lng, address: t.address })}
               accessibilityRole="button"
             >
               <Icon name="map-pin" size={15} color={colors.clay} />
-              <Text style={styles.directionsText}>Get directions</Text>
+              <Text style={styles.directionsText}>{directionsLabel.site}</Text>
               <Icon name="chevron-right" size={14} color={colors.clay} />
             </Pressable>
           ) : null}

@@ -28,6 +28,7 @@
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput, Linking } from 'react-native';
+import { canPoint, directionsLabel, openDirections, openPlace, type Place } from '../src/lib/directions';
 import * as Location from 'expo-location';
 import { Screen } from '../src/components/Screen';
 import { Card } from '../src/components/Card';
@@ -45,6 +46,45 @@ function naira(n: number): string {
 }
 
 const LIVE: DeliveryStatus[] = ['RECEIVED', 'STORE_ACCEPTED', 'COURIER_ASSIGNED', 'PICKED_UP'];
+
+/**
+ * Send the rider somewhere.
+ *
+ * Renders NOTHING when there is no coordinate and no address, rather than a
+ * button that opens an empty map. A store whose owner never set a location is a
+ * real and common row - the admin store map has a counter for exactly that -
+ * and a control that cannot work is worse than an absent one to somebody
+ * standing on a kerb.
+ */
+function Directions({
+  to,
+  label,
+  place,
+  onFail,
+}: {
+  to: Place;
+  label: string;
+  /** Show where it is instead of routing to it. For a job not yet taken. */
+  place?: boolean;
+  onFail?: () => void;
+}) {
+  if (!canPoint(to)) return null;
+  return (
+    <Pressable
+      onPress={() => {
+        void (place ? openPlace(to) : openDirections(to)).then((ok) => {
+          if (!ok) onFail?.();
+        });
+      }}
+      style={styles.directions}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <Icon name={place ? 'map-pin' : 'navigation'} size={15} color={colors.clay} />
+      <Text style={styles.directionsText}>{label}</Text>
+    </Pressable>
+  );
+}
 
 /** Colours for the state badge. Nothing here composes the WORDING - the server does. */
 const TONE: Record<DeliveryStatus, { fg: string; bg: string }> = {
@@ -143,6 +183,15 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
         {d.preparedAt && d.status === 'COURIER_ASSIGNED' ? (
           <Text style={styles.ready}>Packed and ready</Text>
         ) : null}
+        {/* Only before the goods are in the bag. Once they are, the shop is
+            behind them and the only address that matters is the customer's. */}
+        {d.status !== 'PICKED_UP' ? (
+          <Directions
+            to={{ lat: d.pickupLat, lng: d.pickupLng, address: d.pickupAddress }}
+            label={directionsLabel.shop}
+            onFail={() => setError('Could not open a map on this phone.')}
+          />
+        ) : null}
       </Line>
 
       <Line label="Deliver">
@@ -157,6 +206,14 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
             {d.dropoffInstructions ? (
               <Text style={styles.muted}>{d.dropoffInstructions}</Text>
             ) : null}
+            {/* Shown from the moment the job is theirs, not only after pickup:
+                a rider planning a route wants to know which way they are
+                heading before they set off for the shop. */}
+            <Directions
+              to={{ lat: d.dropoffLat, lng: d.dropoffLng, address: d.dropoffAddress }}
+              label={directionsLabel.door}
+              onFail={() => setError('Could not open a map on this phone.')}
+            />
             {d.customerPhone ? (
               <Pressable
                 onPress={() => Linking.openURL(`tel:${d.customerPhone}`)}
@@ -320,6 +377,15 @@ function OfferCard({
       <Line label="Collect">
         <Text style={styles.body}>{o.pickupAddress ?? 'Address not set'}</Text>
         {o.distance ? <Text style={styles.muted}>{o.distance} away</Text> : null}
+        {/* A pin, not a route. "8.0 km away" is a straight line over rooftops;
+            whether that is ten minutes or forty is the thing a rider is
+            actually deciding, and it is not a question this app can answer. */}
+        <Directions
+          to={{ lat: o.pickupLat, lng: o.pickupLng, address: o.pickupAddress }}
+          label="See where it is"
+          place
+          onFail={() => setError('Could not open a map on this phone.')}
+        />
       </Line>
 
       {o.items.length > 0 ? (
@@ -515,6 +581,9 @@ const styles = StyleSheet.create({
   body: { fontSize: type.size.base, color: colors.text },
   muted: { fontSize: type.size.sm, color: colors.textMuted },
   ready: { fontSize: type.size.sm, color: colors.moneyInk, fontFamily: fontFamily.bold },
+
+  directions: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  directionsText: { fontSize: type.size.base, color: colors.clay, fontFamily: fontFamily.bold },
 
   call: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
   callText: { fontSize: type.size.base, color: colors.goldInk, fontFamily: fontFamily.bold },

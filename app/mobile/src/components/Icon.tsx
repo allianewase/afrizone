@@ -19,6 +19,7 @@ export type IconName =
   | 'check-circle'
   | 'clock'
   | 'map-pin'
+  | 'navigation'
   | 'globe'
   | 'alert'
   | 'arrow-up'
@@ -149,6 +150,11 @@ function renderGlyph(
           <Circle cx="12" cy="10" r="3" {...c} />
         </>
       );
+    // Deliberately not another pin. A pin is a place; this is the instruction
+    // to set off towards one, and a rider glancing at a card mid-job should be
+    // able to tell the two apart without reading.
+    case 'navigation':
+      return <Path d="M3 11 22 2l-9 19-2-8-8-2Z" {...c} />;
     case 'globe':
       return (
         <>
