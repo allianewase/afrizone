@@ -1,13 +1,15 @@
 # Afrizone Part Time: API Contract v1 (MVP slice)
 
-**This file stopped being the source of truth and is kept as a record of the v1-v3
-slices.** It is an append log of three early slices and covers none of what came
-after: organizations and stores, courier profiles, credentials, store audits, CAC,
-the Mart event bus, or deliveries and self-claim - the last of which is roughly a
-quarter of the API. Read the route files under `app/server/src/routes/` for what
-exists, `MART_INTEGRATION.md` for the Mart contract, and `BLUEPRINT_STATUS.md` for
-what is built and deployed. Nothing below is wrong; there is simply a great deal
-missing, and treating it as complete is how an endpoint gets reinvented.
+**Read "The rest of the API" at the bottom first if you are looking for anything
+built after the v3 slice.** This file grew as three chronological slices (v1, v2,
+v3) that between them cover 54 of the 148 endpoints the server serves. Everything
+since — organizations and stores, courier profiles, credentials, store audits,
+CAC, disputes, the Mart event bus, deliveries and self-claim — is documented in
+one section at the end rather than retrofitted into the slices above, because the
+slices are a record of what was agreed when, and rewriting them would destroy
+that without making anything clearer.
+
+The v1–v3 sections are still accurate. They are simply not the whole surface.
 
 Backend runs on **http://localhost:4000**, all routes prefixed **`/api`**. Frontend dev server proxies `/api` → `:4000`.
 
@@ -238,3 +240,314 @@ Env-driven, same `PAYSTACK_SECRET` gate as payouts. `PAYSTACK_SECRET` blank → 
 - `POST /api/contracts/:id/sign`: body `{signerName}` (required, ≥2 chars after trim, else `400`). Sets `status: SIGNED`, `signedAt`, `signerName`, `signerIp`, `signatureHash`. Ownership-checked; `400` if already signed.
 - The rendered "Entire Agreement" section now reads "Digitally signed by `{signerName}` on `{date}`" (falls back to the worker's profile name if `signerName` is absent, e.g. legacy contracts signed before this change).
 - No admin-web contract viewer exists: out of scope for this pass.
+
+---
+
+# The rest of the API
+
+Everything above is the v1-v3 record. This section is the other 94 endpoints, and
+together the two cover all 148 the server actually serves.
+
+**Written from the route files, not from memory.** Where this disagrees with
+`app/server/src/routes/`, the code is right.
+
+## Conventions that hold everywhere
+
+**Auth is `Authorization: Bearer <jwt>`.** Tokens last 7 days and **survive a
+password change** - only rotating `JWT_SECRET` evicts them.
+
+**Two axes decide what you can reach, and they are not the same axis.** `role` is
+`SUPER_ADMIN | TASK_MANAGER | HR_ADMIN | WORKER` and says whether you are
+Afrizone staff. `accountType` is `INDIVIDUAL | STORE | COURIER` and says what
+kind of outside party you are. A store owner is `role: WORKER`,
+`accountType: STORE`. Nothing gates on `accountType` alone; membership of an
+organization is what grants a store's access.
+
+**404 is used where you might expect 403.** For any row a caller cannot address -
+another business's order, a delivery that is not theirs - the answer is
+`404 {"error":"Not found"}`. A 403 would confirm the row exists, which turns an
+id parameter into a directory of every order on the platform. Do not "fix" this
+into a 403; several routes depend on it.
+
+**Errors are `{"error": "<sentence>"}`**, written for a person to read. Some
+newer endpoints add a machine-readable `code` alongside it (see the claim route);
+where a `code` exists, branch on it and show the `error`.
+
+**Money is whole Naira integers.** There is no currency field and no kobo.
+
+## Auth and accounts
+
+- `POST /api/auth/register` → `{name, email, password, accountType}` →
+  `201 {token, user, isNewUser: true}`. Password minimum **8 characters**.
+  `409` if the email exists. This is how a store owner or courier makes an
+  account; it does NOT create an organization - see below.
+- `POST /api/auth/login` → `{email, password}` → `{token, user}`, or
+  `{requires2fa: true, challenge}` when the account has TOTP enabled.
+- `GET /api/auth/me` → `{user}`.
+- `POST /api/auth/otp/request` → `{phone}` (E.164) → `200`. Rate limited: `429`.
+- `POST /api/auth/otp/verify` → `{phone, code}` → `{token, user, isNewUser}`.
+  `429` after too many attempts - a fresh code is required, not a retry.
+- `POST /api/auth/2fa/setup` (auth) → `{otpauthUrl, qrDataUrl, secret}`.
+- `POST /api/auth/2fa/enable` (auth) → `{code}` → `{enabled: true}`.
+- `POST /api/auth/2fa/disable` (auth) → `{code}` → `{enabled: false}`.
+- `POST /api/auth/2fa/verify` → `{challenge, code}` → `{token, user}`. The
+  challenge comes from the `requires2fa` login response and is short-lived.
+- `POST /api/auth/google` → `{idToken}` → `{token, user, isNewUser}`.
+  `503` when Google SSO is not configured; `400` "No admin account for this
+  Google email" - it signs in existing admins, it does not create accounts.
+- `POST /api/auth/password/forgot` → `{email}` → `200` **always**, whether or not
+  the address exists. Deliberate: a different answer for an unknown address is an
+  account-enumeration oracle.
+- `POST /api/auth/password/reset` → `{token, password}` → `{ok: true}`. Tokens
+  are single-use and expire in 30 minutes.
+
+> **There is no change-password-while-signed-in endpoint.** Forgot-then-reset is
+> the entire surface. With SMTP unconfigured the token is only visible in
+> `wrangler tail`.
+
+## A worker's own account
+
+All under `/api/me`, all `requireAuth`, all scoped to the caller - there is no id
+parameter to tamper with.
+
+- `GET /api/me` → the caller's user. `PATCH /api/me` → name, email, phone,
+  location, bank details, TIN. Account number must be **exactly 10 digits**;
+  `bankMasked` is derived server-side and never trusted from the client.
+- `GET /api/me/applications`, `GET /api/me/timesheets`, `GET /api/me/contracts`,
+  `GET /api/me/contracts/:id` → the caller's own rows. `403` on somebody else's
+  contract.
+- `GET /api/me/wallet`, `GET /api/me/transactions`, `GET /api/me/payments/:id`.
+- `GET /api/me/tax-statement?year=` → the annual WHT statement.
+- `GET /api/me/commitments` → the escrow ring-fence from the worker's side, with
+  a summary and per-item state. A null amount means hourly work whose hours are
+  not in yet.
+- `GET /api/me/clock/:taskId` → `{clockedIn, lastEventAt, elapsedSeconds}`.
+- `GET /api/me/ratings`, `POST /api/me/ratings` → a worker rating the other side.
+  Only once the work is approved.
+- `POST /api/me/audits` → `{taskId, score, notes}` → files a store audit result
+  for an audit task the caller holds. Score 0-100.
+- `GET /api/me/notifications` → `{items, unreadCount}`;
+  `GET /api/me/notifications/unread-count`;
+  `POST /api/me/notifications/:id/read`; `POST /api/me/notifications/read-all`.
+- `PATCH /api/me/push-token` → `{pushToken}`.
+- `POST /api/me/kyc/submit` → submits for a tier.
+- `GET /api/me/courier` → the courier readiness checklist plus the vehicle
+  catalogue. **The catalogue travels with the answer** so no client hard-codes a
+  vehicle list that then drifts from the server's.
+- `PUT /api/me/courier/vehicle` → `{vehicleType, plateNumber?}`. `FOOT` and
+  `BICYCLE` take no plate; a plate is unique across couriers where present.
+
+### Skills and credentials the worker holds
+
+- `GET /api/me/skills`; `PUT /api/me/skills` → `{skills: [{skillId, years?}]}`.
+  Max 50; `years` 0-70.
+- `GET /api/me/credentials`; `POST /api/me/credentials` →
+  `{credentialTypeId, title, issuer?, referenceNumber?, issuedAt?, expiresAt?,
+  documentId?}` → `201`. **`403` for an Afrizone-issued type** - those are
+  awarded from platform history, not submitted.
+- `PATCH /api/me/credentials/:id`; `DELETE /api/me/credentials/:id` → `{ok:true}`.
+
+> **There is no `EXPIRED` status.** Expiry is computed at read time from
+> `status === VERIFIED && (expiresAt is null || expiresAt > now)`, so a job that
+> fails to run can never leave a lapsed licence reading as valid.
+
+### KYC documents
+
+- `GET /api/me/kyc/documents` → the caller's documents.
+- `POST /api/me/kyc/documents` → **`multipart/form-data`**, fields `docType`
+  (`ID | SELFIE | DOCS`) and `file`. Max **10 MB**. Identity types accept a
+  narrower MIME list than `DOCS`.
+- `GET /api/me/kyc/documents/file/:filename` → the bytes, authorized per caller.
+
+> Both of those **bypass Express entirely** and are handled in the Worker's
+> `fetch` before routing (`handleKycUpload` / `handleKycFileGet`), because
+> multipart and R2 streaming do not survive the Express layer here. They are real
+> endpoints; they are just not in a router.
+
+## Organizations — a business's own people
+
+`/api/organizations`. Access comes from `OrganizationMember`, never from `role`.
+A non-member gets `404`, not `403`.
+
+- `GET /api/organizations?kind=` → the businesses the caller belongs to.
+- `GET /api/organizations/:id` → the business plus `myRole`.
+- `PATCH /api/organizations/:id` → **OWNER only**. Name, contact, address,
+  lat/lng, bank details, TIN. Changing the payout account writes its own audit
+  row: it is the one edit here that redirects money.
+- `POST /api/organizations/:id/cac` → `{cacNumber}` → **OWNER only**. Always
+  lands `PENDING`, never `VERIFIED` — a registry hit is evidence, not a decision.
+- `GET /api/organizations/:id/members`.
+- `POST /api/organizations/:id/members` → `{email | phone, role?}` → `201`.
+  **OWNER only.** The person must already have an Afrizone account (`404`
+  otherwise) — this attaches an account, it does not create one.
+- `PATCH /api/organizations/:id/members/:memberId` → `{role}`;
+  `DELETE /api/organizations/:id/members/:memberId` → `{ok: true}`.
+  Both refuse to remove or demote the **last OWNER**: a business with no owner
+  cannot manage itself and needs an admin to rescue it.
+- `GET /api/organizations/map?kind=&lat=&lng=&radius=` → pins, with a **named
+  count of businesses the map cannot show** because nobody set their
+  coordinates. Counted separately so "not approved yet" is distinguishable from
+  "no location on file".
+
+> **How a real store gets in**, since no single endpoint does it: the owner
+> registers themselves (`POST /api/auth/register`, `accountType: STORE`), then an
+> admin creates the organization with their address in `ownerEmail`, which
+> attaches them as OWNER in the same request. A store cannot declare itself.
+
+## Organizations — Afrizone staff
+
+`/api/admin/organizations`, `SUPER_ADMIN | TASK_MANAGER`.
+
+- `GET /api/admin/organizations?kind=&status=&cacStatus=`.
+  `GET /api/admin/organizations/:id` → with members and the latest audit.
+- `POST /api/admin/organizations` → `{name, kind?, slug?, ownerEmail?, status?, …}`
+  → `201`. The owner is
+  **resolved before the organization is created**, so a typo in the email cannot
+  leave an ownerless business behind. `status` is `PENDING | ACTIVE | SUSPENDED`
+  — there is no `APPROVED`.
+- `PATCH /api/admin/organizations/:id` → including `status`, which the business's
+  own PATCH cannot set.
+- `POST /api/admin/organizations/:id/audit` → raises a premises-audit task. `400`
+  when there is no address to send anybody to, and when it is already approved.
+- `POST /api/admin/organizations/:id/audit-result` → `{score, notes}` → `201`.
+  Score 0–100.
+- `POST /api/admin/organizations/:id/cac-decision` →
+  `{decision: VERIFIED | REJECTED, note?}`.
+- `GET /api/admin/organizations/cac/config` → `{configured}`. False until
+  `CAC_LOOKUP_URL` and `CAC_API_KEY` are set, which is why verification is a
+  manual check today.
+
+## Deliveries
+
+Three audiences on one resource. See `MART_INTEGRATION.md` for the order
+lifecycle and `BLUEPRINT_STATUS.md` §6 for why `Delivery.status` is a third status
+axis, separate from `Task` and `Contract`.
+
+### The store
+
+- `GET /api/organizations/:id/deliveries?status=` → that store's orders.
+- `POST /api/deliveries/:id/accept` → `{…delivery, posted: bool, warning?}`.
+  **Accepting is what posts the courier job** — one action, not two, because a
+  store that accepted and then had to remember a second step leaves orders
+  accepted and unposted, which looks exactly like a delivery nobody wanted. If
+  the posting fails the order is still accepted and `warning` says so.
+- `POST /api/deliveries/:id/reject` → `{reason}` (required).
+- `POST /api/deliveries/:id/prepared` → the goods are packed.
+
+### The courier
+
+- `GET /api/me/delivery-offers?lat=&lng=` → `{selfClaim, offers[]}`.
+  Coordinates are **optional**; without them offers come back unclaimable with
+  `reason: "Turn on location to take jobs near you"` rather than an invented
+  distance. Each offer carries `fee`, `distance`, `claimable`, `reason`,
+  `opensToYouInMinutes`, and an `offer` object
+  `{stage, radiusMetres, waitingMinutes, widenings, atMaxRadius, escalated, label}`.
+  **An offer carries no customer data** — no name, number or door. Somebody who
+  has not taken the job has no business holding it.
+- `POST /api/deliveries/:id/claim` → `{lat, lng}` → `201` with the full delivery,
+  customer data now included. Refusals carry a machine-readable `code`:
+
+  | code | status | means |
+  |---|---|---|
+  | `SELF_CLAIM_OFF` | 403 | `rules.DELIVERY.selfClaim` is `off` |
+  | `NOT_QUALIFIED` | 403 | tier, credential or identity gate |
+  | `TOO_FAR` | 403 | with `distanceMetres`, `radiusMetres`, `opensToYouInMinutes` |
+  | `NO_LOCATION` | 400 | no coordinates sent |
+  | `NOT_OFFERED` | 404 | not on the board |
+  | `NOT_AVAILABLE` | 409 | somebody else took it |
+
+- `GET /api/me/deliveries`; `GET /api/deliveries/:id` → `{…delivery, contractId}`
+  for the courier holding it.
+- `POST /api/deliveries/:id/picked-up`.
+- `POST /api/deliveries/:id/complete` → `{code}`, the customer's code from Mart.
+  **`503` when the verifier is unreachable** — "we could not check this", never
+  "that is the wrong code". A rider must not be made to argue with a customer
+  about a check that never ran.
+- `POST /api/deliveries/:id/failed` → `{reason}` (required).
+
+### Afrizone staff
+
+`/api/admin/deliveries`, `SUPER_ADMIN | TASK_MANAGER`.
+
+- `GET /api/admin/deliveries?status=&storeId=&stuck=&escalated=`. The response
+  says whether the **outbound half of the Mart integration is configured**, so an
+  operator can tell a courier problem from an unwired endpoint, and carries
+  `selfClaim` and `escalatedCount`.
+- `GET /api/admin/deliveries/:id` → with the task behind it.
+- `POST /api/admin/deliveries/:id/cancel` → `{reason}` (required).
+- `POST /api/admin/deliveries/:id/reopen` → `{reason}` → re-posts the job. §6 D5,
+  the settled half: a courier who vanishes. **Reuses the same posting**, and
+  restarts `offeredAt`, so
+  the order is not reported as having waited since before the courier who
+  abandoned it took it.
+- `GET /api/admin/deliveries/purge` → what the §5 customer-data purge would do;
+  `POST` runs it. Normally the `17 3 * * *` cron does this. Every run writes an
+  audit row **including a run that finds nothing**, so a cron that stopped firing
+  is distinguishable from a quiet week.
+
+## Mart integration
+
+- `POST /api/integrations/mart/events` → **not behind `requireAuth`**. Signed with
+  `HMAC-SHA256(MART_INBOUND_SECRET, "<unix-seconds>.<raw body>")`, hex, in headers
+  `X-Afz-Timestamp` and `X-Afz-Signature`. The timestamp is **inside** the signed
+  string, not merely sent alongside it, so it cannot be changed freely. Window is
+  **5 minutes**. `401` unsigned, tampered or stale; `400` for a payload understood
+  and refused; `500` is ours and safe to retry, because intake is idempotent on
+  `eventId`. Types: `order.confirmed`, `stock.low`, `store.applied`,
+  `listing.needs_media`.
+- `GET /api/admin/mart/events?status=&type=` → the ledger, with counts taken
+  across everything rather than the page. This is the screen you open when an
+  expected task does not exist: it distinguishes "Mart never sent it" from "we
+  de-duplicated it" from "nothing handles this yet".
+- `GET /api/admin/mart/rules` → `{kinds, offer}`. **Not a flat map of kinds** —
+  the delivery offer rule is not a task-generation rule, and a `DELIVERY` entry
+  in that list would mean something different from every other row in it.
+
+## Staff: review, disputes, reference data
+
+- `GET /api/credentials?filter=` → the review queue.
+  `GET /api/credentials/pending-count` → `{pending}`.
+  `GET /api/credentials/:id` → with the worker's other credentials for context.
+  `POST /api/credentials/:id/review` →
+  `{decision: APPROVE | REJECT | REVOKE, reasonCode?, reasonText?, corrections?}`.
+  A rejection needs **at least 10 characters** of explanation.
+- `GET /api/workers/:id/profile` → skills and credentials.
+  `PATCH /api/workers/:id/tiers` → `{tiers: []}`.
+  `POST /api/workers/:id/credentials` → award an Afrizone-issued credential —
+  the route by which a competent worker with no formal paper can pass a gate.
+  `GET /api/workers/:id/kyc/documents`.
+- `POST /api/workers/:id/rate` → `{taskId, score}` (1–5) → the worker's new
+  rolling rating.
+- `GET /api/disputes`, `PATCH /api/disputes/:id` (staff);
+  `POST /api/me/disputes`, `GET /api/me/disputes` (the worker). Raising one needs
+  **10 characters** of description, and `409` if an open dispute already covers
+  that item.
+- `GET /api/settings/skills?all=`, `POST /api/settings/skills`,
+  `PATCH /api/settings/skills/:id`, and the same three for credential types:
+  `GET /api/settings/credential-types?all=`, `POST /api/settings/credential-types`,
+  `PATCH /api/settings/credential-types/:id`. These are the catalogues that task
+  requirements point at. `?all=1` includes retired rows;
+  nothing is ever hard-deleted, only deactivated, so the rows pointing at them are
+  never orphaned.
+- `GET /api/settings/templates`, `PUT /api/settings/templates/:key`.
+- `POST /api/tasks/qualifying-count` →
+  `{tier, skillIds?, credentialTypeIds?, requiresIdentityVerified?}` → how many
+  workers would qualify. Powers the live count on the task form. The denominator
+  is everyone in that tier, because tier is who the work is *for*, not a
+  requirement being chosen.
+- `GET /api/tasks/:id/eligibility` → the caller's own verdict against one task,
+  with the requirements that produced it.
+- `GET /api/search?q=` → `{tasks, workers}`.
+
+## Machines and health
+
+- `GET /api/health` → `{status, service, time}`.
+- `GET /api/health/config` → `{ready, criticalIssues, services}` — what is
+  configured and what is not. The honest answer to "is anything wrong", and
+  unauthenticated on purpose.
+- `POST /api/webhooks/paystack` → HMAC over the raw body → `{received: true}`.
+- `POST /api/webhooks/smile` → the same shape, for KYC results.
+
+> Both webhooks and the Mart endpoint have `express.raw()` mounted on their paths
+> **before** the global JSON parser. Signature verification needs the exact bytes;
+> a re-serialized body will not match.
