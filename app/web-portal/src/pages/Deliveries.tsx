@@ -21,6 +21,7 @@ import { ErrorNote } from './Shell'
 import { api, ApiError } from '../lib/api'
 import type { Delivery, DeliveryStatus } from '../lib/types'
 import { directionsUrl, type Place } from '../lib/directions'
+import { useArrivals, useLive, useOverlay } from '../lib/useLive'
 
 /** Whole Naira everywhere - there is no currency field in this platform. */
 function naira(n: number): string {
@@ -244,24 +245,11 @@ function StoreOrderCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
  * second loading state for a question already answered.
  */
 export function StoreOrders({ orgId }: { orgId: string }) {
-  const [orders, setOrders] = useState<Delivery[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const live = useLive<Delivery[]>((signal) => api.storeDeliveries(orgId, signal), [orgId])
+  const [orders, replace] = useOverlay(live)
+  const error = live.error
 
-  useEffect(() => {
-    const ctrl = new AbortController()
-    api
-      .storeDeliveries(orgId, ctrl.signal)
-      .then(setOrders)
-      .catch((e) => {
-        if (!ctrl.signal.aborted) setError(e instanceof ApiError ? e.message : 'Could not load orders.')
-      })
-    return () => ctrl.abort()
-  }, [orgId])
-
-  function replace(next: Delivery) {
-    setOrders((cur) => (cur ?? []).map((o) => (o.id === next.id ? { ...o, ...next } : o)))
-  }
-
+  const arrivals = useArrivals((live.data ?? []).map((o) => o.id))
   const waiting = (orders ?? []).filter((o) => o.status === 'RECEIVED').length
 
   return (
@@ -269,6 +257,7 @@ export function StoreOrders({ orgId }: { orgId: string }) {
       <h2 className="sectitle">
         Orders{waiting > 0 ? ` · ${waiting} waiting on you` : ''}
       </h2>
+      <Freshness live={live} />
 
       {error && <ErrorNote message={error} />}
       {!orders && !error && <p className="muted">Loading…</p>}
@@ -281,9 +270,48 @@ export function StoreOrders({ orgId }: { orgId: string }) {
       )}
 
       {orders && [...orders].sort(byUrgency).map((o) => (
-        <StoreOrderCard key={o.id} d={o} onChange={replace} />
+        <div key={o.id} className={arrivals.has(o.id) ? 'arrived' : undefined}>
+          {arrivals.has(o.id) && <div className="arrived-tag">Just in</div>}
+          <StoreOrderCard d={o} onChange={replace} />
+        </div>
       ))}
     </>
+  )
+}
+
+/**
+ * How fresh this is, and a way to insist.
+ *
+ * A screen that updates on its own has to SAY so, or somebody stares at it
+ * wondering whether it is stuck and reloads anyway - which is the habit the
+ * polling was meant to remove. It also has to admit when it has failed: the
+ * stale case shows the last good data and says the connection dropped, rather
+ * than blanking a counter screen over one lost request.
+ */
+function Freshness({ live }: { live: { refreshing: boolean; updatedAt: Date | null; stale: boolean; refresh: () => void } }) {
+  const [, force] = useState(0)
+
+  // "2 min ago" has to age on its own, or it says "just now" forever.
+  useEffect(() => {
+    const t = setInterval(() => force((n) => n + 1), 15_000)
+    return () => clearInterval(t)
+  }, [])
+
+  if (!live.updatedAt) return null
+  const secs = Math.round((Date.now() - live.updatedAt.getTime()) / 1000)
+  const ago = secs < 45 ? 'just now' : secs < 90 ? 'a minute ago' : `${Math.round(secs / 60)} min ago`
+
+  return (
+    <div className="fresh">
+      {live.stale ? (
+        <span className="fresh-stale">Connection dropped &mdash; showing what we last had, from {ago}</span>
+      ) : (
+        <span>{live.refreshing ? 'Checking…' : `Updated ${ago}`}</span>
+      )}
+      <button type="button" className="fresh-btn" onClick={live.refresh} disabled={live.refreshing}>
+        Check now
+      </button>
+    </div>
   )
 }
 
@@ -502,29 +530,17 @@ function CourierJobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
 
 /** Every order this courier is carrying, and the ones they have finished. */
 export function CourierJobs() {
-  const [jobs, setJobs] = useState<Delivery[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const feed = useLive<Delivery[]>((signal) => api.myDeliveries(signal), [])
+  const [jobs, replace] = useOverlay(feed)
+  const error = feed.error
 
-  useEffect(() => {
-    const ctrl = new AbortController()
-    api
-      .myDeliveries(ctrl.signal)
-      .then(setJobs)
-      .catch((e) => {
-        if (!ctrl.signal.aborted) setError(e instanceof ApiError ? e.message : 'Could not load your jobs.')
-      })
-    return () => ctrl.abort()
-  }, [])
-
-  function replace(next: Delivery) {
-    setJobs((cur) => (cur ?? []).map((j) => (j.id === next.id ? { ...j, ...next } : j)))
-  }
-
+  const arrivals = useArrivals((feed.data ?? []).map((j) => j.id))
   const live = (jobs ?? []).filter((j) => LIVE.includes(j.status)).length
 
   return (
     <>
       <h2 className="sectitle">Your deliveries{live > 0 ? ` · ${live} live` : ''}</h2>
+      <Freshness live={feed} />
 
       {error && <ErrorNote message={error} />}
       {!jobs && !error && <p className="muted">Loading…</p>}
@@ -537,7 +553,10 @@ export function CourierJobs() {
       )}
 
       {jobs && [...jobs].sort(byUrgency).map((j) => (
-        <CourierJobCard key={j.id} d={j} onChange={replace} />
+        <div key={j.id} className={arrivals.has(j.id) ? 'arrived' : undefined}>
+          {arrivals.has(j.id) && <div className="arrived-tag">New job</div>}
+          <CourierJobCard d={j} onChange={replace} />
+        </div>
       ))}
     </>
   )

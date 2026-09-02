@@ -100,3 +100,37 @@ h1.pt {
   margin: 30px 0 12px; letter-spacing: -.01em;
 }
 .muted { color: var(--muted); }
+
+/* ── Freshness, and orders that arrive while you are looking ─────────────── */
+/* Quiet on purpose. This line is reassurance, not information: it earns its
+   place only when somebody wonders whether the screen is stuck, so it must not
+   compete with the order underneath it. */
+.fresh {
+  display: flex; align-items: center; gap: 10px;
+  margin: -4px 0 14px; font-size: 12.5px; color: var(--faint);
+}
+.fresh-stale { color: var(--danger-ink); }
+.fresh-btn {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font-size: 12.5px; font-weight: 700; color: var(--gold-ink);
+}
+.fresh-btn:disabled { opacity: .5; cursor: default; }
+
+/* An order that appeared while the page was open. The tag is the signal; the
+   ring is only there so the eye can find the card the tag belongs to. */
+.arrived { position: relative; }
+.arrived > .card { box-shadow: 0 0 0 2px var(--gold); }
+.arrived-tag {
+  position: absolute; top: -9px; left: 16px; z-index: 1;
+  padding: 2px 9px; border-radius: 100px;
+  background: var(--gold); color: var(--text);
+  font-size: 11px; font-weight: 800; letter-spacing: .02em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .arrived > .card { animation: arrive .5s var(--ease); }
+  @keyframes arrive {
+    from { transform: translateY(-4px); }
+    to { transform: none; }
+  }
+}
