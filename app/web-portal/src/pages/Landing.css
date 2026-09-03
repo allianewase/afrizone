@@ -240,3 +240,78 @@
   .lp-continue { width: 100%; justify-content: center; }
   .lp-go { align-items: stretch; }
 }
+
+/* ── Arrival ─────────────────────────────────────────────────────────────── */
+/*
+   The page assembles in the order somebody reads it: the question, then the
+   three answers left to right, then the button that acts on them. Roughly
+   400ms end to end - long enough to feel deliberate, short enough that nobody
+   waiting to click has to wait.
+
+   Only opacity and transform, so every frame stays on the compositor and the
+   animation cannot cause layout.
+
+   FILL-MODE IS `backwards`, NOT `both`, AND THE DIFFERENCE IS A BUG. Both of
+   them hold the `from` state during the delay, which is what stops the cards
+   flashing at full opacity for a frame before their turn. But `both` also holds
+   the `to` state forever afterwards - and an animated value outranks a normal
+   declaration, so `transform: none` would win against `.lp-card:hover`'s
+   translateY for the life of the page. The hover lift and the press would
+   simply never fire. `backwards` gives up the element's transform the moment
+   the animation ends, which is the whole point.
+
+   NOTHING HERE NEEDS A REDUCED-MOTION GUARD. styles.css already kills every
+   animation and transition under `prefers-reduced-motion: reduce`, globally.
+   Do not add a second guard; do not remove that one.
+*/
+@keyframes lp-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.lp-top      { animation: lp-rise .45s var(--ease) backwards; }
+.lp-intro    { animation: lp-rise .5s var(--ease) backwards .06s; }
+.lp-card     { animation: lp-rise .5s var(--ease) backwards; }
+.lp-card:nth-child(1) { animation-delay: .14s; }
+.lp-card:nth-child(2) { animation-delay: .20s; }
+.lp-card:nth-child(3) { animation-delay: .26s; }
+.lp-go       { animation: lp-rise .5s var(--ease) backwards .34s; }
+.lp-staff    { animation: lp-rise .5s var(--ease) backwards .40s; }
+
+
+/* ── Being chosen ────────────────────────────────────────────────────────── */
+/* The badge fills gold on selection. A short overshoot makes it feel like the
+   card answered rather than merely changed colour - the difference between a
+   control that acknowledges you and one that repaints. */
+@keyframes lp-pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.lp-card.is-on .lp-glyph { animation: lp-pop .34s var(--ease); }
+
+/* The tick draws itself rather than appearing. 30 is a hair over the path
+   length, so the line is fully hidden at 0 and fully drawn at the end. */
+@keyframes lp-draw {
+  from { stroke-dashoffset: 30; }
+  to   { stroke-dashoffset: 0; }
+}
+.lp-card.is-on .lp-check svg path {
+  stroke-dasharray: 30;
+  animation: lp-draw .32s var(--ease) .06s both;
+}
+
+/* Pressing it should feel like pressing something. */
+.lp-card:active { transform: translateY(-2px) scale(0.994); }
+
+/* ── The button waking up ────────────────────────────────────────────────── */
+/* One pulse of the gold shadow the moment it becomes usable, so the eye is
+   pulled to the next step without the button nagging. It plays once because the
+   element goes from :disabled to not, which restarts the animation - not on
+   every re-render. */
+@keyframes lp-ready {
+  0%   { box-shadow: 0 10px 20px -12px rgba(224, 148, 32, .9), 0 0 0 0 rgba(251, 172, 52, .5); }
+  70%  { box-shadow: 0 10px 20px -12px rgba(224, 148, 32, .9), 0 0 0 10px rgba(251, 172, 52, 0); }
+  100% { box-shadow: 0 10px 20px -12px rgba(224, 148, 32, .9), 0 0 0 0 rgba(251, 172, 52, 0); }
+}
+.lp-continue:not(:disabled) { animation: lp-ready .6s var(--ease); }
