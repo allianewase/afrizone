@@ -70,6 +70,20 @@ const CAC_COPY: Record<CacStatus, { cls: string; label: string; note: string }> 
  * The number stays editable after submission on purpose. The commonest failure
  * is a typo, and a rejected registration nobody can correct is a dead end.
  */
+/**
+ * The Android build people can actually install.
+ *
+ * HARD-CODED, AND IT HAS TO BE UPDATED WITH EVERY RELEASE. EAS gives each build
+ * its own artifact URL; there is no "latest" address to point at. Putting it in
+ * the code rather than an env var is deliberate - a stale link is then visible
+ * in the diff of whichever commit shipped it, instead of being a dashboard
+ * setting nobody remembers exists. The alternative was leaving the button
+ * disabled, which is what it was, and a permanently dead download is worse than
+ * one that occasionally points at last month's build.
+ */
+const ANDROID_APK =
+  'https://expo.dev/artifacts/eas/a8UGAMNz1InkCJegYphv9JU8_3VdX0MVm-y2VHkMeac.apk'
+
 function CacCard({ org, onUpdated }: { org: Organization; onUpdated: (o: Organization) => void }) {
   const status: CacStatus = org.cacStatus ?? 'UNVERIFIED'
   const copy = CAC_COPY[status]
@@ -201,14 +215,17 @@ function OrgView({ kind }: { kind: OrgKind }) {
       <div className="card">
         <h2 className="sectitle" style={{ marginTop: 0 }}>No {noun} on your account yet</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          Either someone from your {noun} adds you, or Afrizone registers it. Once that happens it
-          appears here.
+          Your account is ready, but it is not yet attached to a {noun}. Declaring yourself a{' '}
+          {noun} and belonging to one are two different things, and only the second brings you work.
         </p>
         <div className="note" style={{ marginBottom: 0 }}>
-          <b>What to do</b>
+          <b>What happens next</b>
           <br />
-          If your {noun} is already on Afrizone, ask its owner to add this email. If it is not,
-          contact Afrizone to register it — every {noun} is approved before it can take work.
+          If your {noun} is already registered with Afrizone, ask its owner to add this email
+          address from their People list — you will appear here straight away. If it is not
+          registered yet, contact Afrizone and we will set it up. Every {noun} is checked and
+          approved before it can take work, which is the same check that makes customers willing to
+          order through us.
         </div>
       </div>
     )
@@ -219,21 +236,34 @@ function OrgView({ kind }: { kind: OrgKind }) {
 
   return (
     <>
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
-          <h2 className="sectitle" style={{ margin: 0 }}>{org.name}</h2>
+      {/* A business, not a settings table. The name and whether it is open for
+          orders are what somebody opening this page came to see; the rest is
+          reference, so it sits in a compact strip underneath rather than in a
+          four-row form with a 130px label column. */}
+      <div className="card biz">
+        <div className="biz-head">
+          <h2>{org.name}</h2>
           <span className={`pill ${pill.cls}`}>{pill.label}</span>
         </div>
-        <div className="rows">
-          <div className="row"><span className="row-l">Address</span><span className="row-v">{org.address || '—'}</span></div>
-          <div className="row"><span className="row-l">Phone</span><span className="row-v">{org.phone || '—'}</span></div>
-          <div className="row">
-            <span className="row-l">Payout account</span>
-            <span className="row-v">
-              {org.bankMasked ? `${org.bankMasked}${org.bankName ? ` · ${org.bankName}` : ''}` : '—'}
-            </span>
+        <p className="biz-where">{org.address || 'No address on file'}</p>
+        <div className="biz-facts">
+          <div>
+            <span>Phone</span>
+            <b>{org.phone || '—'}</b>
           </div>
-          <div className="row"><span className="row-l">Your role</span><span className="row-v">{org.myRole === 'OWNER' ? 'Owner' : 'Staff'}</span></div>
+          <div>
+            <span>Payout account</span>
+            <b>
+              {org.bankMasked ? org.bankMasked : '—'}
+              {org.bankMasked && org.bankName ? (
+                <em>{org.bankName}</em>
+              ) : null}
+            </b>
+          </div>
+          <div>
+            <span>Your role</span>
+            <b>{org.myRole === 'OWNER' ? 'Owner' : 'Staff'}</b>
+          </div>
         </div>
       </div>
 
@@ -272,7 +302,10 @@ export function StoreDashboard() {
       <Shell>
         <p className="eyebrow">Store</p>
         <h1 className="pt">Your store</h1>
-        <p className="lede">Fulfilment for AfriZoneMart orders.</p>
+        <p className="lede">
+          Orders placed on AfriZoneMart arrive here. Accept the ones you can fulfil, say when they
+          are packed, and a courier is sent to collect. Nothing is dispatched until you agree to it.
+        </p>
         <OrgView kind="STORE" />
       </Shell>
     </Guarded>
@@ -287,8 +320,9 @@ export function CourierDashboard() {
         <p className="eyebrow">Courier / Dispatch</p>
         <h1 className="pt">Deliveries</h1>
         <p className="lede">
-          Hello {user?.name?.split(' ')[0]}. Everything you are carrying, and everything you have
-          finished.
+          Hello {user?.name?.split(' ')[0]}. Everything you are carrying and everything you have
+          finished. A job appears here the moment it becomes yours, and the customer's address and
+          number appear with it — on the job, never on the posting.
         </p>
 
         {/* Above the checklist deliberately: a rider who is already working
@@ -492,26 +526,40 @@ export function IndividualLanding() {
       <h1 className="pt">Your work lives in the app</h1>
       <p className="lede">
         {user ? `You are signed in, ${user.name.split(' ')[0]}. ` : ''}
-        Finding tasks, clocking in on site, sending proof of work and getting paid all happen in the
-        AfriZone Part Time app.
+        Finding tasks, clocking in on site, submitting proof of work and tracking what you have
+        earned all happen in the AfriZone Part Time app. This portal is for stores and courier
+        companies; there is nothing here you need.
       </p>
 
       <div className="card form-narrow" style={{ marginLeft: 0 }}>
         <h2 className="sectitle" style={{ marginTop: 0 }}>Get the app</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          Install it on your phone and sign in with the same details.
+          Install it on your Android phone and sign in with the details you used here.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 16 }}>
-          <button className="btn" type="button" disabled title="Distribution link not set up yet">
+          <a
+            className="btn"
+            href={ANDROID_APK}
+            style={{ display: 'grid', placeItems: 'center', textDecoration: 'none' }}
+          >
             Download for Android
-          </button>
+          </a>
           {!user && (
             <Link className="btn ghost" to="/register/INDIVIDUAL" style={{ display: 'grid', placeItems: 'center', textDecoration: 'none' }}>
               Create an account here first
             </Link>
           )}
         </div>
-        <p className="alt" style={{ textAlign: 'left', marginTop: 18 }}>
+        {/* Said before they tap it, not after. Android interrupts a sideload
+            with a security prompt, and somebody who was not expecting it reads
+            it as the download having gone wrong. */}
+        <div className="note" style={{ margin: '16px 0 0' }}>
+          <b>Installing it</b>
+          <br />
+          The app is not on Google Play yet, so your phone will ask whether to allow an install from
+          your browser. That prompt is expected — allow it once and the install continues.
+        </div>
+        <p className="alt" style={{ textAlign: 'left', marginTop: 16 }}>
           Run a shop or deliver instead? <Link to="/">Pick a different account type</Link>
         </p>
       </div>
