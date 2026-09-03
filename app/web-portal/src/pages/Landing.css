@@ -142,7 +142,7 @@
   font-size: 1.16rem;
   letter-spacing: -0.012em;
   margin: 2px 0 0;
-  color: var(--text);
+  color: var(--heading);
 }
 .lp-blurb { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--muted); }
 
@@ -215,7 +215,8 @@
 .lp-continue:disabled svg { opacity: 0.4; }
 
 .lp-already { margin: 0; font-size: 13.5px; color: var(--faint); }
-.lp-already a { color: var(--gold-ink); font-weight: 700; }
+.lp-already a { color: var(--heading); font-weight: 700; }
+.lp-already a:hover { color: var(--gold-ink); }
 
 .lp-staff {
   margin: clamp(30px, 5vw, 46px) 0 0;
@@ -223,6 +224,7 @@
   color: var(--faint);
 }
 .lp-staff a { color: var(--muted); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.lp-staff a { color: var(--heading); }
 .lp-staff a:hover { color: var(--gold-ink); }
 
 @media (max-width: 980px) {
@@ -321,7 +323,7 @@
   font-family: var(--display); font-weight: 800;
   font-size: clamp(1.5rem, 3vw, 2.05rem); line-height: 1.12;
   letter-spacing: -.022em; text-wrap: balance;
-  margin: 0 0 12px; color: var(--text);
+  margin: 0 0 12px; color: var(--heading);
 }
 .lp-lede {
   margin: 0 0 clamp(26px, 4vw, 38px);
@@ -341,7 +343,7 @@
   font-family: var(--display); font-weight: 800;
   font-size: clamp(2rem, 5vw, 3.15rem); line-height: 1.04;
   letter-spacing: -.03em; text-wrap: balance;
-  margin: 0 0 16px; max-width: 18ch;
+  margin: 0 0 16px; max-width: 18ch; color: var(--heading);
 }
 .lp-hero .lp-sub { max-width: 60ch; font-size: clamp(16px, 1.6vw, 18px); }
 
@@ -377,7 +379,7 @@ a.lp-continue { text-decoration: none; }
 .lp-nav > a:not(.lp-signin) {
   font-size: 14px; font-weight: 600; color: var(--muted); text-decoration: none;
 }
-.lp-nav > a:not(.lp-signin):hover { color: var(--gold-ink); }
+.lp-nav > a:not(.lp-signin):hover { color: var(--heading); }
 
 /* ── The four stages ─────────────────────────────────────────────────────── */
 .lp-stages {
@@ -399,7 +401,7 @@ a.lp-continue { text-decoration: none; }
 }
 .lp-stages h3, .lp-feat h3 {
   font-family: var(--display); font-weight: 700; font-size: 1.02rem;
-  letter-spacing: -.012em; margin: 0 0 7px;
+  letter-spacing: -.012em; margin: 0 0 7px; color: var(--heading);
 }
 .lp-stages p, .lp-feat p {
   margin: 0; font-size: 14px; line-height: 1.58; color: var(--muted);
@@ -423,7 +425,7 @@ a.lp-continue { text-decoration: none; }
   width: 100%; display: flex; align-items: center; gap: 14px;
   padding: 18px 2px; background: none; border: 0; cursor: pointer;
   font-family: var(--display); font-size: 1rem; font-weight: 700;
-  letter-spacing: -.01em; text-align: left; color: var(--text);
+  letter-spacing: -.01em; text-align: left; color: var(--heading);
 }
 .lp-q > button svg {
   width: 18px; height: 18px; margin-left: auto; flex: none; color: var(--faint);

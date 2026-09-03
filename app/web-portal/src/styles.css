@@ -42,6 +42,12 @@
   --bg2: #ededed; /* derived: one step down from the ground, for bands and inputs */
   --surface: #ffffff;
   --text: #2c2c2c;
+  /* THE BRAND IS TWO COLOURS. The identity sheet gives Deep Navy #000066 and
+     Sea Buckthorn #fbac34 and nothing else, so navy has to carry something —
+     it was decorating a focus ring while every heading on the site was grey.
+     Headings and links are navy; gold is the accent and the action. That is
+     also how the logo is built: a navy cart on a gold continent. */
+  --heading: #000066;
   --muted: #5b5b5b; /* derived from the shop's #858585, darkened to 7:1 */
   --faint: #757575; /* derived, 4.6:1 — the lightest that still passes AA */
   --line: #e8e8e8;
