@@ -58,8 +58,18 @@
   --r-sm: 12px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  --display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
-  --body: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* ONE FAMILY, TWO WEIGHTS, per the identity sheet: Raleway ExtraBold for
+     headings, Raleway Medium for body. The portal was on Bricolage Grotesque
+     and Inter, which app/mobile never was — its theme.ts has carried Raleway
+     and a note saying "per the brand spec" all along, so this is the portal
+     catching up rather than a new direction.
+
+     BOTH TOKENS ARE THE SAME FAMILY ON PURPOSE. The distinction the sheet
+     draws is weight, not face, so --display and --body differ only in how
+     heavily they are set. Keeping two variables anyway means a future
+     display face can be introduced in one place. */
+  --display: Raleway, ui-sans-serif, system-ui, sans-serif;
+  --body: Raleway, ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -70,6 +80,7 @@ body {
   color: var(--text);
   font-family: var(--body);
   font-size: 15px;
+  font-weight: 500;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
