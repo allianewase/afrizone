@@ -196,13 +196,10 @@ const FAQS = [
     a: 'Into the bank account on your profile. The amount is committed against the work when it is assigned and released once the work is confirmed complete. Withholding tax is applied and recorded, and your annual statement is available from your account.',
   },
   {
-    q: 'I am Afrizone staff. Do I sign up here?',
-    a: 'No. Staff accounts are created by Afrizone and used on the admin console, which is a separate application with its own sign-in. This portal is for stores, couriers and individuals only.',
+    q: 'I work at Afrizone. Do I sign up here?',
+    a: 'No. This portal is for stores, couriers and individuals. Staff accounts are created internally and used on a separate internal system — your team will tell you where.',
   },
 ]
-
-/** Where Afrizone's own staff belong. Mirrors WEB_ADMIN_URL on the server. */
-const ADMIN_CONSOLE = 'https://admin.parttime.afrizonemart.com'
 
 export default function Landing() {
   const [chosen, setChosen] = useState<AccountType | null>(null)
@@ -416,16 +413,20 @@ export default function Landing() {
       <footer className="lp-foot">
         <div className="lp-sec-in lp-foot-in">
           <Logo size={28} />
-          <p className="lp-staff">
-            {/* Afrizone's own people do not belong in the picker — they are not
-                an outside party, and their console is a different application
-                with a different sign-in. Saying so saves a support ticket. */}
-            Afrizone staff sign in on the{' '}
-            <a href={ADMIN_CONSOLE} rel="noreferrer">
-              admin console
-            </a>
-            .
-          </p>
+          {/*
+            THE ADMIN ADDRESS IS NOT PUBLISHED HERE, AND MUST NOT BE ADDED BACK.
+            This line used to link to the staff console by name and URL, which
+            handed every visitor — and every crawler and scanner — the address
+            of the one application on the platform that can approve payouts and
+            read customer data. Staff already know where they work; nobody else
+            needs to.
+
+            The sentence stays, because its job was never the link: somebody
+            from Afrizone who lands here has to be told this is not their
+            sign-in, or they file a ticket about a password that was never going
+            to work.
+          */}
+          <p className="lp-staff">Afrizone staff do not register or sign in here.</p>
           <p className="lp-copy">© {new Date().getFullYear()} AfriZoneMart. All rights reserved.</p>
         </div>
       </footer>
