@@ -85,7 +85,7 @@
 .lp-card:hover {
   border-color: var(--gold);
   transform: translateY(-6px);
-  box-shadow: 0 20px 25px -5px rgba(28, 25, 23, 0.10), 0 8px 10px -6px rgba(28, 25, 23, 0.08);
+  box-shadow: 0 20px 25px -5px rgba(16, 16, 24, 0.10), 0 8px 10px -6px rgba(16, 16, 24, 0.08);
 }
 .lp-card:focus-visible {
   outline: 2px solid var(--gold);
@@ -98,7 +98,7 @@
 .lp-card.is-on {
   border-color: var(--gold);
   background: linear-gradient(180deg, rgba(251, 172, 52, 0.10), rgba(251, 172, 52, 0.04));
-  box-shadow: 0 0 0 1px var(--gold), 0 20px 25px -5px rgba(28, 25, 23, 0.10);
+  box-shadow: 0 0 0 1px var(--gold), 0 20px 25px -5px rgba(16, 16, 24, 0.10);
 }
 .lp-card.is-on .lp-glyph {
   background: var(--gold);
@@ -194,8 +194,8 @@
   font-weight: 700;
   cursor: pointer;
   color: var(--text);
-  background: linear-gradient(180deg, var(--gold), #e09420);
-  box-shadow: 0 10px 20px -12px rgba(224, 148, 32, 0.9);
+  background: linear-gradient(180deg, var(--gold), var(--gold-deep));
+  box-shadow: 0 10px 20px -12px rgba(216, 142, 27, 0.9);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .lp-continue svg { width: 18px; height: 18px; transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -300,9 +300,9 @@
    element goes from :disabled to not, which restarts the animation - not on
    every re-render. */
 @keyframes lp-ready {
-  0%   { box-shadow: 0 10px 20px -12px rgba(224, 148, 32, .9), 0 0 0 0 rgba(251, 172, 52, .5); }
-  70%  { box-shadow: 0 10px 20px -12px rgba(224, 148, 32, .9), 0 0 0 10px rgba(251, 172, 52, 0); }
-  100% { box-shadow: 0 10px 20px -12px rgba(224, 148, 32, .9), 0 0 0 0 rgba(251, 172, 52, 0); }
+  0%   { box-shadow: 0 10px 20px -12px rgba(216, 142, 27, .9), 0 0 0 0 rgba(251, 172, 52, .5); }
+  70%  { box-shadow: 0 10px 20px -12px rgba(216, 142, 27, .9), 0 0 0 10px rgba(251, 172, 52, 0); }
+  100% { box-shadow: 0 10px 20px -12px rgba(216, 142, 27, .9), 0 0 0 0 rgba(251, 172, 52, 0); }
 }
 .lp-continue:not(:disabled) { animation: lp-ready .6s var(--ease); }
 

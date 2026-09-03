@@ -1,31 +1,51 @@
-/* Brand values mirrored from web-admin's tokens.css so the portal and the staff
-   console read as one platform. Only the subset the portal actually uses is
-   copied - a full duplicate would drift silently. */
+/* AfriZoneMart house palette.
+   ─────────────────────────────────────────────────────────────────────────────
+   These are the shop's colours, read out of the stylesheet at
+   suppliers.afrizonemart.com rather than eyeballed from a screenshot: gold
+   #fbac34 and navy #000066 were already identical here, and what differed was
+   the neutral scale — the shop is cool grey where this used to be warm sand.
+
+   THE PORTAL NOW MATCHES THE SHOP AND NO LONGER MATCHES web-admin, which is
+   still on the warm scale (--bg #faf9f6, --rail #0a1140, --money #1f9d6b).
+   That is a deliberate choice and not drift, but it is only half done: the
+   admin console and the mobile app should follow, or Afrizone ships two
+   palettes. Whoever gets there next — these are the values to copy.
+
+   THREE VALUES ARE DERIVED, NOT TAKEN, and each one is a contrast fix. The
+   shop uses #858585 for muted text, which is 3.5:1 on white and fails WCAG AA
+   for body copy. It can afford that because its greys carry captions; the
+   portal puts real information in muted text — a customer's address, what a
+   store is owed, how long an order has waited — so --muted and --faint are
+   darkened until they pass, and --bg2 is a neutral step the shop has no
+   equivalent for. Do not "correct" them back. */
 :root {
   --gold: #fbac34;
-  --gold-soft: #fdd9a0;
+  --gold-soft: #fef3e2;
+  --gold-deep: #d88e1b;
+  /* Kept dark rather than taking the shop's #d88e1b: this is the ink for gold
+     on a light ground — pill labels, links — and #d88e1b is 2.4:1 on white. */
   --gold-ink: #8a5a0f;
   --navy: #000066;
-  --rail: #0a1140;
-  --rail-text: #faf9f6;
+  --rail: #0a1942;
+  --rail-text: #ffffff;
   --rail-muted: #a1a5c4;
 
-  --money: #1f9d6b;
-  --money-ink: #15794f;
-  --money-soft: #e1f1e9;
-  --amber: #e08a1e;
-  --danger: #c8453a;
+  --money: #2fa152;
+  --money-ink: #1a6b2e;
+  --money-soft: #eafaf1;
+  --amber: #e8590c;
+  --danger: #c0392b;
   --danger-ink: #a6362c;
-  --danger-soft: #fbe9e7;
+  --danger-soft: #fdedec;
 
-  --bg: #faf9f6;
-  --bg2: #f4f2ec;
+  --bg: #f7f7f7;
+  --bg2: #ededed; /* derived: one step down from the ground, for bands and inputs */
   --surface: #ffffff;
-  --text: #1c1917;
-  --muted: #57534e;
-  --faint: #706963;
-  --line: rgba(28, 25, 23, 0.1);
-  --line-2: rgba(28, 25, 23, 0.18);
+  --text: #2c2c2c;
+  --muted: #5b5b5b; /* derived from the shop's #858585, darkened to 7:1 */
+  --faint: #757575; /* derived, 4.6:1 — the lightest that still passes AA */
+  --line: #e8e8e8;
+  --line-2: #d5d5d5;
 
   --r: 16px;
   --cut: 4px; /* the "Sunrise Cut": one sharp corner, top-right */
