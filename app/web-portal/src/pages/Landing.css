@@ -2,9 +2,7 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(1100px 460px at 50% -180px, rgba(251, 172, 52, 0.16), transparent 70%),
-    var(--bg);
+  background: var(--bg);
 }
 
 /* ── Top bar ─────────────────────────────────────────────────────────────── */
@@ -33,13 +31,6 @@
 .lp-signin:hover { border-color: var(--gold); transform: translateY(-1px); }
 
 /* ── Intro ───────────────────────────────────────────────────────────────── */
-.lp-main {
-  flex: 1;
-  width: 100%;
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: clamp(28px, 6vw, 64px) clamp(20px, 5vw, 56px) 64px;
-}
 .lp-intro { max-width: 640px; margin-bottom: clamp(28px, 4vw, 44px); }
 .lp-eyebrow {
   font-size: 11px;
@@ -269,14 +260,13 @@
   to   { opacity: 1; transform: none; }
 }
 
-.lp-top      { animation: lp-rise .45s var(--ease) backwards; }
-.lp-intro    { animation: lp-rise .5s var(--ease) backwards .06s; }
-.lp-card     { animation: lp-rise .5s var(--ease) backwards; }
-.lp-card:nth-child(1) { animation-delay: .14s; }
-.lp-card:nth-child(2) { animation-delay: .20s; }
-.lp-card:nth-child(3) { animation-delay: .26s; }
-.lp-go       { animation: lp-rise .5s var(--ease) backwards .34s; }
-.lp-staff    { animation: lp-rise .5s var(--ease) backwards .40s; }
+/* ONLY THE HERO ANIMATES ON LOAD. The page is several screens tall now, so a
+   staggered entrance on the cards and the footer would be motion playing where
+   nobody can see it, finishing long before anybody scrolls that far. Everything
+   below the fold is handled by the scroll-driven rule at the end of this file
+   instead - it arrives when you reach it. */
+.lp-top     { animation: lp-rise .45s var(--ease) backwards; }
+.lp-hero-in { animation: lp-rise .55s var(--ease) backwards .06s; }
 
 
 /* ── Being chosen ────────────────────────────────────────────────────────── */
@@ -315,3 +305,177 @@
   100% { box-shadow: 0 10px 20px -12px rgba(224, 148, 32, .9), 0 0 0 0 rgba(251, 172, 52, 0); }
 }
 .lp-continue:not(:disabled) { animation: lp-ready .6s var(--ease); }
+
+/* ══ A scrolling page, not a single screen ═══════════════════════════════════
+   The picker is still the point; everything around it answers the questions
+   somebody asks before they are willing to use it. Bands alternate between the
+   page ground and the warmer one so a long page has a rhythm rather than
+   running together. */
+
+.lp-sec { padding: clamp(46px, 7vw, 84px) clamp(20px, 5vw, 56px); }
+.lp-sec-alt { background: var(--bg2); }
+.lp-sec-in { width: 100%; max-width: 1120px; margin: 0 auto; }
+.lp-narrow { max-width: 760px; }
+
+.lp-h2 {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(1.5rem, 3vw, 2.05rem); line-height: 1.12;
+  letter-spacing: -.022em; text-wrap: balance;
+  margin: 0 0 12px; color: var(--text);
+}
+.lp-lede {
+  margin: 0 0 clamp(26px, 4vw, 38px);
+  font-size: 16px; line-height: 1.6; color: var(--muted); max-width: 62ch;
+}
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+.lp-hero {
+  padding: clamp(36px, 6vw, 78px) clamp(20px, 5vw, 56px) clamp(44px, 6vw, 76px);
+  background:
+    radial-gradient(1100px 460px at 50% -200px, rgba(251, 172, 52, 0.18), transparent 70%),
+    var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.lp-hero-in { width: 100%; max-width: 1120px; margin: 0 auto; }
+.lp-hero h1 {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(2rem, 5vw, 3.15rem); line-height: 1.04;
+  letter-spacing: -.03em; text-wrap: balance;
+  margin: 0 0 16px; max-width: 18ch;
+}
+.lp-hero .lp-sub { max-width: 60ch; font-size: clamp(16px, 1.6vw, 18px); }
+
+/* Four claims, each one true of the build today. */
+.lp-facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 26px; }
+.lp-facts span {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 13px; border-radius: 100px;
+  background: var(--surface); border: 1px solid var(--line);
+  font-size: 13px; font-weight: 600; color: var(--muted);
+}
+.lp-facts span::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--gold);
+}
+
+.lp-hero-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.lp-ghost {
+  display: inline-flex; align-items: center; min-height: 50px; padding: 0 22px;
+  border: 1px solid var(--line-2); border-radius: var(--r-sm);
+  border-top-right-radius: var(--cut);
+  background: var(--surface); text-decoration: none;
+  font-size: 15px; font-weight: 600; color: var(--text);
+  transition: all .25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.lp-ghost:hover { border-color: var(--gold); transform: translateY(-2px); }
+
+/* An <a> styled as the primary button, so the hero CTA and the form CTA are
+   visibly the same promise. */
+a.lp-continue { text-decoration: none; }
+
+/* ── Nav ─────────────────────────────────────────────────────────────────── */
+.lp-nav { display: flex; align-items: center; gap: 22px; }
+.lp-nav > a:not(.lp-signin) {
+  font-size: 14px; font-weight: 600; color: var(--muted); text-decoration: none;
+}
+.lp-nav > a:not(.lp-signin):hover { color: var(--gold-ink); }
+
+/* ── The four stages ─────────────────────────────────────────────────────── */
+.lp-stages {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px;
+  counter-reset: stage;
+}
+.lp-stages li {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r); border-top-right-radius: var(--cut);
+  padding: 22px 20px 24px;
+}
+.lp-stage-n {
+  display: inline-block; margin-bottom: 12px;
+  font-family: var(--display); font-weight: 800; font-size: 13px;
+  letter-spacing: .06em; color: var(--gold-ink);
+  padding: 4px 9px; border-radius: 8px; border-top-right-radius: var(--cut);
+  background: var(--gold-soft);
+}
+.lp-stages h3, .lp-feat h3 {
+  font-family: var(--display); font-weight: 700; font-size: 1.02rem;
+  letter-spacing: -.012em; margin: 0 0 7px;
+}
+.lp-stages p, .lp-feat p {
+  margin: 0; font-size: 14px; line-height: 1.58; color: var(--muted);
+}
+
+/* ── What you get ────────────────────────────────────────────────────────── */
+.lp-feats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+.lp-feat {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r); border-top-right-radius: var(--cut);
+  padding: 24px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+/* ── Questions ───────────────────────────────────────────────────────────── */
+.lp-faq {
+  border-top: 1px solid var(--line-2);
+}
+.lp-q { border-bottom: 1px solid var(--line-2); }
+.lp-q > button {
+  width: 100%; display: flex; align-items: center; gap: 14px;
+  padding: 18px 2px; background: none; border: 0; cursor: pointer;
+  font-family: var(--display); font-size: 1rem; font-weight: 700;
+  letter-spacing: -.01em; text-align: left; color: var(--text);
+}
+.lp-q > button svg {
+  width: 18px; height: 18px; margin-left: auto; flex: none; color: var(--faint);
+  transition: transform .25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.lp-q.is-open > button svg { transform: rotate(180deg); color: var(--gold-ink); }
+.lp-q > button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.lp-q > p {
+  margin: -4px 0 20px; padding-right: 32px;
+  font-size: 15px; line-height: 1.62; color: var(--muted);
+  animation: lp-rise .28s var(--ease) backwards;
+}
+
+/* ── Last word ───────────────────────────────────────────────────────────── */
+.lp-final {
+  padding: clamp(46px, 7vw, 84px) clamp(20px, 5vw, 56px);
+  background:
+    radial-gradient(900px 400px at 50% 120%, rgba(251, 172, 52, 0.20), transparent 70%),
+    var(--bg);
+  border-top: 1px solid var(--line);
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+.lp-foot {
+  padding: 30px clamp(20px, 5vw, 56px) 40px;
+  background: var(--surface); border-top: 1px solid var(--line);
+}
+.lp-foot-in { display: flex; flex-direction: column; gap: 10px; }
+.lp-copy { margin: 0; font-size: 12.5px; color: var(--faint); }
+
+/* ── Narrower ────────────────────────────────────────────────────────────── */
+@media (max-width: 980px) {
+  .lp-stages { grid-template-columns: repeat(2, 1fr); }
+  .lp-feats { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .lp-stages { grid-template-columns: 1fr; }
+  /* The section links go; "Sign in" is the only one worth the width. */
+  .lp-nav > a:not(.lp-signin) { display: none; }
+  .lp-hero-cta { flex-direction: column; align-items: stretch; }
+  .lp-ghost { justify-content: center; }
+}
+
+/* The bands arrive as you reach them rather than all at once on load - the
+   page is several screens tall now, and animating section five while somebody
+   is reading section one is motion nobody sees. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .lp-sec-in, .lp-final .lp-sec-in {
+      animation: lp-rise .6s var(--ease) both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
+  }
+}
