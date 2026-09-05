@@ -49,7 +49,12 @@
      also how the logo is built: a navy cart on a gold continent. */
   --heading: #000066;
   --muted: #5b5b5b; /* derived from the shop's #858585, darkened to 7:1 */
-  --faint: #757575; /* derived, 4.6:1 — the lightest that still passes AA */
+  /* 757575 was 4.6:1 against --surface (white) but only 4.30:1 against
+     --bg (#f7f7f7), a near-miss of AA's 4.5 floor on the page's own ground -
+     found while porting this same value to app/mobile and checking it against
+     both grounds instead of one. 6b6b6b clears 4.5 on both: 4.97:1 on --bg,
+     5.33:1 on --surface. */
+  --faint: #6b6b6b;
   --line: #e8e8e8;
   --line-2: #d5d5d5;
 

@@ -45,7 +45,7 @@ export default function TabsLayout() {
           paddingTop: 8,
           // Lifted bar instead of a flat hairline-bordered strip: matches the
           // shadow treatment every card in the app now carries.
-          shadowColor: '#1C1917',
+          shadowColor: colors.text,
           shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.08,
           shadowRadius: 16,

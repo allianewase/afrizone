@@ -1,9 +1,24 @@
 /**
  * Design tokens for the worker mobile app.
  *
- * These mirror web-admin's tokens.css value for value. Reasoning behind the
- * values lives in docs/design-decisions.md; several look wrong until you read
- * the measurement, so check there before changing one.
+ * THE NEUTRALS AND STATUS FILLS NOW MIRROR THE AFRIZONEMART HOUSE PALETTE
+ * (web-portal/src/styles.css), not web-admin's tokens.css. They used to mirror
+ * web-admin value for value, which is why some comments below still say so —
+ * those are now aspirational rather than true, and are worth reading as "this
+ * is where it should end up," not "this is where it is."
+ *
+ * TWO SURFACES ARE ON THE SHOP PALETTE, ONE IS NOT. The portal moved first and
+ * was verified against the shop's own stylesheet; this file follows it exactly
+ * so an amount that reads green here reads the same green there. web-admin has
+ * not moved, so a handful of tokens tied explicitly to it in the comments below
+ * (onGold, clayDeep, railMuted) are LEFT UNCHANGED on purpose — they are
+ * derivatives of admin tokens that have not moved, and changing them alone
+ * would make them wrong rather than early.
+ *
+ * Reasoning behind the ORIGINAL warm values lives in docs/design-decisions.md;
+ * that document was written for the palette this file just left, and reading
+ * it as authority on today's hex values will mislead more than it helps. It is
+ * still the right place to understand what a token means and why it exists.
  */
 
 export const colors = {
@@ -21,34 +36,41 @@ export const colors = {
   forest: '#14302B', // dark surfaces, Paid status
   forest700: '#1E4B41',
 
-  // Status language, shared with web-admin and design-system.html.
-  money: '#1F9D6B', // available / paid / success
+  // Status language. money and danger now follow the shop palette; indigo,
+  // amber and pending have no equivalent on suppliers.afrizonemart.com and are
+  // unchanged internal choices, still shared with web-admin and design-system.html.
+  money: '#2FA152', // available / paid / success — AfriZoneMart green
   indigo: '#2D5BA8', // info / in review
   // Warnings only, not a status, and a FILL only: as text or as an icon it is
   // 2.55:1 on the page. Warning type uses goldInk. There is deliberately no
   // amberInk, because darkening amber lands on goldInk. docs/design-decisions.md
   amber: '#E08A1E',
-  danger: '#C8453A', // errors / rejected
+  danger: '#C0392B', // errors / rejected — AfriZoneMart red
   pending: '#6B3F94', // violet, not amber: docs/design-decisions.md
 
   // Type versions of three fills that are illegible as small text on light.
   // Active shipped at 1.64:1, Available 2.86:1, Rejected 3.65:1.
-  moneyInk: '#15794F',
+  // 1A6B2E replaces 15794F: same role (the readable ink for `money`, which is
+  // 3.31:1 as text and only safe as a fill or an icon-on-its-own), recomputed
+  // for the new green. 6.59:1 on white.
+  moneyInk: '#1A6B2E',
   dangerInk: '#A6362C',
   goldInk: '#8A5A0F',
-  // Label colour for anything sitting on the gold gradient, the twin of
-  // web-admin's --on-gold. White on gold is 1.90:1; this is 9.20:1 on the light
-  // end of the ramp and 5.71:1 on the deep end.
+  // UNCHANGED - twin of web-admin's --on-gold, which has not moved. Revisit
+  // together with clayDeep and railMuted when web-admin does.
   onGold: '#1C1917',
 
-  // Neutrals: "Warm Refined". docs/design-decisions.md
-  bg: '#FAF9F6', // app background, 16.61:1 against `text`
-  surfaceSand: '#F4F2EC', // recessed surface
+  // Neutrals: the shop palette, not "Warm Refined" any more.
+  bg: '#F7F7F7', // app background, 13.04:1 against `text`
+  surfaceSand: '#EDEDED', // recessed surface
   surface: '#FFFFFF', // card
-  line: '#E8E3DA', // hairline / border
-  text: '#1C1917', // primary text
-  textMuted: '#57534E', // secondary text, 7.25:1
-  textFaint: '#706963', // placeholders and hints, 5.13:1
+  line: '#E8E8E8', // hairline / border
+  text: '#2C2C2C', // primary text
+  textMuted: '#5B5B5B', // secondary text, 6.34:1 on `bg`, 6.79:1 on `surface`
+  // The old warm value (706963) was 4.30:1 on the old FAF9F6 ground - a
+  // near-miss of AA's 4.5 floor. 6B6B6B clears it on both new grounds:
+  // 4.97:1 on `bg`, 5.33:1 on `surface`.
+  textFaint: '#6B6B6B', // placeholders and hints
   white: '#FFFFFF',
 
   // Secondary ink for navy grounds, the twin of web-admin's --rail-muted.
@@ -58,7 +80,7 @@ export const colors = {
   // Backdrop behind modals and bottom sheets, derived from `text`. Held here
   // because seven screens had it inlined as a literal, and two of those
   // literals were still the pre-rebrand warm black.
-  scrim: 'rgba(28,25,23,0.45)',
+  scrim: 'rgba(44,44,44,0.45)',
 
   // Pill fills: the exact tints web-admin composes (each status colour at 10 to
   // 16% over white), so a pill renders identically in both apps rather than
@@ -67,9 +89,9 @@ export const colors = {
   pendingSoft: '#F0ECF4',
   claySoft: '#FFF5E7',
   indigoSoft: '#E6EBF5',
-  moneySoft: '#E4F3ED',
+  moneySoft: '#EAFAF1', // the shop's tint for `money`, not web-admin's
   forestSoft: '#E3E6E5',
-  dangerSoft: '#F8E9E7',
+  dangerSoft: '#FDEDEC', // the shop's tint for `danger`, not web-admin's
 } as const;
 
 export const spacing = {
@@ -108,19 +130,20 @@ export const motif = {
 } as const;
 
 export const shadow = {
-  // Soft warm shadow, restrained (fintech, not glass) per §1.5. Bumped from
-  // the original 0.1/0.08 opacities: against `bg` (#FAF9F6) sitting this
-  // close to `surface` (#FFFFFF), that value rendered as barely perceptible
-  // on web, so every card read as flat. This is the same shape, just visible.
+  // Soft shadow, restrained (fintech, not glass) per §1.5. Bumped from the
+  // original 0.1/0.08 opacities: against `bg` sitting this close to `surface`
+  // (#FFFFFF), that value rendered as barely perceptible on web, so every card
+  // read as flat. This is the same shape, just visible. colors.text rather than
+  // a literal, so this stays correct if the palette moves again.
   card: {
-    shadowColor: '#1C1917',
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 14 },
     shadowOpacity: 0.16,
     shadowRadius: 28,
     elevation: 6,
   },
   soft: {
-    shadowColor: '#1C1917',
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.12,
     shadowRadius: 18,
@@ -128,7 +151,7 @@ export const shadow = {
   },
   /** Smaller-radius lift for compact surfaces (segmented control thumb, chips). */
   tight: {
-    shadowColor: '#1C1917',
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
