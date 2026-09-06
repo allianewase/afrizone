@@ -1,23 +1,24 @@
 /**
  * Design tokens for the worker mobile app.
  *
- * THE NEUTRALS AND STATUS FILLS NOW MIRROR THE AFRIZONEMART HOUSE PALETTE
- * (web-portal/src/styles.css), not web-admin's tokens.css. They used to mirror
- * web-admin value for value, which is why some comments below still say so —
- * those are now aspirational rather than true, and are worth reading as "this
- * is where it should end up," not "this is where it is."
+ * THE NEUTRALS AND STATUS FILLS MIRROR THE AFRIZONEMART HOUSE PALETTE, and now
+ * all three surfaces (this file, web-portal/src/styles.css,
+ * web-admin/src/styles/tokens.css) agree. onGold, clayDeep and railMuted —
+ * held here as "twins of web-admin's --X" while admin was still on the old
+ * palette — are now correct rather than aspirational, admin having moved too.
  *
- * TWO SURFACES ARE ON THE SHOP PALETTE, ONE IS NOT. The portal moved first and
- * was verified against the shop's own stylesheet; this file follows it exactly
- * so an amount that reads green here reads the same green there. web-admin has
- * not moved, so a handful of tokens tied explicitly to it in the comments below
- * (onGold, clayDeep, railMuted) are LEFT UNCHANGED on purpose — they are
- * derivatives of admin tokens that have not moved, and changing them alone
- * would make them wrong rather than early.
+ * VERIFY AGAINST THE SHOP'S OWN NAMED CLASSES, NOT A RAW HEX FREQUENCY COUNT.
+ * `textMuted` originally read #858585 as "the shop's muted" from a
+ * separator-free regex dump of their compiled CSS and, believing it failed
+ * AA, darkened it to #5B5B5B under a "we had to fix their broken colour"
+ * story. Neither part of that was true: their real .text-muted class
+ * resolves to #555555, which already clears AA on its own (6.34:1+). Fixed
+ * below — verified this time against their named utility classes
+ * (.text-danger, .bg-success, .text-charcoal…) rather than ranked hex codes.
  *
  * Reasoning behind the ORIGINAL warm values lives in docs/design-decisions.md;
- * that document was written for the palette this file just left, and reading
- * it as authority on today's hex values will mislead more than it helps. It is
+ * that document was written for the palette this file left, and reading it as
+ * authority on today's hex values will mislead more than it helps. It is
  * still the right place to understand what a token means and why it exists.
  */
 
@@ -28,7 +29,9 @@ export const colors = {
   // The deep end of the brand gradient, the twin of web-admin's --clay-deep.
   // Every gradient needs it: clay and gold are the same hex, so a two-stop ramp
   // between them renders as a flat fill. docs/design-decisions.md
-  clayDeep: '#C98518',
+  // VERIFIED (via web-admin): the shop's own .to-amber-dark gradient stop.
+  // Was #C98518, an independently derived value with no source.
+  clayDeep: '#D88E1B',
   gold: '#FBAC34', // same hex; kept as a separate name for existing call sites
   goldBright: '#FBAC34', // logo mark colour
   navy: '#000066', // logo mark navy
@@ -56,9 +59,12 @@ export const colors = {
   moneyInk: '#1A6B2E',
   dangerInk: '#A6362C',
   goldInk: '#8A5A0F',
-  // UNCHANGED - twin of web-admin's --on-gold, which has not moved. Revisit
-  // together with clayDeep and railMuted when web-admin does.
-  onGold: '#1C1917',
+  // Twin of web-admin's --on-gold, now moved: repointed to `text`'s new
+  // value rather than kept independent, since web-portal never needed a
+  // separate on-gold token at all - its buttons just use `text` directly,
+  // and 2C2C2C clears both gradient ends fine (7.35:1 on gold, 5.19:1 on
+  // clayDeep).
+  onGold: '#2C2C2C',
 
   // Neutrals: the shop palette, not "Warm Refined" any more.
   bg: '#F7F7F7', // app background, 13.04:1 against `text`
@@ -66,7 +72,9 @@ export const colors = {
   surface: '#FFFFFF', // card
   line: '#E8E8E8', // hairline / border
   text: '#2C2C2C', // primary text
-  textMuted: '#5B5B5B', // secondary text, 6.34:1 on `bg`, 6.79:1 on `surface`
+  // The shop's real .text-muted class, verified via web-admin's rebrand
+  // rather than a raw hex scan. 6.96:1 on `bg`, 7.46:1 on `surface`.
+  textMuted: '#555555',
   // The old warm value (706963) was 4.30:1 on the old FAF9F6 ground - a
   // near-miss of AA's 4.5 floor. 6B6B6B clears it on both new grounds:
   // 4.97:1 on `bg`, 5.33:1 on `surface`.
@@ -74,7 +82,9 @@ export const colors = {
   white: '#FFFFFF',
 
   // Secondary ink for navy grounds, the twin of web-admin's --rail-muted.
-  // 7.29:1 on navy, where textMuted is 2.31:1.
+  // Re-verified against the shop's own deep-navy gradient stop (#0A1942, used
+  // for --rail once web-admin moved, replacing the independently-derived
+  // #0A1140): 7.07:1 on the new rail colour, where textMuted is 2.29:1.
   railMuted: '#A1A5C4',
 
   // Backdrop behind modals and bottom sheets, derived from `text`. Held here

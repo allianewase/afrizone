@@ -5,19 +5,28 @@
    #fbac34 and navy #000066 were already identical here, and what differed was
    the neutral scale — the shop is cool grey where this used to be warm sand.
 
-   THE PORTAL NOW MATCHES THE SHOP AND NO LONGER MATCHES web-admin, which is
-   still on the warm scale (--bg #faf9f6, --rail #0a1140, --money #1f9d6b).
-   That is a deliberate choice and not drift, but it is only half done: the
-   admin console and the mobile app should follow, or Afrizone ships two
-   palettes. Whoever gets there next — these are the values to copy.
+   web-admin and app/mobile now carry the same values.
 
-   THREE VALUES ARE DERIVED, NOT TAKEN, and each one is a contrast fix. The
-   shop uses #858585 for muted text, which is 3.5:1 on white and fails WCAG AA
-   for body copy. It can afford that because its greys carry captions; the
-   portal puts real information in muted text — a customer's address, what a
-   store is owed, how long an order has waited — so --muted and --faint are
-   darkened until they pass, and --bg2 is a neutral step the shop has no
-   equivalent for. Do not "correct" them back. */
+   VERIFY AGAINST THE SHOP'S OWN NAMED CLASSES, NOT A RAW HEX FREQUENCY COUNT.
+   This file originally read #858585 as "the shop's muted" from a
+   separator-free regex dump of the compiled CSS and, believing it failed AA,
+   darkened it to #5b5b5b under a "we had to fix their broken colour" story.
+   Neither part of that was true: their real .text-muted class resolves to
+   #555555, which already clears AA on its own (6.96:1 on --bg). Fixed to
+   #555555 below — verified this time against web-admin/src/styles/tokens.css,
+   which was corrected the same way after reading the shop's utility classes
+   by name (.text-danger, .bg-success, .text-charcoal…) rather than
+   ranking raw hex codes by frequency.
+
+   --amber REMOVED. It was #e8590c, read from a one-off arbitrary-value
+   utility (.bg-\[\#E8590C\]) with no semantic name anywhere in the shop's
+   CSS — not their amber (which is identical to --gold) and not anything.
+   Nothing in the portal used it.
+
+   --bg2 and --faint remain genuinely DERIVED: the shop has one grey tier
+   (muted) and no recessed-surface concept, so there is no equivalent to
+   check these against. Do not "correct" them to a shop value; there isn't
+   one. */
 :root {
   --gold: #fbac34;
   --gold-soft: #fef3e2;
@@ -33,7 +42,6 @@
   --money: #2fa152;
   --money-ink: #1a6b2e;
   --money-soft: #eafaf1;
-  --amber: #e8590c;
   --danger: #c0392b;
   --danger-ink: #a6362c;
   --danger-soft: #fdedec;
@@ -48,12 +56,10 @@
      Headings and links are navy; gold is the accent and the action. That is
      also how the logo is built: a navy cart on a gold continent. */
   --heading: #000066;
-  --muted: #5b5b5b; /* derived from the shop's #858585, darkened to 7:1 */
-  /* 757575 was 4.6:1 against --surface (white) but only 4.30:1 against
-     --bg (#f7f7f7), a near-miss of AA's 4.5 floor on the page's own ground -
-     found while porting this same value to app/mobile and checking it against
-     both grounds instead of one. 6b6b6b clears 4.5 on both: 4.97:1 on --bg,
-     5.33:1 on --surface. */
+  --muted: #555555; /* the shop's real .text-muted — 6.96:1 on --bg, 7.46:1 on --surface */
+  /* DERIVED: no lighter grey tier exists on the shop's site. A step below
+     --muted for placeholders and hints, clearing AA on both grounds:
+     4.97:1 on --bg, 5.33:1 on --surface. */
   --faint: #6b6b6b;
   --line: #e8e8e8;
   --line-2: #d5d5d5;

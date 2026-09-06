@@ -18,8 +18,8 @@ const TONE_GRADIENT: Record<GlassTone, [string, string]> = {
   clay: ['rgba(201,133,24,0.20)', 'rgba(255,255,255,0.30)'],
   gold: ['rgba(251,172,52,0.24)', 'rgba(255,255,255,0.30)'],
   indigo: ['rgba(45,91,168,0.18)', 'rgba(255,255,255,0.30)'],
-  money: ['rgba(31,157,107,0.18)', 'rgba(255,255,255,0.30)'],
-  danger: ['rgba(200,69,58,0.18)', 'rgba(255,255,255,0.30)'],
+  money: ['rgba(47,161,82,0.18)', 'rgba(255,255,255,0.30)'],
+  danger: ['rgba(192,57,43,0.18)', 'rgba(255,255,255,0.30)'],
 };
 
 const TONE_BORDER: Record<GlassTone, string> = {
@@ -27,8 +27,8 @@ const TONE_BORDER: Record<GlassTone, string> = {
   clay: 'rgba(201,133,24,0.45)',
   gold: 'rgba(251,172,52,0.55)',
   indigo: 'rgba(45,91,168,0.40)',
-  money: 'rgba(31,157,107,0.40)',
-  danger: 'rgba(200,69,58,0.40)',
+  money: 'rgba(47,161,82,0.40)',
+  danger: 'rgba(192,57,43,0.40)',
 };
 
 interface GlassCardProps {

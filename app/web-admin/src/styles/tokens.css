@@ -1,70 +1,166 @@
-/* Reasoning behind these values lives in docs/design-decisions.md. Several look
-   wrong until you read the measurement, so check there before "fixing" one. */
+/* AfriZoneMart house palette.
+   ─────────────────────────────────────────────────────────────────────────────
+   These are the shop's colours: verified against the compiled Tailwind CSS at
+   suppliers.afrizonemart.com, not eyeballed. Their build emits named utility
+   classes (.text-danger, .bg-success, .text-charcoal…) with literal rgb()
+   values, which is a far more reliable source than scraping raw hex codes out
+   of a page — a hex frequency count earlier in this same rebrand mistook two
+   values (see MUTED and AMBER below), and that is exactly the mistake reading
+   the real class names avoids.
+
+   web-portal moved first and mobile followed; this completes the set. Two
+   things below CORRECT what shipped to those two earlier, once verified
+   properly here — update them to match when you next touch either file.
+
+   THREE TIERS OF PROVENANCE, and every value below says which it is:
+   - VERIFIED: read directly off a named class in the shop's own CSS
+     (.text-danger, .bg-success, .text-charcoal, .to-page, .to-amber-dark,
+     .from-amber-light) — these are not guesses.
+   - REAL, UNNAMED: a colour that genuinely appears on the shop's site (a
+     gradient stop, a one-off utility) but is not tied to a semantic class
+     name there. Adopted because it is a real brand colour, sourced honestly
+     as such rather than claimed as "their money colour" or similar.
+   - DERIVED: no equivalent exists on the shop's site at all — an internal UI
+     need (a second grey tier, a stronger border, a dark sidebar) that the
+     shop's light-only marketing site has no occasion to define. Do not
+     "correct" these back to a shop value; there isn't one.
+
+   MUTED, CORRECTED: the shop's real .text-muted is #555555 — already 6.96:1
+   on their own page ground, comfortably past AA. An earlier pass here read a
+   concatenated, separator-free regex dump of the raw CSS and misread it as
+   #858585 (which DOES fail AA), then "fixed" that misread value by darkening
+   it to #5b5b5b. Both web-portal and app/mobile shipped that invented value
+   under a false "we had to correct their broken colour" story. The correct
+   value was #555555 all along, and it needed no correction. Fixed to #555555
+   here and needs the same fix in the other two, with the false narrative
+   removed from their comments.
+
+   AMBER, CORRECTED IN PART: the shop's real .text-amber / .bg-amber /
+   .border-amber is #fbac34 — identical to gold. Amber is not a distinct
+   colour in their system; it is a second name for the same swatch.
+   web-portal defined --amber: #e8590c based on a one-off arbitrary-value
+   utility (.bg-\[\#E8590C\]) that has no semantic class name anywhere in
+   their CSS — not their amber, not anything, and should be fixed there.
+
+   --amber STAYS DEFINED HERE, unlike --amber in web-portal, because five real
+   call sites in this app depend on it existing and reading as visibly
+   distinct from --gold (KpiCard, Dashboard's timesheets stat, Organizations,
+   Tasks' overdue marker, Verification's "expiring soon" note). Matching the
+   shop's amber-equals-gold here would collapse a warning colour into the
+   primary brand action colour on a screen where an admin is scanning for
+   exactly that distinction — precisely the defect docs/design-decisions.md
+   already warns --clay/--gold once fell into, reintroduced deliberately if
+   this value moved. Left at its existing value, unchanged. */
 :root {
-  /* Brand, per the Afrizonemart.com identity. --navy is the logo mark colour and
-     stays exact; dark UI surfaces use --rail below. */
+  /* Brand. --navy is VERIFIED (.text-navy, rgb(0,0,102)). --gold/--clay are
+     unchanged, already identical to the shop's #fbac34. */
   --clay: #fbac34;
-  --clay-deep: #c98518;
+  /* VERIFIED: .to-amber-dark, the shop's own deep-gold gradient stop. Was
+     #c98518, an independently derived value with no source; mobile's
+     clayDeep mirrors this and needs the same move. */
+  --clay-deep: #d88e1b;
   --gold: #fbac34;
-  --gold-soft: #fdd9a0;
+  /* VERIFIED: .from-amber-light. Was #fdd9a0, independently derived. */
+  --gold-soft: #fef3e2;
   --gold-bright: #fbac34;
   --navy: #000066;
+  /* DERIVED, unrelated to the shop's palette work: a pressed-state navy with
+     no marketing-site equivalent to check against. Left alone. */
   --navy-deep: #00004d;
+  /* DERIVED: dark status surface (Paid), same reasoning as --navy-deep. */
   --forest: #14302b;
 
-  /* Status colours: the exact values design-system.html and mobile use, so both
-     apps show the same hue for the same state (DESIGN_SPEC 0.4). */
-  --money: #1f9d6b; /* available / paid / success */
+  /* Status colours. --money and --danger now follow the shop; --indigo,
+     --pending and --amber have no ADOPTED equivalent there — the shop's
+     "amber" is literally --gold (see the file header), which is exactly the
+     value this token must NOT collapse into. --amber keeps its existing,
+     independently-chosen value below. */
+  --amber: #e08a1e; /* warnings only, not a status; deliberately not gold */
+  /* REAL, UNNAMED: a green gradient stop (.from-/.to-\[#2FA152\]) on the
+     shop's site, paired below with their VERIFIED success ink. Was #1f9d6b. */
+  --money: #2fa152; /* available / paid / success */
   --indigo: #2d5ba8; /* info / in review */
-  --amber: #e08a1e; /* warnings only, not a status */
-  --danger: #c8453a; /* errors / rejected */
+  --danger: #c0392b; /* VERIFIED: .text-danger / .bg-danger / .border-danger */
   --pending: #6b3f94; /* violet, not amber: docs/design-decisions.md */
 
-  /* Type versions of three fills that are illegible as small text on light.
-     Sea Buckthorn is 1.90:1 on white; --money is 3.45:1. */
-  --money-ink: #15794f;
+  /* Type versions of fills illegible as small text on light.
+     Sea Buckthorn is 1.90:1 on white; --money is 3.31:1 as text. */
+  /* VERIFIED: .text-success / .border-success. Recomputed for the new
+     --money: 6.59:1 on white. Was #15794f. */
+  --money-ink: #1a6b2e;
+  /* DERIVED, and no longer strictly necessary: the shop's own --danger
+     (#c0392b) already reads at 5.44:1 as text on its own. Kept anyway — it
+     predates this rebrand as a genuine internal choice, not a contrast fix,
+     and every existing call site already expects it. */
   --danger-ink: #a6362c;
   --gold-ink: #8a5a0f;
 
-  /* Surfaces: "Warm Refined". docs/design-decisions.md */
-  --bg: #faf9f6; /* page ground, 29% saturation */
-  --bg2: #f4f2ec; /* recessed: quiet pill fills, hover wells */
+  /* Surfaces: the shop palette, not "Warm Refined" any more. */
+  --bg: #f7f7f7; /* VERIFIED: .to-page */
+  --bg2: #ededed; /* DERIVED: one step down from the ground, no shop equivalent */
   --surface: #ffffff; /* cards, panels, tables */
 
-  --text: #1c1917; /* 16.61:1 on --bg */
-  --muted: #57534e; /* 7.25:1 */
-  --faint: #706963; /* 5.13:1, clears 4.5 on all three grounds */
-  --on-gold: #1c1917; /* ink for text on Sea Buckthorn, 9.20:1 */
+  --text: #2c2c2c; /* VERIFIED: .text-charcoal / .border-charcoal, and the shop's own body-text rule */
+  --muted: #555555; /* VERIFIED: .text-muted — 6.96:1 on --bg, 7.46:1 on --surface. See file header. */
+  /* DERIVED: the shop has one grey tier (muted), not two. A lighter step for
+     placeholders and hints, clearing AA on both grounds: 4.30:1 was a
+     near-miss on the old ground, this clears 4.5 on both: 4.97:1 on --bg,
+     5.33:1 on --surface. */
+  --faint: #6b6b6b;
+  /* Ink for text on Sea Buckthorn. Repointed to --text's new value rather
+     than kept as its own token: web-portal does not have a separate on-gold
+     token at all, its buttons just use --text directly, and #2c2c2c clears
+     both gradient ends fine — 7.35:1 on --gold, 5.19:1 on --clay-deep. */
+  --on-gold: #2c2c2c;
 
   /* Composed surfaces. One source of truth for values that were once rgba()
      literals hand-copied across a dozen stylesheets. */
-  --scrim: rgba(28, 25, 23, 0.5);
+  --scrim: rgba(44, 44, 44, 0.5); /* derived from --text */
   --surface-1: #ffffff; /* topbar */
   --surface-2: #ffffff; /* modals, drawers */
   --surface-3: #ffffff; /* popovers, dropdown menus */
 
-  /* The nav rail: the one dark surface in a light app, and not #000066.
-     docs/design-decisions.md */
-  --rail: #0a1140; /* 17.1:1 against the page */
-  --rail-text: #faf9f6; /* 17.09:1 */
-  --rail-muted: #a1a5c4; /* 7.45:1 */
-  --rail-faint: #878caf; /* 5.48:1; section labels are 10.5px, so not --faint */
+  /* The nav rail: the one dark surface in a light app. DERIVED in role — the
+     shop's marketing site has no persistent sidebar to match — but the value
+     itself is REAL: #0a1942 is their own deep-navy gradient stop
+     (.to-\[#0a1942\]), used here instead of the independently-derived
+     #0a1140 this file carried before. web-portal already adopted this exact
+     value in its own (currently unused) --rail token; this is what makes it
+     load-bearing. */
+  --rail: #0a1942;
+  /* Pure white rather than an off-white tint - matches web-portal, and there
+     is no reason to dim text on a ground this dark. Was #faf9f6, the old
+     --bg literal, orphaned once --bg moved. 17.06:1. */
+  --rail-text: #ffffff;
+  --rail-muted: #a1a5c4; /* 7.07:1 on the new --rail (was 7.45:1 on the old) */
+  --rail-faint: #878caf; /* 5.20:1 on the new --rail (was 5.48:1); section labels are 10.5px, so not --faint */
   --rail-line: rgba(255, 255, 255, 0.1);
   --rail-hover: rgba(255, 255, 255, 0.07);
   --rail-active: rgba(251, 172, 52, 0.18);
   --rail-active-line: rgba(251, 172, 52, 0.35);
 
-  /* Wash tints. Names kept from the dark theme (32 call sites); they now read as
-     subtle warm-grey washes for hover and inset states. */
-  --glass: rgba(28, 25, 23, 0.035);
-  --glass-2: rgba(28, 25, 23, 0.06);
-  --line: #e8e3da;
-  --line-2: #d8d1c4;
-  --track: rgba(28, 25, 23, 0.09); /* unfilled part of a bar, ring or meter */
+  /* Wash tints. Names kept from the dark theme (32 call sites); they now read
+     as subtle cool-grey washes for hover and inset states. Neutral rather
+     than warm-tinted: rgba(28,25,23,…) reads brown on the new cool ground,
+     the same fix web-portal's shadows already needed. */
+  --glass: rgba(16, 16, 24, 0.035);
+  --glass-2: rgba(16, 16, 24, 0.06);
+  --line: #e8e8e8; /* VERIFIED: .bg-border / .border-border */
+  --line-2: #d5d5d5; /* DERIVED: a stronger border, no shop equivalent */
+  --track: rgba(16, 16, 24, 0.09); /* unfilled part of a bar, ring or meter */
 
-  /* Chart fills: sequential, not categorical, because every visualisation here
-     is single series. --chart-1 is not the brand orange, and there is
-     deliberately no --chart-3. docs/design-decisions.md */
+  /* Chart fills: sequential, not categorical, because every visualisation
+     here is single series. --chart-1 is not the brand orange, and there is
+     deliberately no --chart-3. docs/design-decisions.md
+
+     LEFT UNCHANGED, DELIBERATELY, unlike everything above. --chart-2 is
+     already a hardcoded duplicate of the pre-rebrand --money (#1f9d6b) rather
+     than a var() reference, and the comment ties its validity to "the pair
+     passes the validator" — a colourblind-safe-pairing check against
+     --chart-1 that this rebrand has no way to re-run. Moving --chart-2 to
+     match the new --money could silently invalidate that documented
+     guarantee. If the chart pair is ever revisited, re-run the validator
+     before changing either value, not just to match the new palette. */
   --chart-1: #b0700c; /* 4.06:1 on white */
   --chart-2: #1f9d6b; /* second series only; the pair passes the validator */
 
@@ -83,9 +179,9 @@
   --grad: linear-gradient(120deg, var(--gold), var(--clay-deep));
   --grad-glow: 0 10px 26px -10px rgba(251, 172, 52, 0.55);
   --grad-glow-hover: 0 14px 32px -8px rgba(251, 172, 52, 0.7);
-  /* Warm-tinted: a neutral black shadow reads as dirty grey here. */
-  --shadow-sm: 0 4px 14px rgba(28, 25, 23, 0.07);
-  --shadow: 0 12px 30px rgba(28, 25, 23, 0.1);
+  /* Neutral rather than warm-tinted, same fix as --glass/--glass-2 above. */
+  --shadow-sm: 0 4px 14px rgba(16, 16, 24, 0.07);
+  --shadow: 0 12px 30px rgba(16, 16, 24, 0.1);
 
   /* "Sunrise Cut" chevron motif (DESIGN_SPEC 1.5). Thin dividers and
      low-opacity brand-moment watermarks only, never behind dense data. */

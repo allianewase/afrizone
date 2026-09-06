@@ -28,7 +28,7 @@ export default function Switch({ checked, onChange, disabled, label, className =
         disabled={disabled}
         aria-label={label}
         className={cn(
-          'h-[25px] w-11 data-[state=checked]:bg-[var(--money)] data-[state=unchecked]:bg-[rgba(28,25,23,0.16)]',
+          'h-[25px] w-11 data-[state=checked]:bg-[var(--money)] data-[state=unchecked]:bg-[rgba(16,16,24,0.16)]',
           'data-[state=unchecked]:border data-[state=unchecked]:border-[var(--line-2)]',
           '[&>span]:size-[19px] [&>span]:data-[state=checked]:translate-x-[19px]',
           className,

@@ -120,12 +120,12 @@
 }
 .twofa-status.on {
   color: var(--money-ink);
-  border-color: rgba(31, 157, 107, 0.3);
-  background: rgba(31, 157, 107, 0.1);
+  border-color: rgba(47, 161, 82, 0.3);
+  background: rgba(47, 161, 82, 0.1);
 }
 .twofa-status.on .dot {
   background: var(--money);
-  box-shadow: 0 0 0 3px rgba(31, 157, 107, 0.2);
+  box-shadow: 0 0 0 3px rgba(47, 161, 82, 0.2);
 }
 
 .twofa-setup {

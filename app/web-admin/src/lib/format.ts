@@ -24,11 +24,11 @@ export function initials(name: string): string {
 
 /** Deterministic gradient for an avatar from a string seed. */
 const AV_GRADS = [
-  'linear-gradient(135deg,#C98518,#FBAC34)',
+  'linear-gradient(135deg,#D88E1B,#FBAC34)',
   'linear-gradient(135deg,#5b8bff,#7c5cff)',
   'linear-gradient(135deg,#27c08a,#1f8f68)',
-  'linear-gradient(135deg,#FBAC34,#C98518)',
-  'linear-gradient(135deg,#ff6b5e,#C98518)',
+  'linear-gradient(135deg,#FBAC34,#D88E1B)',
+  'linear-gradient(135deg,#ff6b5e,#D88E1B)',
 ]
 export function avatarGradient(seed: string): string {
   let h = 0

@@ -673,7 +673,7 @@ function UploadStep({
               <Text style={styles.thumbOverlayText}>Uploading…</Text>
             </View>
           ) : done ? (
-            <View style={[styles.thumbOverlay, { backgroundColor: 'rgba(31,157,107,0.7)' }]}>
+            <View style={[styles.thumbOverlay, { backgroundColor: 'rgba(47,161,82,0.7)' }]}>
               <Icon name="check-circle" size={32} color="#fff" />
               <Text style={[styles.thumbOverlayText, { color: '#fff' }]}>Uploaded</Text>
             </View>
@@ -777,7 +777,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
-  dropzoneRingDone: { borderColor: 'rgba(31,157,107,0.45)' },
+  dropzoneRingDone: { borderColor: 'rgba(47,161,82,0.45)' },
   dropText: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.md },
   thumbWrap: {
     width: '100%',

@@ -9,5 +9,5 @@ import type { OrgKind } from '../api/types'
  */
 export const PIN_COLOR: Record<OrgKind, string> = {
   STORE: '#C2502E',
-  COURIER: '#1F9D6B',
+  COURIER: '#2FA152', // tracks --money; was #1F9D6B, the pre-rebrand green
 }
