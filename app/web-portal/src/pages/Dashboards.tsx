@@ -4,6 +4,7 @@ import Shell, { ErrorNote } from './Shell'
 import { CourierJobs, StoreOrders } from './Deliveries'
 import { useAuth, homeFor } from '../lib/auth'
 import { api, ApiError } from '../lib/api'
+import { ANDROID_APK, AppQr } from '../components/AppDownload'
 import type {
   CacStatus,
   CourierReadiness,
@@ -70,20 +71,6 @@ const CAC_COPY: Record<CacStatus, { cls: string; label: string; note: string }> 
  * The number stays editable after submission on purpose. The commonest failure
  * is a typo, and a rejected registration nobody can correct is a dead end.
  */
-/**
- * The Android build people can actually install.
- *
- * HARD-CODED, AND IT HAS TO BE UPDATED WITH EVERY RELEASE. EAS gives each build
- * its own artifact URL; there is no "latest" address to point at. Putting it in
- * the code rather than an env var is deliberate - a stale link is then visible
- * in the diff of whichever commit shipped it, instead of being a dashboard
- * setting nobody remembers exists. The alternative was leaving the button
- * disabled, which is what it was, and a permanently dead download is worse than
- * one that occasionally points at last month's build.
- */
-const ANDROID_APK =
-  'https://expo.dev/artifacts/eas/a8UGAMNz1InkCJegYphv9JU8_3VdX0MVm-y2VHkMeac.apk'
-
 function CacCard({ org, onUpdated }: { org: Organization; onUpdated: (o: Organization) => void }) {
   const status: CacStatus = org.cacStatus ?? 'UNVERIFIED'
   const copy = CAC_COPY[status]
@@ -536,19 +523,27 @@ export function IndividualLanding() {
         <p className="muted" style={{ marginTop: 0 }}>
           Install it on your Android phone and sign in with the details you used here.
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 16 }}>
-          <a
-            className="btn"
-            href={ANDROID_APK}
-            style={{ display: 'grid', placeItems: 'center', textDecoration: 'none' }}
-          >
-            Download for Android
-          </a>
-          {!user && (
-            <Link className="btn ghost" to="/register/INDIVIDUAL" style={{ display: 'grid', placeItems: 'center', textDecoration: 'none' }}>
-              Create an account here first
-            </Link>
-          )}
+        {/* Side by side rather than stacked: the realistic way this reaches a
+            courier is somebody else's screen held up to them, or a flyer on a
+            counter - the code has to sit next to the button, not below a
+            scroll. Wraps to stacked on its own at form-narrow's 430px width. */}
+        <div className="app-get" style={{ marginTop: 16 }}>
+          <AppQr />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 9, flex: 1, minWidth: 180 }}>
+            <a
+              className="btn"
+              href={ANDROID_APK}
+              style={{ display: 'grid', placeItems: 'center', textDecoration: 'none' }}
+            >
+              Download for Android
+            </a>
+            {!user && (
+              <Link className="btn ghost" to="/register/INDIVIDUAL" style={{ display: 'grid', placeItems: 'center', textDecoration: 'none' }}>
+                Create an account here first
+              </Link>
+            )}
+            <span className="muted" style={{ fontSize: 12.5 }}>Or scan the code</span>
+          </div>
         </div>
         {/* Said before they tap it, not after. Android interrupts a sideload
             with a security prompt, and somebody who was not expecting it reads

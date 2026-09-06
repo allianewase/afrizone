@@ -253,3 +253,15 @@ h1.pt {
 @media (max-width: 560px) {
   .biz-facts { grid-template-columns: 1fr; gap: 12px; }
 }
+
+/* ── The app download card ──────────────────────────────────────────────── */
+.app-get { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.app-qr {
+  flex: none; padding: 8px; background: #fff;
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+}
+.app-qr svg { display: block; width: 100%; height: 100%; }
+
+@media (max-width: 460px) {
+  .app-get { flex-direction: column; align-items: flex-start; }
+}
