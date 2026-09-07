@@ -33,7 +33,7 @@ import * as Location from 'expo-location';
 import { Screen } from '../src/components/Screen';
 import { Card } from '../src/components/Card';
 import { Button } from '../src/components/Button';
-import { Icon } from '../src/components/Icon';
+import { Icon, IconName } from '../src/components/Icon';
 import { LoadingState, ErrorState, EmptyState } from '../src/components/Feedback';
 import { colors, spacing, type, radii, fontFamily, shadow } from '../src/theme';
 import { api, ApiError } from '../src/api/client';
@@ -107,10 +107,32 @@ function Badge({ d }: { d: Delivery }) {
   );
 }
 
-function Line({ label, children }: { label: string; children: React.ReactNode }) {
+/**
+ * A block of a job card: where the goods are, or where they are going.
+ *
+ * AN ICON, NOT A LABEL COLUMN. This used to be a fixed-width "Collect" /
+ * "Deliver" caption sat to the left of the content, the way a form labels a
+ * field - fine for a form, but every one of these rows is the same two
+ * things every time (the shop, or the customer), so a courier does not need
+ * the word spelled out on every card, every time. A small icon says it once
+ * and gives the address, the phone number and the directions link the
+ * width the label column used to take from them.
+ */
+function Line({
+  icon,
+  label,
+  children,
+}: {
+  icon: IconName;
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <View style={styles.line}>
-      <Text style={styles.lineLabel}>{label}</Text>
+      <View style={styles.lineHead}>
+        <Icon name={icon} size={13} color={colors.textFaint} />
+        <Text style={styles.lineLabel}>{label}</Text>
+      </View>
       <View style={styles.lineBody}>{children}</View>
     </View>
   );
@@ -166,10 +188,6 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
     }
   }
 
-  const items = d.items
-    .map((i) => `${i.qty ? `${i.qty} × ` : ''}${i.name ?? i.ref ?? 'Item'}`)
-    .join(', ');
-
   return (
     <Card style={styles.card}>
       <View style={styles.cardTop}>
@@ -177,11 +195,14 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
         <Badge d={d} />
       </View>
 
-      <Line label="Collect">
+      <Line icon="cart" label="Collect">
         <Text style={styles.strong}>{d.storeName ?? 'the store'}</Text>
         {d.pickupAddress ? <Text style={styles.body}>{d.pickupAddress}</Text> : null}
         {d.preparedAt && d.status === 'COURIER_ASSIGNED' ? (
-          <Text style={styles.ready}>Packed and ready</Text>
+          <View style={styles.readyPill}>
+            <Icon name="check-circle" size={12} color={colors.moneyInk} />
+            <Text style={styles.readyText}>Packed and ready</Text>
+          </View>
         ) : null}
         {/* Only before the goods are in the bag. Once they are, the shop is
             behind them and the only address that matters is the customer's. */}
@@ -194,7 +215,7 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
         ) : null}
       </Line>
 
-      <Line label="Deliver">
+      <Line icon="map-pin" label="Deliver">
         {d.customerPurged ? (
           // §5: we said we would delete this seven days after the order
           // finished, and we did. Saying so is not the same as a blank row.
@@ -229,9 +250,23 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
         )}
       </Line>
 
-      {items ? (
-        <Line label="Items">
-          <Text style={styles.body}>{items}</Text>
+      {d.items.length > 0 ? (
+        <Line icon="cart" label="Items">
+          {/* A LIST, NOT A SENTENCE - the same fix the portal's order card
+              needed. Comma-joined item names read fine for two items and
+              become unreadable at six; this is the packing list somebody
+              works down, so the quantity leads each line the way it is
+              actually counted out. The VALUE below is untouched - same
+              naira(d.goodsTotal), same figure, only how the item names above
+              it are laid out has changed. */}
+          <View style={styles.itemList}>
+            {d.items.map((i, idx) => (
+              <View key={idx} style={styles.itemRow}>
+                <Text style={styles.itemQty}>{i.qty ?? 1}</Text>
+                <Text style={styles.body}>{i.name ?? i.ref ?? 'Item'}</Text>
+              </View>
+            ))}
+          </View>
           {/* What the rider is carrying is worth. Not their fee - that is on
               the task and comes from rules.DELIVERY - but somebody responsible
               for a bag of goods should know what is in their hands. */}
@@ -240,7 +275,7 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
       ) : null}
 
       {d.failureReason ? (
-        <Line label="Reported">
+        <Line icon="alert" label="Reported">
           <Text style={styles.body}>{d.failureReason}</Text>
         </Line>
       ) : null}
@@ -630,14 +665,56 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radii.pill },
   badgeText: { fontSize: type.size.xs, fontFamily: fontFamily.bold },
 
-  line: { flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.sm },
-  lineLabel: { width: 66, fontSize: type.size.sm, color: colors.textFaint },
-  lineBody: { flex: 1, gap: 2 },
+  // No more fixed-width label column - an icon plus a small caption above
+  // the content instead, so the address, phone and directions link below get
+  // the full card width rather than sharing the row with a 66px label.
+  line: { paddingVertical: spacing.sm, gap: 4 },
+  lineHead: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  lineLabel: {
+    fontSize: 11,
+    fontFamily: fontFamily.bold,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: colors.textFaint,
+  },
+  lineBody: { gap: 2 },
 
   strong: { fontSize: type.size.base, fontFamily: fontFamily.bold, color: colors.text },
   body: { fontSize: type.size.base, color: colors.text },
   muted: { fontSize: type.size.sm, color: colors.textMuted },
-  ready: { fontSize: type.size.sm, color: colors.moneyInk, fontFamily: fontFamily.bold },
+
+  // "Packed and ready" as a small chip rather than plain bold text - the
+  // same status-chip language used everywhere else on this card, so it does
+  // not look like a stray sentence next to the address.
+  readyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    marginTop: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
+    backgroundColor: colors.moneySoft,
+  },
+  readyText: { fontSize: type.size.xs, fontFamily: fontFamily.bold, color: colors.moneyInk },
+
+  // The packing list. qty in a small fixed column so the numbers line up and
+  // read as a column, the way somebody actually counts a bag out.
+  itemList: { gap: 4 },
+  itemRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  itemQty: {
+    minWidth: 20,
+    textAlign: 'center',
+    fontSize: type.size.xs,
+    fontFamily: fontFamily.bold,
+    color: colors.textMuted,
+    backgroundColor: colors.surfaceSand,
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    overflow: 'hidden',
+  },
 
   directions: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
   directionsText: { fontSize: type.size.base, color: colors.clay, fontFamily: fontFamily.bold },
