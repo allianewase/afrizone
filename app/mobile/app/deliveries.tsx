@@ -329,12 +329,40 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
 }
 
 /**
+ * A distance or a count, with a small icon in front of it.
+ *
+ * PRICE, THEN A ROW OF THESE, IS THE WHOLE DECISION. Instacart's own shopper
+ * app puts distance and item count on the offer card as an icon-led pair
+ * rather than two lines of text — a courier scanning a stack of offers reads
+ * icon shapes faster than they read words, and a glyph plus a number takes a
+ * third of the vertical space a labelled line did. Borrowed as an instinct,
+ * not the icon set: theirs are colourful illustrations, this app draws every
+ * icon as one stroke, and staying consistent with the rest of the product
+ * matters more here than matching a marketing page.
+ */
+function Stat({ icon, children }: { icon: 'navigation' | 'cart'; children: React.ReactNode }) {
+  return (
+    <View style={styles.stat}>
+      <Icon name={icon} size={14} color={colors.textMuted} />
+      <Text style={styles.statText}>{children}</Text>
+    </View>
+  );
+}
+
+/**
  * One order nobody has taken yet.
  *
- * The fee is the loudest thing on it, because that is what a courier is
- * deciding on. Everything that would stop them taking it is stated as one
- * sentence rather than a checklist - somebody standing on a kerb needs the next
- * action, not an audit.
+ * THE FEE LEADS, ALONE ON ITS OWN LINE, because that is what a courier is
+ * deciding on — not sharing a row with the store name where a long name
+ * would squeeze it small at exactly the moment it should be the biggest
+ * thing on the card. Distance and item count sit under it as a single
+ * icon-led row, the two facts that turn a price into "worth the ride" or
+ * not, both readable in the same half-second as the fee itself.
+ *
+ * A thin gold edge marks this as something OFFERED rather than something
+ * already carried — the one visual difference between this and JobCard,
+ * because the two are different questions: "should I take this" against
+ * "what do I do next with what I already have".
  */
 function OfferCard({
   o,
@@ -366,41 +394,43 @@ function OfferCard({
   }
 
   return (
-    <Card style={styles.card}>
-      <View style={styles.cardTop}>
-        <Text style={styles.order} numberOfLines={1}>
-          {o.storeName ?? 'Pickup'}
-        </Text>
-        <Text style={styles.fee}>{naira(o.fee)}</Text>
+    <Card style={styles.offerCard} accent>
+      <Text style={styles.offerFee}>{naira(o.fee)}</Text>
+      <Text style={styles.offerStore} numberOfLines={1}>
+        {o.storeName ?? 'Pickup'}
+      </Text>
+
+      <View style={styles.statRow}>
+        {/* "8.0 km away" is a straight line over rooftops; whether that is ten
+            minutes or forty is the thing a rider is actually deciding, and it
+            is not a question this app can answer — so it says distance, not
+            time, and leaves the judgement to them. */}
+        {o.distance ? <Stat icon="navigation">{o.distance} away</Stat> : null}
+        {o.items.length > 0 ? (
+          <Stat icon="cart">
+            {o.items.length} {o.items.length === 1 ? 'item' : 'items'}
+          </Stat>
+        ) : null}
       </View>
 
-      <Line label="Collect">
-        <Text style={styles.body}>{o.pickupAddress ?? 'Address not set'}</Text>
-        {o.distance ? <Text style={styles.muted}>{o.distance} away</Text> : null}
-        {/* A pin, not a route. "8.0 km away" is a straight line over rooftops;
-            whether that is ten minutes or forty is the thing a rider is
-            actually deciding, and it is not a question this app can answer. */}
-        <Directions
-          to={{ lat: o.pickupLat, lng: o.pickupLng, address: o.pickupAddress }}
-          label="See where it is"
-          place
-          onFail={() => setError('Could not open a map on this phone.')}
-        />
-      </Line>
-
-      {o.items.length > 0 ? (
-        <Line label="Items">
-          <Text style={styles.muted}>
-            {o.items.length} {o.items.length === 1 ? 'item' : 'items'}
-          </Text>
-        </Line>
-      ) : null}
+      <Text style={styles.offerAddress} numberOfLines={2}>
+        {o.pickupAddress ?? 'Address not set'}
+      </Text>
+      <Directions
+        to={{ lat: o.pickupLat, lng: o.pickupLng, address: o.pickupAddress }}
+        label="See where it is"
+        place
+        onFail={() => setError('Could not open a map on this phone.')}
+      />
 
       {/* The server writes this. It says how long the order has waited and
           whether the circle has widened - a job nobody has taken for twenty
           minutes is worth knowing about before riding to it. */}
       {o.offer.stage !== 'OFFERED' ? (
-        <Text style={styles.waiting}>{o.offer.label}</Text>
+        <View style={styles.waitingRow}>
+          <Icon name="clock" size={13} color={colors.goldInk} />
+          <Text style={styles.waiting}>{o.offer.label}</Text>
+        </View>
       ) : null}
 
       {o.claimable ? (
@@ -654,9 +684,48 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
 
-  // What the courier is paid, and the thing they are deciding on.
+  // What the courier is paid, and the thing they are deciding on. Kept for
+  // any other call site still using the old fee treatment.
   fee: { fontSize: type.size.lg, fontFamily: fontFamily.bold, color: colors.moneyInk },
-  waiting: { fontSize: type.size.sm, color: colors.goldInk, marginTop: spacing.sm },
+
+  // ── OfferCard: fee-led, icon-stat row ──────────────────────────────────
+  offerCard: { marginBottom: spacing.lg },
+  // Deliberately larger than the standard `.strong`/`.order` text anywhere
+  // else on this screen — three digits of Naira is the single fact a rider
+  // decides on, and it should read from an arm's length before anything
+  // else on the card does. moneyInk, not clay: this is what the job is
+  // worth, not a call to action - the button below is the action.
+  offerFee: {
+    fontSize: 30,
+    lineHeight: 34,
+    fontFamily: fontFamily.bold,
+    color: colors.moneyInk,
+    fontVariant: ['tabular-nums'],
+  },
+  offerStore: {
+    fontSize: type.size.sm,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  statRow: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+    marginTop: spacing.md,
+  },
+  stat: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  statText: { fontSize: type.size.sm, fontFamily: fontFamily.bold, color: colors.textMuted },
+  offerAddress: {
+    fontSize: type.size.sm,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
+  },
+  waitingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: spacing.sm,
+  },
+  waiting: { fontSize: type.size.sm, color: colors.goldInk },
   blocked: {
     backgroundColor: colors.surfaceSand,
     borderRadius: radii.input,
