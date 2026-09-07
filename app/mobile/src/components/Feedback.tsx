@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { colors, type, spacing, radii } from '../theme';
+import { colors, type, spacing, radii, fontFamily, shadow } from '../theme';
 import { Icon, IconName } from './Icon';
 import { Button } from './Button';
 
@@ -97,17 +97,34 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     minHeight: 220,
   },
-  muted: { color: colors.textMuted, fontSize: type.size.base, textAlign: 'center' },
-  errorTitle: { color: colors.text, fontSize: type.size.md, fontWeight: '700' },
+  // maxWidth keeps a long message reading as a sentence rather than a banner
+  // stretched edge to edge on a wider phone - it is explanation, not a title.
+  muted: {
+    color: colors.textMuted,
+    fontSize: type.size.base,
+    textAlign: 'center',
+    lineHeight: 21,
+    maxWidth: 280,
+  },
+  // fontFamily, not the raw fontWeight this carried before: every other
+  // title in the app sets Raleway's weight through fontFamily, and a numeric
+  // fontWeight does not reliably select the matching custom weight face on
+  // every platform the way the named family does.
+  errorTitle: { color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.extrabold },
   retry: { marginTop: spacing.sm },
   motif: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    // "Sunrise Cut": the sharp corner every surface in this app pairs with a
+    // rounded radius on the opposite one. The icon well had been a plain
+    // rounded square - the one shape nothing else here uses.
+    borderTopRightRadius: radii.cut,
     backgroundColor: colors.claySoft,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
+    ...shadow.tight,
   },
   banner: {
     flexDirection: 'row',
