@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   View,
+  StyleProp,
   ViewStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,7 +22,11 @@ interface ButtonProps {
   loading?: boolean;
   icon?: IconName;
   full?: boolean;
-  style?: ViewStyle;
+  // StyleProp, not a bare ViewStyle: callers pass arrays (e.g. a base +
+  // pill-shape override) fairly often, and RN's own components accept this
+  // shape natively - widening this to match is just following that
+  // convention rather than making every call site flatten first.
+  style?: StyleProp<ViewStyle>;
 }
 
 export function Button({

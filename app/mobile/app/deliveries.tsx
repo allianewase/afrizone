@@ -35,7 +35,7 @@ import { Card } from '../src/components/Card';
 import { Button } from '../src/components/Button';
 import { Icon } from '../src/components/Icon';
 import { LoadingState, ErrorState, EmptyState } from '../src/components/Feedback';
-import { colors, spacing, type, radii, fontFamily } from '../src/theme';
+import { colors, spacing, type, radii, fontFamily, shadow } from '../src/theme';
 import { api, ApiError } from '../src/api/client';
 import { useAsync } from '../src/lib/useAsync';
 import type { Delivery, DeliveryOffer, DeliveryStatus } from '../src/api/types';
@@ -261,36 +261,63 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
       ) : null}
 
       {d.status === 'COURIER_ASSIGNED' ? (
+        // Pill-shaped rather than the standard "Sunrise Cut" rectangle every
+        // other button in this app uses: this is the one thing to do on this
+        // card at this moment, and it earns a shape nothing else here has.
         <Button
           label="Collected from the store"
           onPress={pickUp}
           loading={busy === 'pickup'}
-          style={styles.action}
+          style={[styles.action, styles.pillButton]}
         />
       ) : null}
 
       {d.status === 'PICKED_UP' && !failing ? (
         <View style={styles.action}>
-          <Text style={styles.fieldLabel}>The customer&apos;s code</Text>
-          <TextInput
-            value={code}
-            onChangeText={setCode}
-            keyboardType="number-pad"
-            placeholder="4821"
-            placeholderTextColor={colors.textFaint}
-            style={styles.codeInput}
-            accessibilityLabel="The code the customer received"
-          />
-          <Text style={styles.hint}>
-            AfriZoneMart sent this to the customer. Ask them to read it out — it is the only
-            thing that completes the delivery.
-          </Text>
+          {/* No live map — deliberate, see BLUEPRINT_STATUS.md and
+              ARCHITECTURE.md on why the app hands off to the rider's own
+              navigation app rather than embedding one. This is the same
+              instinct without the infrastructure it would need: a schematic
+              of where the trip started and where it ends, not a real one. */}
+          <View style={styles.route}>
+            <View style={styles.routeEnd}>
+              <Icon name="check-circle" size={16} color={colors.moneyInk} />
+              <Text style={styles.routeLabel} numberOfLines={1}>
+                {d.storeName ?? 'the store'}
+              </Text>
+            </View>
+            <View style={styles.routeLine} />
+            <View style={[styles.routeEnd, styles.routeEndRight]}>
+              <Text style={[styles.routeLabel, styles.routeLabelRight]} numberOfLines={1}>
+                {d.customerName ?? 'the customer'}
+              </Text>
+              <Icon name="map-pin" size={16} color={colors.clay} />
+            </View>
+          </View>
+
+          <View style={styles.codePanel}>
+            <Text style={styles.fieldLabel}>The customer&apos;s code</Text>
+            <TextInput
+              value={code}
+              onChangeText={setCode}
+              keyboardType="number-pad"
+              placeholder="4821"
+              placeholderTextColor={colors.textFaint}
+              style={styles.codeInput}
+              accessibilityLabel="The code the customer received"
+            />
+            <Text style={styles.hint}>
+              AfriZoneMart sent this to the customer. Ask them to read it out — it is the only
+              thing that completes the delivery.
+            </Text>
+          </View>
+
           <Button
             label="Complete delivery"
             onPress={complete}
             loading={busy === 'complete'}
             disabled={code.trim().length === 0}
-            style={styles.gap}
+            style={[styles.gap, styles.pillButton, styles.completeButton]}
           />
           <Pressable onPress={() => setFailing(true)} style={styles.secondary}>
             <Text style={styles.secondaryText}>Could not deliver</Text>
@@ -734,4 +761,39 @@ const styles = StyleSheet.create({
   },
   blockedText: { fontSize: type.size.sm, color: colors.text, lineHeight: 19 },
   blockedHint: { fontSize: type.size.xs, color: colors.textMuted, marginTop: 4 },
+
+  // ── The delivery-completion moment ─────────────────────────────────────
+  // A schematic trip, not a map: where the goods came from, where they are
+  // going. check-circle on the left because that leg is already done by the
+  // time this renders; map-pin on the right because that is where the rider
+  // is headed next.
+  route: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
+  routeEnd: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  routeEndRight: { flexDirection: 'row-reverse' },
+  routeLabel: { fontSize: type.size.xs, fontFamily: fontFamily.bold, color: colors.textMuted },
+  routeLabelRight: { textAlign: 'right' },
+  // A dashed rule reads as a path in a way a solid one reads as a divider.
+  // height: 0 with only borderTopWidth set, not backgroundColor - a filled
+  // View has no dashed option, but a single dashed border edge does.
+  routeLine: {
+    flex: 1,
+    height: 0,
+    marginHorizontal: spacing.sm,
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.line,
+  },
+
+  codePanel: {
+    backgroundColor: colors.surfaceSand,
+    borderRadius: radii.input,
+    padding: spacing.lg,
+  },
+
+  // The one unmistakable action on this card. Pill rather than the standard
+  // "Sunrise Cut" rectangle, and lifted with a shadow every other button in
+  // this file goes without - the same instinct as the route strip above it,
+  // that this moment gets treated as the one that matters.
+  pillButton: { borderRadius: radii.pill, borderTopRightRadius: radii.pill },
+  completeButton: { minHeight: 56, ...shadow.soft },
 });
