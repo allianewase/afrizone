@@ -8,25 +8,20 @@ import {
   ScrollView,
   Modal,
   FlatList,
-  Image,
-  ActivityIndicator,
-  Platform,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Button } from '../../src/components/Button';
-import { ProgressRail } from '../../src/components/ProgressRail';
 import { Icon } from '../../src/components/Icon';
 import { TierBadge } from '../../src/components/TierBadge';
 import { Banner } from '../../src/components/Feedback';
-import { GlassCard, GlassBackdrop, GlassBar } from '../../src/components/Glass';
-import { BlurView } from 'expo-blur';
-import { colors, spacing, radii, type, layout, fontFamily } from '../../src/theme';
+import { KycUploadStep } from '../../src/components/KycUpload';
+import { AppBackHeader } from '../../src/appui/AppUI';
+import { ObField, ObChip, ObButton, ObCheckCircle } from '../../src/onboarding/ObUI';
+import { obColors, obRadii } from '../../src/onboarding/onboardingTheme';
 import { api, ApiError } from '../../src/api/client';
 import { useAuth } from '../../src/auth/AuthContext';
 import { NIGERIAN_BANKS } from '../../src/lib/banks';
+import { ID_TYPES, TIERS } from '../../src/lib/kyc';
 import type { Tier } from '../../src/api/types';
 
 /**
@@ -34,6 +29,18 @@ import type { Tier } from '../../src/api/types';
  * ID upload → selfie → tier docs → TIN → bank → review. Real image uploads via
  * expo-image-picker → POST /api/me/kyc/documents. Final step submits metadata
  * to POST /api/me/kyc/submit (kycStatus = PENDING).
+ *
+ * Restyled to the same afrizone-onboarding-screens.html chrome as the rest of
+ * (auth)/ - ObField/ObChip/ObButton/ObCheckCircle, KycUploadStep's `flat`
+ * variant (the same dropzone id-upload.tsx and selfie.tsx already use). This
+ * is a standalone re-verification wizard reached later from Profile/Home
+ * (not the first-time OnboardingContext-driven flow those two screens are
+ * part of), so it keeps its own local step state exactly as before - only
+ * the JSX/styling changed.
+ *
+ * TierBadge is left on its own (old-themed) color mapping, same as
+ * choose-tier.tsx's identical tier cards - it's shared, real per-tier tone
+ * logic that isn't worth forking twice for one restyle pass.
  */
 type StepKey =
   | 'name'
@@ -68,24 +75,6 @@ const STEP_LABEL: Record<StepKey, string> = {
   review: 'Review',
   submitted: 'Submitted',
 };
-
-// Nigeria document keywords Smile ID's Document Verification recognises
-// (server/src/services/smileIdentity.ts → NG_ID_TYPES). Only used when Smile ID
-// is configured server-side; harmless to always collect otherwise.
-const ID_TYPES: { key: string; label: string }[] = [
-  { key: 'IDENTITY_CARD', label: 'National ID' },
-  { key: 'VOTER_ID', label: "Voter's Card" },
-  { key: 'DRIVERS_LICENSE', label: "Driver's Licence" },
-  { key: 'PASSPORT', label: 'Passport' },
-];
-
-const TIERS: { key: Tier; blurb: string; docLabel: string }[] = [
-  { key: 'STUDENT', blurb: 'Campus tasks, surveys, promo.', docLabel: 'Matric number / student ID' },
-  { key: 'DISPATCH', blurb: 'Parcel runs & delivery.', docLabel: "Driver's licence + vehicle papers" },
-  { key: 'REMOTE', blurb: 'Online data, support, freelance.', docLabel: 'Portfolio / CV (optional)' },
-  { key: 'PROMO', blurb: 'Activations & field marketing.', docLabel: 'Reference / past activation' },
-  { key: 'TRADE', blurb: 'Skilled trades.', docLabel: 'Trade certification' },
-];
 
 export default function KycScreen() {
   const insets = useSafeAreaInsets();
@@ -189,297 +178,252 @@ export default function KycScreen() {
 
   return (
     <View style={styles.root}>
-      <GlassBackdrop />
-
-      <GlassBar edge="top" style={[styles.topbar, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable onPress={back} hitSlop={10} style={styles.backBtn} accessibilityLabel="Back">
-          <Icon name="chevron-left" size={22} color={colors.text} />
-        </Pressable>
-        <Text style={styles.topTitle}>
-          {user?.kycStatus === 'REJECTED' ? 'Re-verify' : 'Get verified'}
-        </Text>
-        <View style={{ width: layout.hitTarget }} />
-      </GlassBar>
-
-      {step !== 'submitted' ? (
-        <View style={styles.railWrap}>
-          <GlassCard tone="clay" radius={radii.card} contentStyle={{ padding: spacing.md }}>
-            <ProgressRail current={stepIndex + 1} total={STEPS.length - 1} label={STEP_LABEL[step]} />
-          </GlassCard>
-        </View>
-      ) : null}
-
       <ScrollView
-        contentContainerStyle={{
-          padding: layout.screenPadding,
-          paddingBottom: insets.bottom + 120,
-          gap: spacing.lg,
-        }}
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + 110 }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {step !== 'submitted' ? (
-          user?.kycStatus === 'REJECTED' ? (
-            <Banner
-              tone="danger"
-              icon="shield"
-              title="Previous verification rejected"
-              message={
-                user?.kycNote ??
-                'Please update your documents and re-submit. Ensure your ID is clear and your selfie matches your ID photo.'
-              }
-            />
-          ) : (
-            <Banner
-              tone="indigo"
-              icon="shield"
-              title="Secure verification"
-              message="Your documents are uploaded securely. Name, email, tier, TIN and bank are submitted on the final step."
-            />
-          )
-        ) : null}
-        {error ? <Banner tone="danger" icon="alert" title="Couldn’t submit" message={error} /> : null}
+        <AppBackHeader title={user?.kycStatus === 'REJECTED' ? 'Re-verify' : 'Get verified'} onBack={back} />
 
-        {step === 'name' && (
-          <View style={{ gap: spacing.lg }}>
-            <Field label="Full name" hint="As it appears on your ID.">
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Amaka Obi"
-                placeholderTextColor={colors.textFaint}
-                style={styles.input}
-                autoCapitalize="words"
+        {step !== 'submitted' ? (
+          <View style={styles.rail}>
+            <View style={styles.railHead}>
+              <Text style={styles.railCount}>Step {stepIndex + 1} of {STEPS.length - 1}</Text>
+              <Text style={styles.railLabel}>{STEP_LABEL[step]}</Text>
+            </View>
+            <View style={styles.railBar}>
+              {STEPS.slice(0, -1).map((_, i) => (
+                <View key={i} style={[styles.railSeg, i <= stepIndex && styles.railSegOn]} />
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        <View style={{ gap: 16 }}>
+          {step !== 'submitted' ? (
+            user?.kycStatus === 'REJECTED' ? (
+              <Banner
+                tone="danger"
+                icon="shield"
+                title="Previous verification rejected"
+                message={
+                  user?.kycNote ??
+                  'Please update your documents and re-submit. Ensure your ID is clear and your selfie matches your ID photo.'
+                }
               />
-            </Field>
-            <Field label="Email" hint="For receipts and WHT statements.">
-              <TextInput
+            ) : (
+              <Banner
+                tone="indigo"
+                icon="shield"
+                title="Secure verification"
+                message="Your documents are uploaded securely. Name, email, tier, TIN and bank are submitted on the final step."
+              />
+            )
+          ) : null}
+          {error ? <Banner tone="danger" icon="alert" title="Couldn't submit" message={error} /> : null}
+
+          {step === 'name' && (
+            <View style={{ gap: 16 }}>
+              <ObField label="Full name" value={name} onChangeText={setName} placeholder="Amaka Obi" hint="As it appears on your ID." autoCapitalize="words" />
+              <ObField
+                label="Email"
                 value={email}
                 onChangeText={setEmail}
+                placeholder="you@email.com"
+                hint="For receipts and WHT statements."
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
-                placeholder="you@email.com"
-                placeholderTextColor={colors.textFaint}
-                style={styles.input}
               />
-            </Field>
-          </View>
-        )}
+            </View>
+          )}
 
-        {step === 'tier' && (
-          <View style={{ gap: spacing.md }}>
-            <Text style={styles.h2}>Choose your work tier</Text>
-            {TIERS.map((t) => {
-              const active = tier === t.key;
-              return (
-                <Pressable
-                  key={t.key}
-                  onPress={() => setTier(t.key)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: active }}
-                >
-                  <GlassCard tone={active ? 'clay' : 'neutral'} contentStyle={{ gap: spacing.sm }}>
+          {step === 'tier' && (
+            <View style={{ gap: 12 }}>
+              <Text style={styles.h2}>Choose your work tier</Text>
+              {TIERS.map((t) => {
+                const active = tier === t.key;
+                return (
+                  <Pressable
+                    key={t.key}
+                    onPress={() => setTier(t.key)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    style={[styles.tierCard, active && styles.tierCardSel]}
+                  >
                     <View style={styles.tierHead}>
                       <TierBadge tier={t.key} />
-                      {active ? <Icon name="check-circle" size={20} color={colors.clay} /> : null}
+                      {active ? <Icon name="check-circle" size={18} color={obColors.goldDeep} /> : null}
                     </View>
                     <Text style={styles.tierBlurb}>{t.blurb}</Text>
-                  </GlassCard>
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
 
-        {step === 'id' && (
-          <View style={{ gap: spacing.lg }}>
-            <Field label="ID type">
-              <View style={styles.idTypeRow}>
-                {ID_TYPES.map((t) => {
-                  const selected = idType === t.key;
-                  return (
-                    <Pressable
-                      key={t.key}
-                      onPress={() => setIdType(t.key)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected }}
-                    >
-                      <GlassCard
-                        tone={selected ? 'indigo' : 'neutral'}
-                        radius={radii.pill}
-                        contentStyle={styles.idTypeChipContent}
-                      >
-                        <Text style={[styles.idTypeChipText, selected && styles.idTypeChipTextActive]}>
-                          {t.label}
-                        </Text>
-                      </GlassCard>
-                    </Pressable>
-                  );
-                })}
+          {step === 'id' && (
+            <View style={{ gap: 16 }}>
+              <View style={{ gap: 8 }}>
+                <Text style={styles.fieldLabel}>ID type</Text>
+                <View style={styles.chipRow}>
+                  {ID_TYPES.map((t) => (
+                    <ObChip key={t.key} label={t.label} selected={idType === t.key} onPress={() => setIdType(t.key)} />
+                  ))}
+                </View>
               </View>
-            </Field>
-            <UploadStep
-              icon="id"
-              title="Upload your ID"
-              sub="NIN slip, voter's card, or passport photo page."
-              docType="ID"
-              docId={idDocId}
-              onUploaded={setIdDocId}
+              <KycUploadStep
+                variant="flat"
+                icon="id"
+                title="Upload your ID"
+                sub="NIN slip, voter's card, or passport photo page."
+                docType="ID"
+                docId={idDocId}
+                onUploaded={setIdDocId}
+              />
+            </View>
+          )}
+
+          {step === 'selfie' && (
+            <KycUploadStep
+              variant="flat"
+              icon="camera"
+              title="Take a selfie"
+              sub="Clear, well-lit photo of your face. Use the front camera."
+              docType="SELFIE"
+              preferCamera
+              docId={selfieDocId}
+              onUploaded={setSelfieDocId}
             />
-          </View>
-        )}
+          )}
 
-        {step === 'selfie' && (
-          <UploadStep
-            icon="camera"
-            title="Take a selfie"
-            sub="Clear, well-lit photo of your face. Use the front camera."
-            docType="SELFIE"
-            preferCamera
-            docId={selfieDocId}
-            onUploaded={setSelfieDocId}
-          />
-        )}
+          {step === 'docs' && (
+            <KycUploadStep
+              variant="flat"
+              icon="id"
+              title={selectedTier ? `${selectedTier.key} documents` : 'Tier documents'}
+              sub={selectedTier?.docLabel ?? 'Supporting documents for your tier.'}
+              docType="DOCS"
+              allowPdf
+              docId={docsDocId}
+              onUploaded={setDocsDocId}
+            />
+          )}
 
-        {step === 'docs' && (
-          <UploadStep
-            icon="id"
-            title={selectedTier ? `${selectedTier.key} documents` : 'Tier documents'}
-            sub={selectedTier?.docLabel ?? 'Supporting documents for your tier.'}
-            docType="DOCS"
-            allowPdf
-            docId={docsDocId}
-            onUploaded={setDocsDocId}
-          />
-        )}
-
-        {step === 'tin' && (
-          <Field label="Tax Identification Number (TIN)" hint="Optional: you can add this later in Profile. Required for WHT statements.">
-            <TextInput
+          {step === 'tin' && (
+            <ObField
+              label="Tax Identification Number (TIN)"
               value={tin}
               onChangeText={setTin}
-              keyboardType="number-pad"
               placeholder="12345678-0001 (optional)"
-              placeholderTextColor={colors.textFaint}
-              style={styles.input}
+              hint="Optional: you can add this later in Profile. Required for WHT statements."
+              keyboardType="number-pad"
             />
-          </Field>
-        )}
+          )}
 
-        {step === 'bank' && (
-          <View style={{ gap: spacing.lg }}>
-            <Field label="Bank">
-              <Pressable
-                onPress={() => setBankPickerOpen(true)}
-                style={[styles.input, styles.bankPicker]}
-                accessibilityRole="button"
-                accessibilityLabel="Select bank"
-              >
-                <Text style={[styles.bankPickerText, !selectedBank && { color: colors.textMuted }]}>
-                  {selectedBank ? selectedBank.name : 'Select your bank…'}
-                </Text>
-                <Icon name="chevron-down" size={18} color={colors.textMuted} />
-              </Pressable>
-            </Field>
-            <Field label="Account number (NUBAN)" hint="10-digit Nigerian account number. Payouts go here (T+1).">
-              <TextInput
+          {step === 'bank' && (
+            <View style={{ gap: 16 }}>
+              <View style={{ gap: 6 }}>
+                <Text style={styles.fieldLabel}>Bank</Text>
+                <Pressable
+                  onPress={() => setBankPickerOpen(true)}
+                  style={styles.bankPicker}
+                  accessibilityRole="button"
+                  accessibilityLabel="Select bank"
+                >
+                  <Text style={[styles.bankPickerText, !selectedBank && { color: obColors.textFaint }]}>
+                    {selectedBank ? selectedBank.name : 'Select your bank…'}
+                  </Text>
+                  <Icon name="chevron-down" size={18} color={obColors.textMut} />
+                </Pressable>
+              </View>
+              <ObField
+                label="Account number (NUBAN)"
                 value={acct}
                 onChangeText={(t) => setAcct(t.replace(/\D/g, '').slice(0, 10))}
-                keyboardType="number-pad"
                 placeholder="0123456789"
-                placeholderTextColor={colors.textFaint}
-                style={styles.input}
+                hint="10-digit Nigerian account number. Payouts go here (T+1)."
+                keyboardType="number-pad"
                 maxLength={10}
               />
               {acct.length > 0 && acct.length < 10 ? (
                 <Text style={styles.acctHint}>{10 - acct.length} more digits needed</Text>
               ) : acct.length === 10 ? (
-                <Text style={[styles.acctHint, { color: colors.moneyInk }]}>✓ Valid NUBAN</Text>
+                <Text style={[styles.acctHint, { color: obColors.mgreen }]}>✓ Valid NUBAN</Text>
               ) : null}
-            </Field>
-          </View>
-        )}
+            </View>
+          )}
 
-        {step === 'review' && (
-          <View style={{ gap: spacing.md }}>
-            <Text style={styles.h2}>Review & submit</Text>
-            <GlassCard tone="gold" contentStyle={{ paddingHorizontal: spacing.lg, paddingVertical: 0 }}>
-              <ReviewRow label="Name" value={name.trim() || '—'} />
-              <ReviewRow label="Email" value={email.trim() || '—'} />
-              <ReviewRow label="Tier" value={tier ?? '—'} />
-              <ReviewRow
-                label="ID"
-                value={idDocId ? `✓ Uploaded (${ID_TYPES.find((t) => t.key === idType)?.label ?? idType})` : 'Missing'}
-              />
-              <ReviewRow label="Selfie" value={selfieDocId ? '✓ Uploaded' : 'Missing'} />
-              <ReviewRow label="Tier docs" value={docsDocId ? '✓ Uploaded' : 'Missing'} />
-              <ReviewRow label="TIN" value={tin || '—'} />
-              <ReviewRow label="Bank" value={bankCode ? maskedBank() : '—'} last />
-            </GlassCard>
-            <Text style={styles.muted}>
-              Submitting sets your status to <Text style={{ fontWeight: '700' }}>In review</Text>.
-              An admin verifies your tier before you can apply to tasks.
-            </Text>
-          </View>
-        )}
+          {step === 'review' && (
+            <View style={{ gap: 12 }}>
+              <Text style={styles.h2}>Review & submit</Text>
+              <View style={styles.reviewCard}>
+                <ReviewRow label="Name" value={name.trim() || '—'} />
+                <ReviewRow label="Email" value={email.trim() || '—'} />
+                <ReviewRow label="Tier" value={tier ?? '—'} />
+                <ReviewRow
+                  label="ID"
+                  value={idDocId ? `✓ Uploaded (${ID_TYPES.find((t) => t.key === idType)?.label ?? idType})` : 'Missing'}
+                />
+                <ReviewRow label="Selfie" value={selfieDocId ? '✓ Uploaded' : 'Missing'} />
+                <ReviewRow label="Tier docs" value={docsDocId ? '✓ Uploaded' : 'Missing'} />
+                <ReviewRow label="TIN" value={tin || '—'} />
+                <ReviewRow label="Bank" value={bankCode ? maskedBank() : '—'} last />
+              </View>
+              <Text style={styles.muted}>
+                Submitting sets your status to <Text style={{ fontWeight: '700', color: obColors.text }}>In review</Text>.
+                An admin verifies your tier before you can apply to tasks.
+              </Text>
+            </View>
+          )}
 
-        {step === 'submitted' && submittedStatus === 'REJECTED' && (
-          <View style={styles.submitted}>
-            <GlassCard tone="danger" radius={44} style={styles.submittedIcon} contentStyle={styles.submittedIconContent}>
-              <Icon name="alert" size={40} color={colors.danger} strokeWidth={3} />
-            </GlassCard>
-            <Text style={styles.h1}>Verification not approved</Text>
-            <Text style={styles.muted}>
-              {submittedNote ??
-                'Your ID and selfie did not pass automated verification. Please re-check your documents and try again.'}
-            </Text>
-          </View>
-        )}
+          {step === 'submitted' && submittedStatus === 'REJECTED' && (
+            <View style={styles.submitted}>
+              <ObCheckCircle tone="danger" icon="alert" />
+              <Text style={styles.h1}>Verification not approved</Text>
+              <Text style={styles.muted}>
+                {submittedNote ??
+                  'Your ID and selfie did not pass automated verification. Please re-check your documents and try again.'}
+              </Text>
+            </View>
+          )}
 
-        {step === 'submitted' && submittedStatus === 'VERIFIED' && (
-          <View style={styles.submitted}>
-            <GlassCard tone="indigo" radius={44} style={styles.submittedIcon} contentStyle={styles.submittedIconContent}>
-              <Icon name="check" size={40} color={colors.indigo} strokeWidth={3} />
-            </GlassCard>
-            <Text style={styles.h1}>Identity verified</Text>
-            <Text style={styles.muted}>
-              Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. Your identity has been{' '}
-              <Text style={{ fontWeight: '700', color: colors.indigo }}>automatically verified</Text>.
-              An admin still needs to approve your tier before you can apply to tasks.
-            </Text>
-          </View>
-        )}
+          {step === 'submitted' && submittedStatus === 'VERIFIED' && (
+            <View style={styles.submitted}>
+              <ObCheckCircle tone="gold" />
+              <Text style={styles.h1}>Identity verified</Text>
+              <Text style={styles.muted}>
+                Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. Your identity has been{' '}
+                <Text style={{ fontWeight: '700', color: obColors.goldDeep }}>automatically verified</Text>.
+                An admin still needs to approve your tier before you can apply to tasks.
+              </Text>
+            </View>
+          )}
 
-        {step === 'submitted' && submittedStatus === 'PENDING' && (
-          <View style={styles.submitted}>
-            <GlassCard tone="indigo" radius={44} style={styles.submittedIcon} contentStyle={styles.submittedIconContent}>
-              <Icon name="check" size={40} color={colors.indigo} strokeWidth={3} />
-            </GlassCard>
-            <Text style={styles.h1}>Verification in review</Text>
-            <Text style={styles.muted}>
-              Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. Your verification is{' '}
-              <Text style={{ fontWeight: '700', color: colors.indigo }}>In review</Text>. You can
-              explore tasks now; applying unlocks once an admin approves your tier.
-            </Text>
-          </View>
-        )}
+          {step === 'submitted' && submittedStatus === 'PENDING' && (
+            <View style={styles.submitted}>
+              <ObCheckCircle tone="gold" />
+              <Text style={styles.h1}>Verification in review</Text>
+              <Text style={styles.muted}>
+                Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. Your verification is{' '}
+                <Text style={{ fontWeight: '700', color: obColors.goldDeep }}>In review</Text>. You can
+                explore tasks now; applying unlocks once an admin approves your tier.
+              </Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
-      {/* Bank picker modal */}
+      {/* Bank picker sheet */}
       <Modal
         visible={bankPickerOpen}
         transparent
         animationType="slide"
         onRequestClose={() => setBankPickerOpen(false)}
       >
-        <Pressable style={styles.pickerBackdrop} onPress={() => setBankPickerOpen(false)} />
-        <View style={[styles.pickerSheet, { paddingBottom: insets.bottom + spacing.md }]}>
-          <BlurView
-            intensity={Platform.OS === 'android' ? 90 : 50}
-            tint="light"
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.pickerGrabber} />
+        <Pressable style={styles.backdrop} onPress={() => setBankPickerOpen(false)} />
+        <View style={[styles.pickerSheet, { paddingBottom: insets.bottom + 16 }]}>
+          <View style={styles.grabber} />
           <Text style={styles.pickerTitle}>Select bank</Text>
           <FlatList
             data={NIGERIAN_BANKS}
@@ -489,49 +433,29 @@ export default function KycScreen() {
                 onPress={() => { setBankCode(item.code); setBankPickerOpen(false); }}
                 style={[styles.bankItem, bankCode === item.code && styles.bankItemActive]}
               >
-                <Text style={[styles.bankItemText, bankCode === item.code && { color: colors.goldInk, fontWeight: '700' }]}>
+                <Text style={[styles.bankItemText, bankCode === item.code && { color: obColors.navy, fontWeight: '700' }]}>
                   {item.name}
                 </Text>
-                {bankCode === item.code ? <Icon name="check" size={18} color={colors.clay} /> : null}
+                {bankCode === item.code ? <Icon name="check" size={18} color={obColors.goldDeep} /> : null}
               </Pressable>
             )}
-            ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.line }} />}
+            ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: obColors.line }} />}
           />
         </View>
       </Modal>
 
-      <GlassBar edge="bottom" style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         {step === 'submitted' ? (
-          <Button variant="premium" label="Go to Home" icon="home" onPress={() => router.replace('/(tabs)/home')} />
+          <ObButton label="Go to Home" onPress={() => router.replace('/(tabs)/home')} />
         ) : (
-          <Button
-            variant="premium"
+          <ObButton
             label={step === 'review' ? 'Submit for review' : 'Continue'}
-            icon="chevron-right"
             onPress={next}
             disabled={!canContinue || busy}
             loading={busy}
           />
         )}
-      </GlassBar>
-    </View>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={{ gap: 6 }}>
-      <Text style={styles.label}>{label}</Text>
-      {children}
-      {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+      </View>
     </View>
   );
 }
@@ -547,314 +471,76 @@ function ReviewRow({ label, value, last }: { label: string; value: string; last?
   );
 }
 
-function UploadStep({
-  icon,
-  title,
-  sub,
-  docType,
-  preferCamera,
-  allowPdf,
-  docId,
-  onUploaded,
-}: {
-  icon: 'id' | 'camera';
-  title: string;
-  sub: string;
-  docType: 'ID' | 'SELFIE' | 'DOCS';
-  preferCamera?: boolean;
-  /** Supporting documents may be a PDF (a CV, a certificate); ID photos may not. */
-  allowPdf?: boolean;
-  docId: string | null;
-  onUploaded: (id: string) => void;
-}) {
-  const [localUri, setLocalUri] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-
-  async function pick(fromCamera: boolean) {
-    setUploadError(null);
-
-    if (fromCamera) {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        setUploadError('Camera permission denied. Enable it in Settings.');
-        return;
-      }
-    } else {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        setUploadError('Photo library permission denied. Enable it in Settings.');
-        return;
-      }
-    }
-
-    const options: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.85,
-      allowsEditing: true,
-      aspect: fromCamera && docType === 'SELFIE' ? [1, 1] : [4, 3],
-    };
-
-    const result = fromCamera
-      ? await ImagePicker.launchCameraAsync(options)
-      : await ImagePicker.launchImageLibraryAsync(options);
-
-    if (result.canceled) return;
-
-    const asset = result.assets[0];
-    setLocalUri(asset.uri);
-    setUploading(true);
-
-    try {
-      const ext = asset.uri.split('.').pop() ?? 'jpg';
-      const doc = await api.uploadKycDocument({
-        docType,
-        uri: asset.uri,
-        mimeType: asset.mimeType ?? `image/${ext}`,
-        filename: asset.fileName ?? `${docType.toLowerCase()}.${ext}`,
-      });
-      onUploaded(doc.id);
-    } catch (e) {
-      setUploadError(e instanceof ApiError || e instanceof Error ? e.message : 'Upload failed. Try again.');
-      setLocalUri(null);
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  /**
-   * Pick a PDF (or image) from the device's files, for supporting documents
-   * like a CV or a certificate. Separate from pick(), which uses the image
-   * picker and cannot return a PDF at all.
-   */
-  async function pickDocument() {
-    setUploadError(null);
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
-      copyToCacheDirectory: true,
-      multiple: false,
-    });
-    if (result.canceled) return;
-
-    const asset = result.assets[0];
-    // A PDF has no thumbnail to show, so only set a preview for images.
-    setLocalUri(asset.mimeType === 'application/pdf' ? null : asset.uri);
-    setUploading(true);
-    try {
-      const doc = await api.uploadKycDocument({
-        docType,
-        uri: asset.uri,
-        mimeType: asset.mimeType ?? 'application/pdf',
-        filename: asset.name ?? `${docType.toLowerCase()}.pdf`,
-      });
-      onUploaded(doc.id);
-    } catch (e) {
-      setUploadError(e instanceof ApiError || e instanceof Error ? e.message : 'Upload failed. Try again.');
-      setLocalUri(null);
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  const done = !!docId;
-
-  return (
-    <View style={{ gap: spacing.md }}>
-      <Text style={styles.h2}>{title}</Text>
-      <Text style={[styles.muted, { textAlign: 'left' }]}>{sub}</Text>
-
-      {/* Thumbnail once picked */}
-      {localUri ? (
-        <View style={styles.thumbWrap}>
-          <Image source={{ uri: localUri }} style={styles.thumb} resizeMode="cover" />
-          {uploading ? (
-            <View style={styles.thumbOverlay}>
-              <ActivityIndicator color={colors.text} />
-              <Text style={styles.thumbOverlayText}>Uploading…</Text>
-            </View>
-          ) : done ? (
-            <View style={[styles.thumbOverlay, { backgroundColor: 'rgba(47,161,82,0.7)' }]}>
-              <Icon name="check-circle" size={32} color="#fff" />
-              <Text style={[styles.thumbOverlayText, { color: '#fff' }]}>Uploaded</Text>
-            </View>
-          ) : null}
-        </View>
-      ) : (
-        <GlassCard tone={done ? 'money' : 'gold'} contentStyle={styles.dropzoneContent}>
-          <View style={[styles.dropzoneRing, done && styles.dropzoneRingDone]}>
-            <Icon name={done ? 'check-circle' : icon} size={40} color={done ? colors.money : colors.clay} />
-            <Text style={[styles.dropText, done && { color: colors.moneyInk }]}>
-              {done ? '✓ Document uploaded' : 'Choose how to add your document'}
-            </Text>
-          </View>
-        </GlassCard>
-      )}
-
-      {uploadError ? (
-        <Text style={styles.uploadErr}>{uploadError}</Text>
-      ) : null}
-
-      {/* Action buttons: always shown so user can retake */}
-      {!done && (
-        <View style={styles.pickRow}>
-          {preferCamera ? (
-            <Pressable style={styles.pickBtn} onPress={() => void pick(true)} disabled={uploading}>
-              <Icon name="camera" size={18} color={colors.clay} />
-              <Text style={styles.pickBtnText}>Take photo</Text>
-            </Pressable>
-          ) : null}
-          <Pressable style={styles.pickBtn} onPress={() => void pick(false)} disabled={uploading}>
-            <Icon name="id" size={18} color={colors.clay} />
-            <Text style={styles.pickBtnText}>
-              {preferCamera ? 'Choose from library' : 'Take photo / library'}
-            </Text>
-          </Pressable>
-          {!preferCamera ? (
-            <Pressable style={styles.pickBtn} onPress={() => void pick(true)} disabled={uploading}>
-              <Icon name="camera" size={18} color={colors.clay} />
-              <Text style={styles.pickBtnText}>Camera</Text>
-            </Pressable>
-          ) : null}
-          {allowPdf ? (
-            <Pressable style={styles.pickBtn} onPress={() => void pickDocument()} disabled={uploading}>
-              <Icon name="id" size={18} color={colors.clay} />
-              <Text style={styles.pickBtnText}>Upload PDF</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      )}
-
-      {done && !uploading ? (
-        <Pressable onPress={() => { setLocalUri(null); void pick(preferCamera ?? false); }}>
-          <Text style={styles.retakeLink}>Retake / change</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  topbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: layout.screenPadding,
-    paddingBottom: spacing.sm,
-  },
-  backBtn: {
-    width: layout.hitTarget,
-    height: layout.hitTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: -spacing.md,
-  },
-  topTitle: { flex: 1, textAlign: 'center', fontSize: type.size.md, fontWeight: '700', color: colors.text },
-  railWrap: { paddingHorizontal: layout.screenPadding, paddingBottom: spacing.md },
-  h1: { fontSize: type.size.xxl, fontFamily: fontFamily.extrabold, color: colors.text, textAlign: 'center' },
-  h2: { fontSize: type.size.lg, fontFamily: fontFamily.extrabold, color: colors.text },
-  label: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
-  hint: { color: colors.textMuted, fontSize: type.size.sm },
-  muted: { color: colors.textMuted, fontSize: type.size.base, lineHeight: 22, textAlign: 'center' },
-  input: {
-    minHeight: layout.hitTarget,
-    backgroundColor: colors.surface,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: radii.input,
-    paddingHorizontal: spacing.md,
-    fontSize: type.size.md,
-    color: colors.text,
-  },
+  root: { flex: 1, backgroundColor: obColors.bg },
+  rail: { gap: 8, marginBottom: 18 },
+  railHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  railCount: { color: obColors.goldDeep, fontSize: 12.5, fontWeight: '700' },
+  railLabel: { color: obColors.textMut, fontSize: 12.5 },
+  railBar: { flexDirection: 'row', gap: 4 },
+  railSeg: { flex: 1, height: 5, borderRadius: 100, backgroundColor: obColors.line },
+  railSegOn: { backgroundColor: obColors.goldDeep },
+
+  h1: { fontSize: 20, fontFamily: 'Raleway_800ExtraBold', color: obColors.navy, textAlign: 'center' },
+  h2: { fontSize: 16.5, fontFamily: 'Raleway_800ExtraBold', color: obColors.navy },
+  fieldLabel: { fontSize: 12, fontWeight: '700', color: obColors.textMut },
+  muted: { color: obColors.textMut, fontSize: 13.5, lineHeight: 21, textAlign: 'center' },
+
+  tierCard: { backgroundColor: obColors.white, borderWidth: 1.3, borderColor: obColors.line, borderRadius: 14, padding: 14, gap: 8 },
+  tierCardSel: { borderColor: obColors.goldDeep, backgroundColor: obColors.roleSelectedBg },
   tierHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  tierBlurb: { color: colors.textMuted, fontSize: type.size.base, lineHeight: 20 },
-  dropzoneContent: { padding: spacing.sm },
-  dropzoneRing: {
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(201,133,24,0.35)',
-    borderRadius: radii.card - 4,
-    paddingVertical: spacing.xxxl,
-    alignItems: 'center',
-    gap: spacing.md,
+  tierBlurb: { color: obColors.textMut, fontSize: 13, lineHeight: 18 },
+
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+
+  reviewCard: {
+    backgroundColor: obColors.white,
+    borderWidth: 1,
+    borderColor: obColors.line,
+    borderRadius: obRadii.card,
+    paddingHorizontal: 16,
   },
-  dropzoneRingDone: { borderColor: 'rgba(47,161,82,0.45)' },
-  dropText: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.md },
-  thumbWrap: {
-    width: '100%',
-    height: 200,
-    borderRadius: radii.card,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  thumb: { width: '100%', height: '100%' },
-  thumbOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(44,44,44,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  thumbOverlayText: { color: '#fff', fontWeight: '700', fontSize: type.size.base },
-  pickRow: { flexDirection: 'row', gap: spacing.sm },
-  pickBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: colors.claySoft,
-    borderRadius: radii.card,
-    paddingVertical: spacing.md,
-  },
-  pickBtnText: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.sm },
-  uploadErr: { color: colors.dangerInk, fontSize: type.size.sm, fontWeight: '600' },
-  retakeLink: { color: colors.textMuted, fontSize: type.size.sm, textDecorationLine: 'underline', textAlign: 'center' },
   reviewRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(44,44,44,0.08)',
-    gap: spacing.lg,
+    borderBottomColor: obColors.line,
+    gap: 16,
   },
-  reviewLabel: { color: colors.textMuted, fontSize: type.size.base },
-  reviewValue: { color: colors.text, fontSize: type.size.base, fontWeight: '700', flexShrink: 1, textAlign: 'right' },
-  submitted: { alignItems: 'center', gap: spacing.lg, paddingTop: spacing.xxxl },
-  submittedIcon: { width: 88, height: 88 },
-  submittedIconContent: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 0 },
-  footer: {
-    paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.md,
-  },
+  reviewLabel: { color: obColors.textMut, fontSize: 13.5 },
+  reviewValue: { color: obColors.text, fontSize: 13.5, fontWeight: '700', flexShrink: 1, textAlign: 'right' },
+
+  submitted: { alignItems: 'center', gap: 12, paddingTop: 40 },
+
+  footer: { paddingHorizontal: 20, paddingTop: 10, backgroundColor: obColors.bg },
+
   bankPicker: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 0,
-  },
-  bankPickerText: { fontSize: type.size.md, color: colors.text, flex: 1 },
-  idTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  idTypeChipContent: { paddingVertical: 8, paddingHorizontal: 14 },
-  idTypeChipText: { fontSize: type.size.sm, color: colors.text, fontWeight: '600' },
-  idTypeChipTextActive: { color: colors.indigo },
-  acctHint: { fontSize: type.size.sm, color: colors.textMuted, marginTop: 4 },
-  // bank picker modal
-  pickerBackdrop: { flex: 1, backgroundColor: colors.scrim },
-  pickerSheet: {
-    backgroundColor: 'rgba(250,249,246,0.72)',
-    borderTopLeftRadius: radii.sheet,
-    borderTopRightRadius: radii.sheet,
+    backgroundColor: obColors.white,
     borderWidth: 1,
-    borderBottomWidth: 0,
-    borderColor: 'rgba(255,255,255,0.55)',
-    padding: layout.screenPadding,
-    maxHeight: '70%',
-    overflow: 'hidden',
+    borderColor: obColors.line,
+    borderRadius: obRadii.field,
+    minHeight: 50,
+    paddingHorizontal: 13,
   },
-  pickerGrabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 100, backgroundColor: 'rgba(44,44,44,0.2)', marginBottom: spacing.md },
-  pickerTitle: { fontSize: type.size.lg, fontFamily: fontFamily.extrabold, color: colors.text, marginBottom: spacing.md },
-  bankItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md },
-  bankItemActive: { backgroundColor: colors.claySoft, marginHorizontal: -layout.screenPadding, paddingHorizontal: layout.screenPadding },
-  bankItemText: { fontSize: type.size.base, color: colors.text },
+  bankPickerText: { fontSize: 15, color: obColors.text, flex: 1 },
+  acctHint: { fontSize: 12, color: obColors.textMut, marginTop: -8 },
+
+  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
+  pickerSheet: {
+    backgroundColor: obColors.bg,
+    borderTopLeftRadius: obRadii.hero,
+    borderTopRightRadius: obRadii.hero,
+    padding: 20,
+    maxHeight: '70%',
+  },
+  grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: 4, backgroundColor: obColors.line, marginBottom: 12 },
+  pickerTitle: { fontSize: 18, fontFamily: 'Raleway_800ExtraBold', color: obColors.navy, marginBottom: 8 },
+  bankItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 13 },
+  bankItemActive: { backgroundColor: obColors.roleSelectedBg, marginHorizontal: -20, paddingHorizontal: 20 },
+  bankItemText: { fontSize: 14, color: obColors.text },
 });

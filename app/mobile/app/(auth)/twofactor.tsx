@@ -14,7 +14,7 @@ const CODE_LEN = 6;
  * no separate email-activation step, only this TOTP verification). Reached
  * from the sign-in hub when /api/auth/login returns {requires2fa, challenge}.
  * Dev bypass `000000` (NODE_ENV !== prod). On success: new/never-completed →
- * KYC, else tabs.
+ * onboarding, else tabs.
  */
 export default function TwoFactorScreen() {
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function TwoFactorScreen() {
     setError(null);
     try {
       const isNewUser = await verifyTwoFactor(challenge, c);
-      router.replace(isNewUser ? '/(auth)/kyc' : '/(tabs)/home');
+      router.replace(isNewUser ? '/(auth)/personal-details' : '/(tabs)/home');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'That code is wrong or expired.');
       setCode('');

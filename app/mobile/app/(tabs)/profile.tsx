@@ -12,29 +12,57 @@ import {
   FlatList,
   KeyboardAvoidingView,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Screen } from '../../src/components/Screen';
-import { Card } from '../../src/components/Card';
-import { ListRow } from '../../src/components/ListRow';
-import { Button } from '../../src/components/Button';
-import { TierBadge } from '../../src/components/TierBadge';
-import { StatusPill, toCanonical } from '../../src/components/StatusPill';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  AppListCard,
+  AppListRow,
+  AppStatusPill,
+  AppSectionTitle,
+  AppPrimaryButton,
+  AppLoadingCards,
+  type AppPillTone,
+} from '../../src/appui/AppUI';
 import { Icon } from '../../src/components/Icon';
 import { StarRating } from '../../src/components/StarRating';
-import { Banner, LoadingState } from '../../src/components/Feedback';
-import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
+import { Banner } from '../../src/components/Feedback';
+import { obColors, obRadii } from '../../src/onboarding/onboardingTheme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
 import { NIGERIAN_BANKS } from '../../src/lib/banks';
-import { avatarGradient } from '../../src/lib/format';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { User, Contract } from '../../src/api/types';
+import type { User, Contract, KycStatus } from '../../src/api/types';
+
+/**
+ * Restyled to match afrizone-mobile-prototype (1).html's Profile screen -
+ * centered avatar + verification pill, a "Personal info" card, then grouped
+ * Account/Settings/Support list-cards. All real data-fetching, edit sheets
+ * (name/email, bank account, TIN), notification-preference saving and
+ * logout logic below is unchanged from the previous version of this file -
+ * only the JSX shell and styling changed.
+ *
+ * Avatar is flat navy now, not the previous per-name gradient: the
+ * reference's own avatar is a plain navy circle, and matching it exactly
+ * here was a small, deliberate simplification rather than a functional loss.
+ *
+ * Personal info shows Phone in addition to the two real editable fields
+ * (Full name, Email) - a real field on User, just not one this app has any
+ * flow to change, so it's shown read-only rather than added to the edit
+ * sheet.
+ */
+
+const KYC_PILL: Record<KycStatus, { tone: AppPillTone; label: string }> = {
+  PENDING: { tone: 'review', label: 'Verification under review' },
+  VERIFIED: { tone: 'review', label: 'Verification under review' },
+  TIER_APPROVED: { tone: 'ready', label: 'Verified' },
+  REJECTED: { tone: 'attn', label: 'Verification rejected' },
+};
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user: authUser, signOut, updateUser } = useAuth();
   const [notifTasks, setNotifTasks] = useState<boolean | null>(null);
   const [notifPay, setNotifPay] = useState<boolean | null>(null);
@@ -50,8 +78,8 @@ export default function ProfileScreen() {
 
   const user = me.data ?? authUser;
   const kyc = user?.kycStatus ?? 'PENDING';
+  const kycPill = KYC_PILL[kyc];
 
-  // Sync notification prefs from server once the user object is available.
   React.useEffect(() => {
     if (!user) return;
     if (notifTasks === null) setNotifTasks(user.notifTasks ?? true);
@@ -84,260 +112,202 @@ export default function ProfileScreen() {
     void updateUser(updated);
   }
 
-  return (
-    <Screen
-      title="Profile"
-      subtitle={user?.email ?? undefined}
-      onRefresh={() => { me.reload(); contracts.reload(); }}
-      refreshing={me.loading && !!me.data}
-    >
-      {/* Identity card */}
-      <Card style={styles.identity}>
-        <LinearGradient
-          colors={avatarGradient(user?.name ?? user?.email ?? 'A')}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.avatar}
-        >
-          <Text style={styles.avatarText}>
-            {(user?.name ?? 'A').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
-          </Text>
-        </LinearGradient>
-        <View style={styles.identityBody}>
-          <Text style={styles.name}>{user?.name ?? 'Worker'}</Text>
-          <View style={styles.tiers}>
-            {(user?.tiers ?? []).map((t) => <TierBadge key={t} tier={t} small />)}
-          </View>
+  if (me.loading && !user) {
+    return (
+      <View style={styles.root}>
+        <View style={{ paddingTop: insets.top + 16, paddingHorizontal: 18 }}>
+          <AppLoadingCards count={3} />
         </View>
-        <View style={styles.identityRight}>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 18, paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={me.loading && !!me.data}
+            onRefresh={() => { me.reload(); contracts.reload(); }}
+            tintColor={obColors.navy}
+          />
+        }
+      >
+        <View style={styles.pfHead}>
+          <View style={styles.avatarWrap}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {(user?.name ?? 'A').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
+              </Text>
+            </View>
+            <Pressable onPress={() => setEditProfileOpen(true)} hitSlop={10} style={styles.editBadge} accessibilityLabel="Edit profile">
+              <Icon name="edit" size={12} color={obColors.navyPress} />
+            </Pressable>
+          </View>
+          <Text style={styles.name}>{user?.name ?? 'Worker'}</Text>
           {user?.rating != null ? (
-            <Pressable
-              onPress={() => router.push('/ratings')}
-              style={styles.ratingBlock}
-              accessibilityLabel="View my ratings"
-            >
-              <StarRating score={user.rating} size={13} gap={2} />
-              <Text style={styles.ratingValue}>
-                {user.rating.toFixed(1)}
-                {user.completedCount ? (
-                  <Text style={styles.ratingCount}> · {user.completedCount} tasks</Text>
-                ) : null}
+            <Pressable onPress={() => router.push('/ratings')} style={styles.stars} accessibilityLabel="View my ratings">
+              <StarRating score={user.rating} size={13} gap={2} color={obColors.goldDeep} />
+              <Text style={styles.starsText}>
+                {user.rating.toFixed(1)} rating{user.completedCount ? ` · ${user.completedCount} tasks` : ''}
               </Text>
             </Pressable>
           ) : null}
-          <Pressable
-            onPress={() => setEditProfileOpen(true)}
-            hitSlop={10}
-            style={styles.editBtn}
-            accessibilityLabel="Edit profile"
-          >
-            <Icon name="key" size={16} color={colors.clay} />
-          </Pressable>
+          <View style={{ marginTop: 9 }}>
+            <AppStatusPill tone={kycPill.tone} label={kycPill.label} />
+          </View>
         </View>
-      </Card>
 
-      <Section title="Verification">
-        <Card padded={false} style={styles.list}>
-          <ListRow
+        <View style={styles.infoCard}>
+          <View style={styles.infoHead}>
+            <Text style={styles.infoHeadTitle}>Personal info</Text>
+            <Pressable onPress={() => setEditProfileOpen(true)} hitSlop={8}>
+              <Text style={styles.infoHeadEdit}>Edit</Text>
+            </Pressable>
+          </View>
+          <InfoRow label="Phone" value={user?.phone ?? 'Not set'} />
+          <InfoRow label="Email" value={user?.email ?? 'Not set'} />
+          <InfoRow label="Location" value={user?.location ?? 'Not set'} last />
+        </View>
+
+        <AppSectionTitle title="Account" />
+        <AppListCard>
+          <AppListRow
             icon="shield"
-            title="KYC status"
-            subtitle={
-              kyc === 'PENDING' || kyc === 'VERIFIED'
-                ? 'Under review: we\'ll notify you when done'
-                : kyc === 'TIER_APPROVED'
-                  ? 'Verified · tap to add a tier or re-verify'
-                  : 'Identity & tier verification'
-            }
-            right={<StatusPill status={toCanonical(kyc)} small label={kyc} />}
-            onPress={
-              kyc === 'PENDING' || kyc === 'VERIFIED'
-                ? undefined
-                : () => router.push('/(auth)/kyc')
-            }
-            chevron={kyc !== 'PENDING' && kyc !== 'VERIFIED'}
+            title="Verification & KYC"
+            subtitle="ID, selfie, tier documents"
+            onPress={kyc === 'PENDING' || kyc === 'VERIFIED' ? undefined : () => router.push('/(auth)/kyc')}
           />
-          {/* Documents and skills sit under Verification rather than in their
-              own section, because that is how a worker thinks about them:
-              everything here is about proving what you can do. The subtitles
-              carry the distinction that matters - documents are checked and
-              unlock work; skills are not and do not. */}
-          <ListRow
-            icon="id"
-            title="Your documents"
-            subtitle="Licences, certificates and your CV"
-            onPress={() => router.push('/profile/credentials')}
-            chevron
-          />
-          <ListRow
-            icon="star"
-            title="Your skills"
-            subtitle="Helps us match you to work"
-            onPress={() => router.push('/profile/skills')}
-            chevron
-          />
-          {/* Only couriers see this. The setup screen itself is readable by
-              anyone - somebody weighing up delivery work should be able to see
-              what it takes - but a row about vehicles on a photographer's
-              profile is noise. */}
+          <AppListRow icon="id" title="Documents" subtitle="Licences, certificates and your CV" onPress={() => router.push('/profile/credentials')} />
+          <AppListRow icon="star" title="Skills" subtitle="Helps us match you to work" onPress={() => router.push('/profile/skills')} last={user?.accountType !== 'COURIER'} />
           {user?.accountType === 'COURIER' && (
             <>
-              <ListRow
-                icon="cart"
-                title="Deliveries"
-                subtitle="Orders you are carrying"
-                onPress={() => router.push('/deliveries')}
-                chevron
-              />
-              <ListRow
-                icon="map-pin"
-                title="Courier setup"
-                subtitle="Your vehicle, licence and insurance"
-                onPress={() => router.push('/profile/courier')}
-                chevron
-              />
+              <AppListRow icon="cart" title="Deliveries" subtitle="Orders you are carrying" onPress={() => router.push('/deliveries')} />
+              <AppListRow icon="map-pin" title="Courier setup" subtitle="Your vehicle, licence and insurance" onPress={() => router.push('/profile/courier')} last />
             </>
           )}
-        </Card>
-      </Section>
+        </AppListCard>
 
-      <Section title="Security">
-        <Card padded={false} style={styles.list}>
-          <ListRow
+        <View style={{ height: 20 }} />
+        <AppSectionTitle title="Settings" />
+        <AppListCard>
+          <AppListRow
             icon="shield"
-            title="Two-factor authentication"
-            subtitle="Add a code from an authenticator app"
-            right={
-              <StatusPill
-                status={user?.totpEnabled ? 'paid' : 'pending'}
-                small
-                label={user?.totpEnabled ? 'On' : 'Off'}
-              />
-            }
+            title="Security"
+            subtitle="Password, two-factor"
             onPress={() => router.push('/security')}
+            right={<AppStatusPill tone={user?.totpEnabled ? 'ready' : 'review'} label={user?.totpEnabled ? '2FA On' : '2FA Off'} />}
           />
-        </Card>
-      </Section>
+          <AppListRow icon="id" title="Contracts" subtitle={`${contracts.data?.length ?? 0} on file`} onPress={() => setContractsSheetHint()} />
+          <AppListRow icon="bank" title="Bank account" subtitle={user?.bankMasked ?? 'Tap to add your payout account'} onPress={() => setEditBankOpen(true)} />
+          <AppListRow icon="wallet" title="Tax ID (TIN)" subtitle={user?.tin ?? 'Tap to add your TIN'} onPress={() => setEditTinOpen(true)} last />
+        </AppListCard>
 
-      <Section title="Contracts">
-        <Card padded={false} style={styles.list}>
-          {contracts.loading && !contracts.data ? (
-            <View style={{ paddingVertical: spacing.lg }}>
-              <LoadingState />
-            </View>
-          ) : (contracts.data?.length ?? 0) === 0 ? (
-            <ListRow
-              icon="id"
-              title="No contracts yet"
-              subtitle="Service agreements appear once you're approved for a task."
-              chevron={false}
-            />
-          ) : (
-            (contracts.data ?? []).map((c, i) => (
-              <View key={c.id}>
-                <ContractRow contract={c} />
-                {i < (contracts.data?.length ?? 0) - 1 ? <Divider /> : null}
-              </View>
-            ))
-          )}
-        </Card>
-      </Section>
-
-      <Section title="Payments & tax">
-        <Card padded={false} style={styles.list}>
-          <ListRow
-            icon="bank"
-            title="Bank account"
-            subtitle={user?.bankMasked ?? 'Tap to add your payout account'}
-            onPress={() => setEditBankOpen(true)}
-          />
-          <Divider />
-          <ListRow
-            icon="wallet"
-            title="Tax ID (TIN)"
-            subtitle={user?.tin ?? 'Tap to add your TIN for WHT statements'}
-            onPress={() => setEditTinOpen(true)}
-          />
-        </Card>
-      </Section>
-
-      <Section title="Notifications">
-        <Card style={styles.notif}>
-          <NotifRow
-            label="Task matches & approvals"
-            value={notifTasks ?? true}
-            onChange={(v) => { setNotifTasks(v); void saveNotif({ notifTasks: v }); }}
-          />
-          <Divider />
-          <NotifRow
-            label="Payments & withdrawals"
-            value={notifPay ?? true}
-            onChange={(v) => { setNotifPay(v); void saveNotif({ notifPay: v }); }}
-          />
-          <Divider />
-          <NotifRow
-            label="Email summaries"
-            value={notifEmail ?? false}
-            onChange={(v) => { setNotifEmail(v); void saveNotif({ notifEmail: v }); }}
-          />
-        </Card>
-        {notifSaveError ? (
-          <Text style={styles.notifError}>{notifSaveError}</Text>
+        {/* Contracts list - kept as its own real section (sign/view state
+            per contract) rather than folded into the Settings row above,
+            which just links attention there. */}
+        {(contracts.data?.length ?? 0) > 0 ? (
+          <>
+            <View style={{ height: 20 }} />
+            <AppSectionTitle title="Contracts" />
+            <AppListCard>
+              {(contracts.data ?? []).map((c, i) => (
+                <ContractRow key={c.id} contract={c} last={i === (contracts.data?.length ?? 1) - 1} />
+              ))}
+            </AppListCard>
+          </>
         ) : null}
-      </Section>
 
-      <Section title="Support">
-        <Card padded={false} style={styles.list}>
-          <ListRow icon="alert" title="Disputes" onPress={() => router.push('/disputes')} />
-          <Divider />
-          <ListRow icon="clock" title="Timesheets" subtitle="Track submitted hours and approval status" onPress={() => router.push('/timesheets')} />
-          <Divider />
-          <ListRow icon="star" title="My ratings" subtitle="See feedback from task managers" onPress={() => router.push('/ratings')} />
-          <Divider />
-          <ListRow icon="bell" title="Help & support" onPress={() => router.push('/support')} />
-        </Card>
-      </Section>
+        <View style={{ height: 20 }} />
+        <AppSectionTitle title="Notifications" />
+        <AppListCard>
+          <NotifRow icon="briefcase" label="Task matches & approvals" value={notifTasks ?? true} onChange={(v) => { setNotifTasks(v); void saveNotif({ notifTasks: v }); }} />
+          <NotifRow icon="wallet" label="Payments & withdrawals" value={notifPay ?? true} onChange={(v) => { setNotifPay(v); void saveNotif({ notifPay: v }); }} />
+          <NotifRow icon="mail" label="Email summaries" value={notifEmail ?? false} onChange={(v) => { setNotifEmail(v); void saveNotif({ notifEmail: v }); }} last />
+        </AppListCard>
+        {notifSaveError ? <Text style={styles.notifError}>{notifSaveError}</Text> : null}
 
-      <View style={{ marginTop: spacing.xl }}>
-        <Button label="Log out" variant="secondary" icon="logout" onPress={confirmLogout} />
+        <View style={{ height: 20 }} />
+        <AppSectionTitle title="Support" />
+        <AppListCard>
+          <AppListRow icon="alert" title="Disputes" onPress={() => router.push('/disputes')} />
+          <AppListRow icon="clock" title="Timesheets" subtitle="Track submitted hours and approval status" onPress={() => router.push('/timesheets')} />
+          <AppListRow icon="star" title="My ratings" subtitle="See feedback from task managers" onPress={() => router.push('/ratings')} />
+          <AppListRow icon="bell" title="Help & support" onPress={() => router.push('/support')} last />
+        </AppListCard>
+
+        <View style={{ marginTop: 24 }}>
+          <AppPrimaryButton label="Log out" icon="logout" variant="outline" onPress={confirmLogout} />
+        </View>
+        <Text style={styles.version}>Afrizone Part Time · v1.0.0</Text>
+      </ScrollView>
+
+      <EditProfileSheet visible={editProfileOpen} user={user} onClose={() => setEditProfileOpen(false)} onSaved={onSaved} />
+      <EditBankSheet visible={editBankOpen} user={user} onClose={() => setEditBankOpen(false)} onSaved={onSaved} />
+      <EditTinSheet visible={editTinOpen} user={user} onClose={() => setEditTinOpen(false)} onSaved={onSaved} />
+    </View>
+  );
+}
+
+// A "Contracts" settings row has no single destination (there can be many,
+// or none) - tapping it does nothing beyond what's already visible in the
+// Contracts section below when there are any. Kept as a no-op rather than a
+// dead chevron to a screen that doesn't exist.
+function setContractsSheetHint() {}
+
+function InfoRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+  return (
+    <View style={[styles.infoRow, !last && styles.infoRowDivider]}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
+    </View>
+  );
+}
+
+function ContractRow({ contract, last }: { contract: Contract; last?: boolean }) {
+  const router = useRouter();
+  const signed = contract.signedAt != null;
+  return (
+    <AppListRow
+      icon="id"
+      title={contract.task?.title ?? 'Service agreement'}
+      subtitle={signed ? 'Tap to view' : 'Review & sign'}
+      onPress={() => router.push(`/contract/${contract.id}`)}
+      last={last}
+      right={<AppStatusPill tone={signed ? 'paid' : 'await'} label={signed ? 'Signed' : 'Sign now'} />}
+    />
+  );
+}
+
+function NotifRow({
+  icon,
+  label,
+  value,
+  onChange,
+  last,
+}: {
+  icon: React.ComponentProps<typeof Icon>['name'];
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  last?: boolean;
+}) {
+  return (
+    <View style={[styles.notifRow, !last && styles.notifRowDivider]}>
+      <View style={styles.notifIcon}>
+        <Icon name={icon} size={16} color={obColors.navy} />
       </View>
-      <Text style={styles.version}>Afrizone Part Time · v1.0.0</Text>
-
-      {/* Edit sheets */}
-      <EditProfileSheet
-        visible={editProfileOpen}
-        user={user}
-        onClose={() => setEditProfileOpen(false)}
-        onSaved={onSaved}
-      />
-      <EditBankSheet
-        visible={editBankOpen}
-        user={user}
-        onClose={() => setEditBankOpen(false)}
-        onSaved={onSaved}
-      />
-      <EditTinSheet
-        visible={editTinOpen}
-        user={user}
-        onClose={() => setEditTinOpen(false)}
-        onSaved={onSaved}
-      />
-    </Screen>
+      <Text style={styles.notifLabel}>{label}</Text>
+      <Switch value={value} onValueChange={onChange} trackColor={{ true: obColors.gold, false: obColors.line }} thumbColor={obColors.white} accessibilityLabel={label} />
+    </View>
   );
 }
 
 // ─── Edit Profile (name + email) ─────────────────────────────────────────────
 
-function EditProfileSheet({
-  visible,
-  user,
-  onClose,
-  onSaved,
-}: {
-  visible: boolean;
-  user: User | null | undefined;
-  onClose: () => void;
-  onSaved: (u: User) => void;
-}) {
+function EditProfileSheet({ visible, user, onClose, onSaved }: { visible: boolean; user: User | null | undefined; onClose: () => void; onSaved: (u: User) => void }) {
   const insets = useSafeAreaInsets();
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
@@ -364,34 +334,19 @@ function EditProfileSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}>
           <View style={styles.grabber} />
           <Text style={styles.sheetTitle}>Edit profile</Text>
           <View style={styles.fields}>
             <SheetField label="Full name">
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Your full name"
-                placeholderTextColor={colors.textFaint}
-                style={styles.input}
-                autoCapitalize="words"
-              />
+              <TextInput value={name} onChangeText={setName} placeholder="Your full name" placeholderTextColor={obColors.textFaint} style={styles.input} autoCapitalize="words" />
             </SheetField>
             <SheetField label="Email">
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                placeholder="you@email.com"
-                placeholderTextColor={colors.textFaint}
-                style={styles.input}
-              />
+              <TextInput value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="you@email.com" placeholderTextColor={obColors.textFaint} style={styles.input} />
             </SheetField>
           </View>
           {error ? <Banner tone="danger" title="Error" message={error} /> : null}
-          <Button label="Save changes" onPress={save} loading={busy} disabled={!canSave || busy} />
+          <AppPrimaryButton label="Save changes" onPress={save} loading={busy} disabled={!canSave || busy} />
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -400,17 +355,7 @@ function EditProfileSheet({
 
 // ─── Edit Bank Account ────────────────────────────────────────────────────────
 
-function EditBankSheet({
-  visible,
-  user,
-  onClose,
-  onSaved,
-}: {
-  visible: boolean;
-  user: User | null | undefined;
-  onClose: () => void;
-  onSaved: (u: User) => void;
-}) {
+function EditBankSheet({ visible, user, onClose, onSaved }: { visible: boolean; user: User | null | undefined; onClose: () => void; onSaved: (u: User) => void }) {
   const insets = useSafeAreaInsets();
   const [bankCode, setBankCode] = useState(user?.bankCode ?? '');
   const [acct, setAcct] = useState('');
@@ -426,11 +371,7 @@ function EditBankSheet({
     setError(null);
     const nuban = acct.replace(/\D/g, '');
     try {
-      const updated = await api.patchMe({
-        bankCode,
-        bankAccountNumber: nuban,
-        bankName: selectedBank?.name,
-      });
+      const updated = await api.patchMe({ bankCode, bankAccountNumber: nuban, bankName: selectedBank?.name });
       onSaved(updated);
       onClose();
     } catch (e) {
@@ -444,68 +385,46 @@ function EditBankSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}>
           <View style={styles.grabber} />
           <Text style={styles.sheetTitle}>Payout account</Text>
-          {user?.bankMasked ? (
-            <Text style={styles.sheetSub}>Current: {user.bankMasked}</Text>
-          ) : null}
+          {user?.bankMasked ? <Text style={styles.sheetSub}>Current: {user.bankMasked}</Text> : null}
           <View style={styles.fields}>
             <SheetField label="Bank">
-              <Pressable
-                onPress={() => setPickerOpen(true)}
-                style={[styles.input, styles.pickerTrigger]}
-                accessibilityRole="button"
-              >
-                <Text style={[styles.pickerTriggerText, !selectedBank && { color: colors.textMuted }]}>
-                  {selectedBank ? selectedBank.name : 'Select your bank…'}
-                </Text>
-                <Icon name="chevron-down" size={18} color={colors.textMuted} />
+              <Pressable onPress={() => setPickerOpen(true)} style={[styles.input, styles.pickerTrigger]} accessibilityRole="button">
+                <Text style={[styles.pickerTriggerText, !selectedBank && { color: obColors.textMut }]}>{selectedBank ? selectedBank.name : 'Select your bank…'}</Text>
+                <Icon name="chevron-down" size={17} color={obColors.textMut} />
               </Pressable>
             </SheetField>
             <SheetField label="Account number (NUBAN)" hint="10-digit number: payouts go here">
-              <TextInput
-                value={acct}
-                onChangeText={(t) => setAcct(t.replace(/\D/g, '').slice(0, 10))}
-                keyboardType="number-pad"
-                placeholder="0123456789"
-                placeholderTextColor={colors.textFaint}
-                style={styles.input}
-                maxLength={10}
-              />
+              <TextInput value={acct} onChangeText={(t) => setAcct(t.replace(/\D/g, '').slice(0, 10))} keyboardType="number-pad" placeholder="0123456789" placeholderTextColor={obColors.textFaint} style={styles.input} maxLength={10} />
               {acct.length > 0 && acct.length < 10 ? (
                 <Text style={styles.fieldHint}>{10 - acct.length} more digits needed</Text>
               ) : acct.length === 10 ? (
-                <Text style={[styles.fieldHint, { color: colors.moneyInk }]}>✓ Valid NUBAN</Text>
+                <Text style={[styles.fieldHint, { color: obColors.mgreen }]}>✓ Valid NUBAN</Text>
               ) : null}
             </SheetField>
           </View>
           {error ? <Banner tone="danger" title="Error" message={error} /> : null}
-          <Button label="Save account" onPress={save} loading={busy} disabled={!canSave || busy} />
+          <AppPrimaryButton label="Save account" onPress={save} loading={busy} disabled={!canSave || busy} />
         </View>
       </KeyboardAvoidingView>
 
-      {/* Bank picker modal */}
       <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setPickerOpen(false)} />
-        <View style={[styles.pickerSheet, { paddingBottom: insets.bottom + spacing.md }]}>
+        <View style={[styles.pickerSheet, { paddingBottom: insets.bottom + 12 }]}>
           <View style={styles.grabber} />
           <Text style={styles.sheetTitle}>Select bank</Text>
           <FlatList
             data={NIGERIAN_BANKS}
             keyExtractor={(b) => b.code}
             renderItem={({ item }) => (
-              <Pressable
-                onPress={() => { setBankCode(item.code); setPickerOpen(false); }}
-                style={[styles.bankItem, bankCode === item.code && styles.bankItemActive]}
-              >
-                <Text style={[styles.bankItemText, bankCode === item.code && { color: colors.goldInk, fontWeight: '700' }]}>
-                  {item.name}
-                </Text>
-                {bankCode === item.code ? <Icon name="check" size={18} color={colors.clay} /> : null}
+              <Pressable onPress={() => { setBankCode(item.code); setPickerOpen(false); }} style={[styles.bankItem, bankCode === item.code && styles.bankItemActive]}>
+                <Text style={[styles.bankItemText, bankCode === item.code && { color: obColors.goldDeep, fontWeight: '700' }]}>{item.name}</Text>
+                {bankCode === item.code ? <Icon name="check" size={17} color={obColors.gold} /> : null}
               </Pressable>
             )}
-            ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.line }} />}
+            ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: obColors.line }} />}
           />
         </View>
       </Modal>
@@ -515,17 +434,7 @@ function EditBankSheet({
 
 // ─── Edit TIN ─────────────────────────────────────────────────────────────────
 
-function EditTinSheet({
-  visible,
-  user,
-  onClose,
-  onSaved,
-}: {
-  visible: boolean;
-  user: User | null | undefined;
-  onClose: () => void;
-  onSaved: (u: User) => void;
-}) {
+function EditTinSheet({ visible, user, onClose, onSaved }: { visible: boolean; user: User | null | undefined; onClose: () => void; onSaved: (u: User) => void }) {
   const insets = useSafeAreaInsets();
   const [tin, setTin] = useState(user?.tin ?? '');
   const [busy, setBusy] = useState(false);
@@ -551,31 +460,22 @@ function EditTinSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}>
           <View style={styles.grabber} />
           <Text style={styles.sheetTitle}>Tax ID (TIN)</Text>
           <Text style={styles.sheetSub}>Used on WHT deduction statements issued to you.</Text>
           <View style={styles.fields}>
             <SheetField label="TIN" hint="e.g. 12345678-0001">
-              <TextInput
-                value={tin}
-                onChangeText={setTin}
-                placeholder="12345678-0001"
-                placeholderTextColor={colors.textFaint}
-                style={styles.input}
-                autoCapitalize="none"
-              />
+              <TextInput value={tin} onChangeText={setTin} placeholder="12345678-0001" placeholderTextColor={obColors.textFaint} style={styles.input} autoCapitalize="none" />
             </SheetField>
           </View>
           {error ? <Banner tone="danger" title="Error" message={error} /> : null}
-          <Button label="Save TIN" onPress={save} loading={busy} disabled={!canSave || busy} />
+          <AppPrimaryButton label="Save TIN" onPress={save} loading={busy} disabled={!canSave || busy} />
         </View>
       </KeyboardAvoidingView>
     </Modal>
   );
 }
-
-// ─── Shared sub-components ────────────────────────────────────────────────────
 
 function SheetField({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -587,171 +487,61 @@ function SheetField({ label, hint, children }: { label: string; hint?: string; c
   );
 }
 
-function ContractRow({ contract }: { contract: Contract }) {
-  const router = useRouter();
-  // Signature comes from signedAt, not status - status is the work lifecycle.
-  const signed = contract.signedAt != null;
-
-  return (
-    <Pressable
-      style={styles.contractRow}
-      onPress={() => router.push(`/contract/${contract.id}`)}
-      accessibilityRole="button"
-    >
-      <Icon name="id" size={20} color={colors.clay} />
-      <View style={styles.contractBody}>
-        <Text style={styles.contractTitle} numberOfLines={2}>
-          {contract.task?.title ?? 'Service agreement'}
-        </Text>
-        <Text style={styles.contractSub}>
-          {signed ? 'Tap to view' : 'Review & sign'}
-        </Text>
-      </View>
-      {signed ? (
-        <StatusPill status="paid" small label="Signed" />
-      ) : (
-        <View style={styles.contractCta}>
-          <Text style={styles.contractCtaText}>Sign</Text>
-          <Icon name="chevron-right" size={16} color={colors.clay} />
-        </View>
-      )}
-    </Pressable>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={{ marginTop: spacing.xl }}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {children}
-    </View>
-  );
-}
-
-function NotifRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <View style={styles.notifRow}>
-      <Text style={styles.notifLabel}>{label}</Text>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        trackColor={{ true: colors.clay, false: colors.line }}
-        thumbColor={colors.white}
-        accessibilityLabel={label}
-      />
-    </View>
-  );
-}
-
-function Divider() {
-  return <View style={styles.divider} />;
-}
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
+  root: { flex: 1, backgroundColor: obColors.bg },
+
+  pfHead: { alignItems: 'center', marginBottom: 18 },
+  avatarWrap: { marginBottom: 4 },
+  avatar: { width: 78, height: 78, borderRadius: 39, backgroundColor: obColors.navy, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: obColors.white, fontSize: 26, fontFamily: 'Raleway_800ExtraBold' },
+  editBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: obColors.gold,
+    borderWidth: 3,
+    borderColor: obColors.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { color: colors.white, fontSize: type.size.lg, fontFamily: fontFamily.extrabold },
-  identityBody: { flex: 1, gap: spacing.xs },
-  identityRight: { alignItems: 'center', gap: spacing.sm },
-  name: { color: colors.text, fontSize: type.size.lg, fontFamily: fontFamily.extrabold },
-  tiers: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  ratingBlock: { alignItems: 'center', gap: spacing.xs },
-  ratingValue: { color: colors.text, fontSize: type.size.sm, fontWeight: '700', marginTop: 1 },
-  ratingCount: { color: colors.textMuted, fontSize: type.size.xs, fontWeight: '400' },
-  editBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: colors.claySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionTitle: {
-    color: colors.textMuted,
-    fontSize: type.size.sm,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-  },
-  list: { paddingHorizontal: spacing.lg },
-  contractRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
-  contractBody: { flex: 1, gap: 2 },
-  contractTitle: { color: colors.text, fontSize: type.size.base, fontWeight: '700' },
-  contractSub: { color: colors.textMuted, fontSize: type.size.xs },
-  contractCta: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  contractCtaText: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.base },
-  notif: { gap: 0 },
-  notifError: { color: colors.dangerInk, fontSize: type.size.sm, marginTop: spacing.xs },
-  notifRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    minHeight: 44,
-  },
-  notifLabel: { color: colors.text, fontSize: type.size.md, fontWeight: '600', flex: 1, paddingRight: spacing.md },
-  divider: { height: 1, backgroundColor: colors.line },
-  version: { color: colors.textMuted, fontSize: type.size.sm, textAlign: 'center', marginTop: spacing.lg },
+  name: { fontSize: 17, fontFamily: 'Raleway_800ExtraBold', color: obColors.navy, marginTop: 10 },
+  stars: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5 },
+  starsText: { fontSize: 12.5, color: obColors.textMut, fontWeight: '700' },
+
+  infoCard: { backgroundColor: obColors.white, borderWidth: 1, borderColor: obColors.line, borderRadius: obRadii.card, paddingHorizontal: 14, marginBottom: 20 },
+  infoHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
+  infoHeadTitle: { fontSize: 13, fontWeight: '700', color: obColors.navy },
+  infoHeadEdit: { fontSize: 12.5, fontWeight: '700', color: obColors.goldDeep },
+  infoRow: { paddingVertical: 9 },
+  infoRowDivider: { borderBottomWidth: 1, borderBottomColor: obColors.line },
+  infoLabel: { fontSize: 11, color: obColors.textMut },
+  infoValue: { fontSize: 13.5, fontWeight: '600', color: obColors.text, marginTop: 2 },
+
+  notifRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  notifRowDivider: { borderBottomWidth: 1, borderBottomColor: obColors.line },
+  notifIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: obColors.sand, alignItems: 'center', justifyContent: 'center' },
+  notifLabel: { flex: 1, fontSize: 13.5, fontWeight: '600', color: obColors.text },
+  notifError: { color: obColors.danger, fontSize: 12.5, marginTop: 8 },
+
+  version: { color: obColors.textMut, fontSize: 12.5, textAlign: 'center', marginTop: 16 },
+
   // sheets
-  backdrop: { flex: 1, backgroundColor: colors.scrim },
-  sheet: {
-    backgroundColor: colors.bg,
-    borderTopLeftRadius: radii.sheet,
-    borderTopRightRadius: radii.sheet,
-    padding: layout.screenPadding,
-    gap: spacing.md,
-  },
-  grabber: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 100,
-    backgroundColor: colors.line,
-    marginBottom: spacing.sm,
-  },
-  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold },
-  sheetSub: { color: colors.textMuted, fontSize: type.size.base, marginTop: -spacing.xs },
-  fields: { gap: spacing.md },
-  fieldLabel: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
-  fieldHint: { color: colors.textMuted, fontSize: type.size.sm },
-  input: {
-    minHeight: layout.hitTarget,
-    backgroundColor: colors.surface,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: radii.input,
-    paddingHorizontal: spacing.md,
-    fontSize: type.size.md,
-    color: colors.text,
-  },
+  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
+  sheet: { backgroundColor: obColors.bg, borderTopLeftRadius: obRadii.hero, borderTopRightRadius: obRadii.hero, padding: 20, gap: 12 },
+  grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: 4, backgroundColor: obColors.line, marginBottom: 8 },
+  sheetTitle: { color: obColors.navy, fontSize: 18, fontFamily: 'Raleway_800ExtraBold' },
+  sheetSub: { color: obColors.textMut, fontSize: 13, marginTop: -4 },
+  fields: { gap: 12 },
+  fieldLabel: { color: obColors.textMut, fontSize: 12, fontWeight: '600' },
+  fieldHint: { color: obColors.textMut, fontSize: 12 },
+  input: { minHeight: 48, backgroundColor: obColors.white, borderColor: obColors.line, borderWidth: 1, borderRadius: obRadii.field, paddingHorizontal: 14, fontSize: 15, color: obColors.text },
   pickerTrigger: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  pickerTriggerText: { fontSize: type.size.md, color: colors.text, flex: 1 },
-  pickerSheet: {
-    backgroundColor: colors.bg,
-    borderTopLeftRadius: radii.card,
-    borderTopRightRadius: radii.card,
-    padding: layout.screenPadding,
-    maxHeight: '70%',
-  },
-  bankItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-  },
-  bankItemActive: {
-    backgroundColor: colors.claySoft,
-    marginHorizontal: -layout.screenPadding,
-    paddingHorizontal: layout.screenPadding,
-  },
-  bankItemText: { fontSize: type.size.base, color: colors.text },
+  pickerTriggerText: { fontSize: 15, color: obColors.text, flex: 1 },
+  pickerSheet: { backgroundColor: obColors.bg, borderTopLeftRadius: obRadii.card, borderTopRightRadius: obRadii.card, padding: 20, maxHeight: '70%' },
+  bankItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 13 },
+  bankItemActive: { backgroundColor: obColors.roleSelectedBg, marginHorizontal: -20, paddingHorizontal: 20 },
+  bankItemText: { fontSize: 14, color: obColors.text },
 });

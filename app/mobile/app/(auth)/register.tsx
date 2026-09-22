@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Button } from '../../src/components/Button';
 import { GoogleButton } from '../../src/components/GoogleButton';
 import { Banner } from '../../src/components/Feedback';
-import { PasswordField } from '../../src/components/PasswordField';
-import { UnderlineInput } from '../../src/components/UnderlineInput';
-import { PatternDivider } from '../../src/components/Motif';
-import { AuthScreen, AuthFooterLink } from '../../src/components/AuthShell';
-import { colors, spacing, type, motif } from '../../src/theme';
+import { ObScreen, ObField, ObPasswordField } from '../../src/onboarding/ObUI';
+import { obColors } from '../../src/onboarding/onboardingTheme';
 import { useAuth } from '../../src/auth/AuthContext';
+import { useOnboarding } from '../../src/onboarding/OnboardingContext';
 import { ACCOUNT_COPY, readAccountType } from '../../src/lib/accountType';
 
 const MIN_PASSWORD = 8;
@@ -17,11 +14,16 @@ const emailValid = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
 
 /**
  * Worker sign-up: Google, or name + email + password + confirm → register →
- * creates a WORKER (isNewUser:true) and routes to the KYC stepper.
+ * creates a WORKER (isNewUser:true) and routes to onboarding.
+ *
+ * Not one of the 12 screens in afrizone-onboarding-screens.html (it has no
+ * password step - only the phone+OTP path is shown), but restyled to match
+ * everything around it since Store/Courier both pass through here.
  */
 export default function RegisterScreen() {
   const router = useRouter();
   const { register } = useAuth();
+  const { update } = useOnboarding();
   // Chosen at the front door. Falls back to INDIVIDUAL when this screen is
   // reached directly - a deep link or a back-navigation should not leave the
   // account type undefined.
@@ -42,7 +44,8 @@ export default function RegisterScreen() {
   const canSubmit = nameOk && emailOk && passOk && matchOk;
 
   function routeAfterAuth(isNewUser: boolean) {
-    router.replace(isNewUser ? '/(auth)/kyc' : '/(tabs)/home');
+    update({ accountType });
+    router.replace(isNewUser ? '/(auth)/personal-details' : '/(tabs)/home');
   }
 
   async function onSubmit() {
@@ -60,71 +63,50 @@ export default function RegisterScreen() {
   }
 
   return (
-    <AuthScreen
+    <ObScreen
       onBack={() => router.back()}
       title={copy.registerTitle}
       subtitle={copy.registerSubtitle}
-      footer={
-        <AuthFooterLink text="Have an account?" linkText="Sign in" onPress={() => router.back()} />
+      primaryLabel="Create account"
+      onPrimary={onSubmit}
+      primaryDisabled={!canSubmit || busy}
+      primaryLoading={busy}
+      footnote={
+        <Text style={styles.footnoteText}>
+          Have an account? <Text style={styles.footnoteLink} onPress={() => router.back()}>Sign in</Text>
+        </Text>
       }
     >
-      {error ? <Banner tone="danger" icon="alert" title="Couldn’t sign up" message={error} /> : null}
+      {error ? <Banner tone="danger" icon="alert" title="Couldn't sign up" message={error} /> : null}
 
       <GoogleButton onSuccess={routeAfterAuth} onError={setError} />
 
       <View style={styles.dividerRow}>
-        <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
+        <View style={styles.dividerLine} />
         <Text style={styles.dividerText}>or sign up with email</Text>
-        <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
+        <View style={styles.dividerLine} />
       </View>
 
-      <UnderlineInput
-        label="Full name"
-        value={name}
-        onChangeText={setName}
-        autoCapitalize="words"
-        autoComplete="name"
-        placeholder="Amaka Obi"
-        accessibilityLabel="Full name"
-        autoFocus
-      />
-
-      <UnderlineInput
-        label="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoComplete="email"
-        placeholder="you@email.com"
-        accessibilityLabel="Email"
-      />
-
-      <PasswordField
-        label="Password"
-        value={password}
-        onChangeText={setPassword}
-        placeholder="Create a password"
-        hint={`At least ${MIN_PASSWORD} characters.`}
-      />
-
-      <PasswordField
+      <ObField label="Full name" value={name} onChangeText={setName} autoCapitalize="words" autoComplete="name" placeholder="Amaka Obi" autoFocus />
+      <ObField label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" placeholder="you@email.com" />
+      <ObPasswordField label="Password" value={password} onChangeText={setPassword} placeholder="Create a password" hint={`At least ${MIN_PASSWORD} characters.`} />
+      <ObPasswordField
         label="Confirm password"
         value={confirm}
         onChangeText={setConfirm}
         placeholder="Re-enter your password"
-        error={confirm.length > 0 && !matchOk ? 'Passwords don’t match.' : undefined}
+        error={confirm.length > 0 && !matchOk ? "Passwords don't match." : undefined}
         onSubmitEditing={onSubmit}
         returnKeyType="go"
       />
-
-      <Button label="Create account" onPress={onSubmit} loading={busy} disabled={!canSubmit || busy} />
-    </AuthScreen>
+    </ObScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  dividerMotif: { flex: 1 },
-  dividerText: { color: colors.textMuted, fontSize: type.size.sm },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: obColors.line },
+  dividerText: { color: obColors.textMut, fontSize: 13 },
+  footnoteText: { color: obColors.textMut, fontSize: 13, textAlign: 'center' },
+  footnoteLink: { color: obColors.goldDeep, fontWeight: '700' },
 });

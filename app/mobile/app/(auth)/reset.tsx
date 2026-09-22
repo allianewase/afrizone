@@ -1,19 +1,16 @@
 import React, { useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Button } from '../../src/components/Button';
 import { Banner } from '../../src/components/Feedback';
-import { PasswordField } from '../../src/components/PasswordField';
-import { UnderlineInput } from '../../src/components/UnderlineInput';
-import { SuccessCard } from '../../src/components/SuccessCard';
-import { AuthScreen, AuthFooterLink } from '../../src/components/AuthShell';
+import { ObScreen, ObField, ObPasswordField, ObSuccessModal } from '../../src/onboarding/ObUI';
 import { useAuth } from '../../src/auth/AuthContext';
 
 const MIN_PASSWORD = 8;
 
 /**
  * Reset password. Paste the reset token (prefilled from the dev token when
- * arriving from Forgot, or a deep link) + a new password (≥8, confirmed) →
- * passwordReset → success → back to the sign-in hub.
+ * arriving from Forgot, or a deep link) + a new password (>=8, confirmed) →
+ * passwordReset → success modal → back to sign-in, matching the reference's
+ * "Reset Successful" card exactly.
  */
 export default function ResetScreen() {
   const router = useRouter();
@@ -47,54 +44,36 @@ export default function ResetScreen() {
   }
 
   return (
-    <AuthScreen
+    <ObScreen
       onBack={() => router.back()}
       title="Reset Password"
-      subtitle="Enter the reset token from your email and choose a new password."
-      footer={<AuthFooterLink text="Have an account?" linkText="Sign in" onPress={() => router.back()} />}
+      subtitle="Use at least 8 characters, and paste the reset token from your email."
+      primaryLabel="Reset"
+      onPrimary={onSubmit}
+      primaryDisabled={!canSubmit || busy}
+      primaryLoading={busy}
     >
-      {done ? (
-        <SuccessCard
-          title="Password changed!"
-          message="No hassle anymore: you can now sign in with your new password."
-          actionLabel="Back to sign in"
-          onAction={() => router.replace('/(auth)/login')}
-        />
-      ) : (
-        <>
-          {error ? <Banner tone="danger" icon="alert" title="Couldn’t reset" message={error} /> : null}
+      {error ? <Banner tone="danger" icon="alert" title="Couldn't reset" message={error} /> : null}
 
-          <UnderlineInput
-            label="Reset token"
-            value={token}
-            onChangeText={setToken}
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder="Paste your token"
-            accessibilityLabel="Reset token"
-          />
+      <ObField label="Reset token" value={token} onChangeText={setToken} autoCapitalize="none" autoCorrect={false} placeholder="Paste your token" />
+      <ObPasswordField label="New password" value={password} onChangeText={setPassword} placeholder="Enter new password" hint={`At least ${MIN_PASSWORD} characters.`} />
+      <ObPasswordField
+        label="Re-enter password"
+        value={confirm}
+        onChangeText={setConfirm}
+        placeholder="Re-enter password"
+        error={confirm.length > 0 && !matchOk ? "Passwords don't match." : undefined}
+        onSubmitEditing={onSubmit}
+        returnKeyType="go"
+      />
 
-          <PasswordField
-            label="New Password"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="New password"
-            hint={`At least ${MIN_PASSWORD} characters.`}
-          />
-
-          <PasswordField
-            label="Confirm Password"
-            value={confirm}
-            onChangeText={setConfirm}
-            placeholder="Re-enter your new password"
-            error={confirm.length > 0 && !matchOk ? 'Passwords don’t match.' : undefined}
-            onSubmitEditing={onSubmit}
-            returnKeyType="go"
-          />
-
-          <Button label="Reset Password" onPress={onSubmit} loading={busy} disabled={!canSubmit || busy} />
-        </>
-      )}
-    </AuthScreen>
+      <ObSuccessModal
+        visible={done}
+        title="Reset Successful"
+        message="Your password is successfully reset."
+        actionLabel="Back to home"
+        onAction={() => router.replace('/(auth)/login')}
+      />
+    </ObScreen>
   );
 }

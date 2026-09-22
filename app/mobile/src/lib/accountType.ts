@@ -57,8 +57,14 @@ export const ACCOUNT_COPY: Record<
  * separate courier app is a routing change here, not a data-model one. Keeping
  * that as one line is the whole reason this function exists rather than an
  * inline ternary at the call site.
+ *
+ * STORE also goes to the tab bar now, not the standalone /store screen -
+ * (tabs)/home.tsx itself renders the store dashboard in place of the worker
+ * task feed for a STORE account, so Home/My Tasks/Wallet/Profile all work
+ * normally and a store owner still has a way to log out and manage
+ * notifications. Jobs is hidden for STORE in (tabs)/_layout.tsx instead of
+ * being handled here.
  */
 export function homeRouteFor(accountType: AccountType | undefined): string {
-  if (accountType === 'STORE') return '/store';
   return '/(tabs)/home';
 }

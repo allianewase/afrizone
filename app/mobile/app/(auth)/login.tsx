@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
-import { Text, View, StyleSheet, Pressable } from 'react-native';
+import { Text, View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button } from '../../src/components/Button';
 import { GoogleButton } from '../../src/components/GoogleButton';
 import { Banner } from '../../src/components/Feedback';
-import { PasswordField } from '../../src/components/PasswordField';
-import { UnderlineInput } from '../../src/components/UnderlineInput';
-import { PatternDivider } from '../../src/components/Motif';
-import { AuthScreen, AuthFooterLink } from '../../src/components/AuthShell';
-import { colors, spacing, type, motif } from '../../src/theme';
+import { ObScreen, ObField, ObPasswordField, ObButton } from '../../src/onboarding/ObUI';
+import { obColors } from '../../src/onboarding/onboardingTheme';
 import { useAuth } from '../../src/auth/AuthContext';
 import { toE164, isValidNgNumber } from '../../src/lib/format';
 
@@ -16,17 +12,14 @@ const COUNTRY_PREFIX = '+234'; // Nigeria default
 const emailValid = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
 
 /**
- * Worker sign-in: phone+OTP, Google, or email + password. Phone-OTP and
- * Google were both dropped to match the reference design exactly, which
- * orphaned otp.tsx and GoogleButton.tsx (both deleted) - restored on request
- * for the pilot launch, which needs phone-based sign-up for workers without
- * reliable email. Both came back compatible with the current theme/API with
- * only layout adaptation needed (old AuthShell/AuthCard -> current
- * AuthScreen), no logic changes.
+ * Worker sign-in: phone+OTP, Google, or email + password. Restyled to match
+ * afrizone-onboarding-screens.html's flat peach/navy system, same as the
+ * rest of the onboarding flow - this was the one screen still flagged as a
+ * seam (welcome.tsx's "Sign In" led here into the old navy-hero look).
  *
  * On password sign-in: if the backend returns `requires2fa` we push the 2FA
- * screen; otherwise we route new/never-completed users to KYC and returning
- * users to the tabs.
+ * screen; otherwise we route new/never-completed users to onboarding and
+ * returning users to the tabs.
  */
 export default function LoginScreen() {
   const router = useRouter();
@@ -46,7 +39,11 @@ export default function LoginScreen() {
   const canSignIn = emailValid(email) && password.length > 0;
 
   function routeAfterAuth(isNewUser: boolean) {
-    router.replace(isNewUser ? '/(auth)/kyc' : '/(tabs)/home');
+    // Reached this screen without ever visiting account-type.tsx, so there is
+    // no chosen account type to stash - INDIVIDUAL, OnboardingContext's own
+    // default, is also the right one: nobody signs up as a Store or Courier
+    // by way of the sign-IN screen's Google button.
+    router.replace(isNewUser ? '/(auth)/personal-details' : '/(tabs)/home');
   }
 
   async function onPhoneContinue() {
@@ -92,32 +89,27 @@ export default function LoginScreen() {
   }
 
   return (
-    <AuthScreen
+    <ObScreen
+      onBack={() => router.back()}
       title="Login"
       subtitle="Welcome back, sign in to continue finding work"
-      footer={
-        <AuthFooterLink
-          text="Don't have an account?"
-          linkText="Create account"
-          onPress={() => router.push('/(auth)/register')}
-        />
+      primaryLabel="Sign In"
+      onPrimary={onSignIn}
+      primaryDisabled={!canSignIn || busy}
+      primaryLoading={busy}
+      footnote={
+        <Text style={styles.footnoteText}>
+          Don't have an account? <Text style={styles.footnoteLink} onPress={() => router.push('/(auth)/register')}>Create account</Text>
+        </Text>
       }
     >
-      {error ? <Banner tone="danger" icon="alert" title="Couldn’t sign in" message={error} /> : null}
+      {error ? <Banner tone="danger" icon="alert" title="Couldn't sign in" message={error} /> : null}
 
       {!phoneOpen ? (
-        <Button
-          label="Continue with phone"
-          icon="phone"
-          variant="secondary"
-          onPress={() => {
-            setError(null);
-            setPhoneOpen(true);
-          }}
-        />
+        <ObButton label="Continue with phone" variant="outline" onPress={() => { setError(null); setPhoneOpen(true); }} />
       ) : (
         <View style={styles.phoneBlock}>
-          <UnderlineInput
+          <ObField
             label="Mobile number"
             value={phone}
             onChangeText={(t) => setPhone(t.replace(/[^\d\s]/g, '').slice(0, 14))}
@@ -125,72 +117,40 @@ export default function LoginScreen() {
             autoComplete="tel"
             placeholder="803 000 0001"
             hint={`We'll text a code to ${COUNTRY_PREFIX} ${phone || '…'}`}
-            accessibilityLabel="Phone number"
             autoFocus
           />
-          <Button
-            label="Send code"
-            icon="chevron-right"
-            onPress={onPhoneContinue}
-            loading={phoneBusy}
-            disabled={!phoneOk || phoneBusy}
-          />
+          <ObButton label="Send code" onPress={onPhoneContinue} loading={phoneBusy} disabled={!phoneOk || phoneBusy} />
         </View>
       )}
 
       <View style={styles.dividerRow}>
-        <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
-        <Text style={styles.dividerText}>or continue with</Text>
-        <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>Or login with</Text>
+        <View style={styles.dividerLine} />
       </View>
 
       <GoogleButton onSuccess={routeAfterAuth} onError={setError} />
 
       <View style={styles.dividerRow}>
-        <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
+        <View style={styles.dividerLine} />
         <Text style={styles.dividerText}>or sign in with email</Text>
-        <PatternDivider color={colors.line} opacity={motif.dividerOpacityLight} style={styles.dividerMotif} />
+        <View style={styles.dividerLine} />
       </View>
 
-      <UnderlineInput
-        label="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoComplete="email"
-        placeholder="you@email.com"
-        accessibilityLabel="Email"
-      />
+      <ObField label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" placeholder="you@email.com" />
+      <ObPasswordField label="Password" value={password} onChangeText={setPassword} placeholder="Your password" autoComplete="password" onSubmitEditing={onSignIn} returnKeyType="go" />
 
-      <PasswordField
-        label="Password"
-        value={password}
-        onChangeText={setPassword}
-        placeholder="Your password"
-        autoComplete="password"
-        onSubmitEditing={onSignIn}
-        returnKeyType="go"
-      />
-
-      <Pressable
-        onPress={() => router.push('/(auth)/forgot')}
-        accessibilityRole="button"
-        style={styles.forgotRow}
-      >
-        <Text style={styles.forgotText}>Forgot password?</Text>
-      </Pressable>
-
-      <Button label="Sign In" onPress={onSignIn} loading={busy} disabled={!canSignIn || busy} />
-    </AuthScreen>
+      <Text style={styles.forgotText} onPress={() => router.push('/(auth)/forgot')}>Forgot password?</Text>
+    </ObScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  forgotRow: { alignSelf: 'flex-end' },
-  forgotText: { color: colors.goldInk, fontSize: type.size.sm, fontWeight: '700' },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  dividerMotif: { flex: 1 },
-  dividerText: { color: colors.textMuted, fontSize: type.size.sm },
-  phoneBlock: { gap: spacing.md },
+  phoneBlock: { gap: 12 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: obColors.line },
+  dividerText: { color: obColors.textMut, fontSize: 13 },
+  forgotText: { color: obColors.goldDeep, fontSize: 13, fontWeight: '700', alignSelf: 'flex-end' },
+  footnoteText: { color: obColors.textMut, fontSize: 13, textAlign: 'center' },
+  footnoteLink: { color: obColors.goldDeep, fontWeight: '700' },
 });

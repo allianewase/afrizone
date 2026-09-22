@@ -1,49 +1,66 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Screen } from '../../src/components/Screen';
-import { Card } from '../../src/components/Card';
-import { Segmented } from '../../src/components/Segmented';
-import { StatusPill } from '../../src/components/StatusPill';
-import { TierBadge } from '../../src/components/TierBadge';
-import { MoneyText } from '../../src/components/MoneyText';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppSegmented, AppListCard, AppListRow, AppStatusPill, AppEmptyState, AppErrorState, AppLoadingCards, type AppPillTone } from '../../src/appui/AppUI';
 import { Icon } from '../../src/components/Icon';
-import { LoadingState, ErrorState, EmptyState } from '../../src/components/Feedback';
-import { colors, spacing, type, fontFamily } from '../../src/theme';
+import { obColors } from '../../src/onboarding/onboardingTheme';
 import { api } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import type { Application } from '../../src/api/types';
 
-type Seg = 'Applied' | 'Active' | 'Completed';
-
 /**
- * Bucket applications for the segmented control (per API_CONTRACT v3):
- *   Applied   = status APPLIED
- *   Active    = status APPROVED and task not CLOSED/ARCHIVED
- *   Completed = task CLOSED/ARCHIVED (plus REJECTED)
+ * Restyled to match afrizone-mobile-prototype (1).html's My Tasks screen -
+ * compact list rows (icon + title/subtitle + status pill), and now the same
+ * three tabs as that reference: Active / Completed / Cancelled, not the
+ * previous Applied / Active / Completed.
+ *
+ * This is a real regrouping, not just a relabel: Active now covers
+ * everything still "live" - APPLIED (awaiting a decision) AND APPROVED-
+ * not-yet-closed (in progress) together, matching the reference's own
+ * "Warehouse picker" example (status Applied, shown under its Active tab).
+ * Completed is a closed/archived task that was APPROVED. Cancelled is
+ * REJECTED, split out on its own instead of lumped into Completed - a
+ * rejection isn't a completion, and the reference's own tab name is the
+ * more honest one.
  */
-function groupApplications(apps: Application[]): {
-  Applied: Application[];
-  Active: Application[];
-  Completed: Application[];
-} {
-  const out = {
-    Applied: [] as Application[],
-    Active: [] as Application[],
-    Completed: [] as Application[],
-  };
+
+type Seg = 'Active' | 'Completed' | 'Cancelled';
+
+function groupApplications(apps: Application[]): Record<Seg, Application[]> {
+  const out: Record<Seg, Application[]> = { Active: [], Completed: [], Cancelled: [] };
   for (const a of apps) {
     const closed = a.task?.status === 'CLOSED' || a.task?.status === 'ARCHIVED';
-    if (closed || a.status === 'REJECTED') out.Completed.push(a);
-    else if (a.status === 'APPROVED') out.Active.push(a);
-    else out.Applied.push(a);
+    if (a.status === 'REJECTED') out.Cancelled.push(a);
+    else if (a.status === 'APPROVED' && closed) out.Completed.push(a);
+    else out.Active.push(a);
   }
   return out;
 }
 
+function statusInfo(app: Application): { tone: AppPillTone; label: string; subtitle: string } {
+  const t = app.task;
+  const completed = t?.status === 'CLOSED' || t?.status === 'ARCHIVED';
+  const hasPayment = completed && app.status === 'APPROVED' && !!app.paymentId;
+
+  if (app.status === 'REJECTED') {
+    return { tone: 'attn', label: 'Not selected', subtitle: app.reason || 'Application not approved' };
+  }
+  if (app.status === 'APPLIED') {
+    return { tone: 'await', label: 'Awaiting approval', subtitle: 'Applied · awaiting response' };
+  }
+  if (completed) {
+    return hasPayment
+      ? { tone: 'paid', label: 'Paid out', subtitle: 'Payment released' }
+      : { tone: 'paid', label: 'Completed', subtitle: 'Task completed' };
+  }
+  return { tone: 'progress', label: 'In progress', subtitle: 'Approved · tap to clock in' };
+}
+
 export default function MyTasksScreen() {
   const router = useRouter();
-  const [seg, setSeg] = useState<Seg>('Applied');
+  const insets = useSafeAreaInsets();
+  const [seg, setSeg] = useState<Seg>('Active');
   // REAL: GET /api/me/applications
   const apps = useAsync<Application[]>((signal) => api.myApplications(signal), []);
 
@@ -51,158 +68,90 @@ export default function MyTasksScreen() {
   const rows = groups[seg];
 
   return (
-    <Screen
-      title="My Tasks"
-      subtitle="Track your applications and work"
-      onRefresh={apps.reload}
-      refreshing={apps.loading && !!apps.data}
-    >
-      <Segmented<Seg>
-        value={seg}
-        onChange={setSeg}
-        options={[
-          { key: 'Applied', label: 'Applied', count: groups.Applied.length },
-          { key: 'Active', label: 'Active', count: groups.Active.length },
-          { key: 'Completed', label: 'Done', count: groups.Completed.length },
-        ]}
-      />
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 18, paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={apps.loading && !!apps.data} onRefresh={apps.reload} tintColor={obColors.navy} />}
+      >
+        <Text style={styles.title}>My Tasks</Text>
 
-      <View style={{ height: spacing.lg }} />
-
-      {apps.loading && !apps.data ? (
-        <LoadingState />
-      ) : apps.error ? (
-        <ErrorState message={apps.error} onRetry={apps.reload} />
-      ) : rows.length === 0 ? (
-        <EmptyState
-          icon="list"
-          title={`Nothing ${seg.toLowerCase()} yet`}
-          message={
-            seg === 'Applied'
-              ? 'Browse Home to find and apply to tasks.'
-              : seg === 'Active'
-                ? 'Approved tasks will show here: clock in from the task.'
-                : 'Completed and closed tasks land here.'
-          }
-        />
-      ) : (
-        <View style={{ gap: spacing.md }}>
-          {rows.map((a) => (
-            <ApplicationCard
-              key={a.id}
-              app={a}
-              onPress={
-                seg === 'Active' ? () => router.push(`/active/${a.taskId}`) : () => router.push(`/task/${a.taskId}`)
-              }
-            />
-          ))}
+        <View style={{ marginTop: 14, marginBottom: 18 }}>
+          <AppSegmented
+            value={seg}
+            onChange={setSeg}
+            options={[
+              { key: 'Active', label: 'Active' },
+              { key: 'Completed', label: 'Completed' },
+              { key: 'Cancelled', label: 'Cancelled' },
+            ]}
+          />
         </View>
-      )}
-    </Screen>
-  );
-}
 
-function ApplicationCard({ app, onPress }: { app: Application; onPress: () => void }) {
-  const t = app.task;
-  const router = useRouter();
-  const completed = t?.status === 'CLOSED' || t?.status === 'ARCHIVED';
-  const hasPayment = completed && app.status === 'APPROVED' && !!app.paymentId;
-
-  return (
-    <Pressable onPress={onPress} accessibilityRole="button">
-      <Card>
-        <View style={styles.head}>
-          {t ? <TierBadge tier={t.tier} small /> : <View />}
-          <StatusPill status={app.status} small />
-        </View>
-        <Text style={styles.title} numberOfLines={2}>
-          {t?.title ?? 'Task'}
-        </Text>
-        {app.status === 'REJECTED' && app.reason ? (
-          <Text style={styles.rejection} numberOfLines={2}>{app.reason}</Text>
-        ) : null}
-        {t && t.slots > 0 ? (
-          <View style={styles.progressRow}>
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${Math.min(100, Math.round(((t.filledCount ?? 0) / t.slots) * 100))}%` },
-                ]}
-              />
-            </View>
-            <Text style={styles.progressLabel}>
-              {t.filledCount ?? 0} of {t.slots} filled
-            </Text>
-          </View>
-        ) : null}
-        <View style={styles.foot}>
-          {t ? (
-            <View style={styles.payRow}>
-              <MoneyText
-                amount={t.payModel === 'HOURLY' ? t.rate : t.budget ?? t.rate}
-                size={type.size.md}
-                color={colors.clay}
-              />
-              <Text style={styles.unit}>{t.payModel === 'HOURLY' ? '/hr' : ' fixed'}</Text>
-            </View>
-          ) : (
-            <View />
-          )}
-          <View style={styles.cta}>
-            <Text style={styles.ctaText}>
-              {app.status === 'APPROVED' && !completed ? 'Open & clock in' : 'View'}
-            </Text>
-            <Icon name="chevron-right" size={16} color={colors.clay} />
-          </View>
-        </View>
-        {hasPayment ? (
-          <Pressable
-            style={styles.paymentLink}
-            onPress={(e) => { e.stopPropagation?.(); router.push(`/payment/${app.paymentId}`); }}
-            accessibilityRole="button"
-          >
-            <Icon name="dollar" size={14} color={colors.money} />
-            <Text style={styles.paymentLinkText}>View payment breakdown</Text>
-            <Icon name="chevron-right" size={14} color={colors.money} />
-          </Pressable>
-        ) : null}
-      </Card>
-    </Pressable>
+        {apps.loading && !apps.data ? (
+          <AppLoadingCards count={4} />
+        ) : apps.error ? (
+          <AppErrorState message={apps.error} onRetry={apps.reload} />
+        ) : rows.length === 0 ? (
+          <AppEmptyState
+            icon="list"
+            title={`Nothing ${seg.toLowerCase()} yet`}
+            message={
+              seg === 'Active'
+                ? 'Applications you send and tasks you get approved for show up here.'
+                : seg === 'Completed'
+                  ? 'Finished tasks land here once they close.'
+                  : 'Applications an admin didn’t approve land here.'
+            }
+          />
+        ) : (
+          <AppListCard>
+            {rows.map((a, i) => {
+              const info = statusInfo(a);
+              const completed = a.task?.status === 'CLOSED' || a.task?.status === 'ARCHIVED';
+              const hasPayment = completed && a.status === 'APPROVED' && !!a.paymentId;
+              return (
+                <View key={a.id}>
+                  <AppListRow
+                    icon={a.status === 'APPLIED' ? 'clock' : a.status === 'REJECTED' ? 'close' : completed ? 'check-circle' : 'briefcase'}
+                    title={a.task?.title ?? 'Task'}
+                    subtitle={info.subtitle}
+                    onPress={a.status === 'APPROVED' && !completed ? () => router.push(`/active/${a.taskId}`) : () => router.push(`/task/${a.taskId}`)}
+                    last={i === rows.length - 1 && !hasPayment}
+                    right={<AppStatusPill tone={info.tone} label={info.label} />}
+                  />
+                  {hasPayment ? (
+                    <Pressable
+                      style={[styles.paymentLink, i === rows.length - 1 && { borderBottomWidth: 0 }]}
+                      onPress={() => router.push(`/payment/${a.paymentId}`)}
+                    >
+                      <Icon name="dollar" size={13} color={obColors.mgreen} />
+                      <Text style={styles.paymentLinkText}>View payment breakdown</Text>
+                      <Icon name="chevron-right" size={13} color={obColors.mgreen} />
+                    </Pressable>
+                  ) : null}
+                </View>
+              );
+            })}
+          </AppListCard>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  title: { color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.bold, marginBottom: spacing.sm },
-  progressRow: { gap: 4, marginBottom: spacing.sm },
-  progressTrack: { height: 5, borderRadius: 3, backgroundColor: colors.surfaceSand, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 3, backgroundColor: colors.clay },
-  progressLabel: { color: colors.textMuted, fontSize: type.size.xs, fontWeight: '600' },
-  foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  payRow: { flexDirection: 'row', alignItems: 'baseline' },
-  unit: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '600' },
-  cta: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  ctaText: { color: colors.goldInk, fontWeight: '700', fontSize: type.size.base },
-  rejection: {
-    color: colors.textMuted,
-    fontSize: type.size.sm,
-    marginBottom: spacing.xs,
-    fontStyle: 'italic',
-  },
+  root: { flex: 1, backgroundColor: obColors.bg },
+  title: { fontSize: 19, fontFamily: 'Raleway_800ExtraBold', color: obColors.navy },
   paymentLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    marginTop: spacing.xs,
-    paddingTop: spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: obColors.line,
+    backgroundColor: obColors.mgreenBg,
   },
-  paymentLinkText: {
-    flex: 1,
-    color: colors.moneyInk,
-    fontSize: type.size.sm,
-    fontWeight: '700',
-  },
+  paymentLinkText: { flex: 1, fontSize: 12, fontWeight: '700', color: obColors.mgreen },
 });

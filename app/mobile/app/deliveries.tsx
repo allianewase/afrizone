@@ -138,7 +138,7 @@ function Line({
   );
 }
 
-function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => void }) {
+export function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => void }) {
   const [busy, setBusy] = useState<'pickup' | 'complete' | 'fail' | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Set only when the check could not be MADE. Deliberately its own state. */
@@ -426,7 +426,7 @@ function Stat({ icon, children }: { icon: 'navigation' | 'cart'; children: React
  * because the two are different questions: "should I take this" against
  * "what do I do next with what I already have".
  */
-function OfferCard({
+export function OfferCard({
   o,
   at,
   onTaken,
@@ -597,6 +597,11 @@ export default function DeliveriesScreen() {
   const live = all.filter((j) => LIVE.includes(j.status));
   const done = all.filter((j) => !LIVE.includes(j.status));
   const available = offers ?? [];
+  // The section-header total from the reference's transaction list, applied
+  // to what it actually means here: what today's finished deliveries paid.
+  const finishedEarned = done
+    .filter((j) => j.status === 'DELIVERED')
+    .reduce((sum, j) => sum + (j.deliveryFee ?? 0), 0);
 
   return (
     <Screen
@@ -637,7 +642,12 @@ export default function DeliveriesScreen() {
 
       {done.length > 0 ? (
         <>
-          <Text style={styles.sectionTitle}>Finished</Text>
+          <View style={styles.sectionHead}>
+            <Text style={[styles.sectionTitle, styles.sectionTitleInRow]}>Finished</Text>
+            {finishedEarned > 0 ? (
+              <Text style={styles.sectionTotal}>{naira(finishedEarned)} earned</Text>
+            ) : null}
+          </View>
           {done.map((j) => (
             <JobCard key={j.id} d={j} onChange={replace} />
           ))}
@@ -781,6 +791,18 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.md,
   },
+  // The "Finished" title shares a row with its earned total (the reference's
+  // date-header/total anatomy) rather than sitting on its own line, so its
+  // own vertical margins move to the row and it drops its own here.
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  sectionTitleInRow: { marginTop: 0, marginBottom: 0 },
+  sectionTotal: { fontSize: type.size.sm, fontFamily: fontFamily.bold, color: colors.moneyInk },
   sectionFirst: {
     fontSize: type.size.md,
     fontFamily: fontFamily.bold,

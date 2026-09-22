@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, TextInput, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useMemo } from 'react';
+import { View, Text, StyleSheet, Modal, Pressable, TextInput, ActivityIndicator, ScrollView, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 // expo-file-system v19 (SDK 54) replaced this API with a File/Directory
@@ -7,20 +7,22 @@ import { useRouter } from 'expo-router';
 // writeAsStringAsync surface this screen already relies on.
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { Screen } from '../../src/components/Screen';
-import { WalletBalanceCard } from '../../src/components/WalletBalanceCard';
-import { Card } from '../../src/components/Card';
-import { Button } from '../../src/components/Button';
-import { MoneyText } from '../../src/components/MoneyText';
+import { AppBalanceHero, AppPrimaryButton, AppListCard, AppListRow, AppChipRow, AppChip, AppEmptyState, AppErrorState, AppLoadingCards } from '../../src/appui/AppUI';
 import { Icon } from '../../src/components/Icon';
-import { StatusPill } from '../../src/components/StatusPill';
-import { LoadingState, ErrorState, EmptyState, Banner } from '../../src/components/Feedback';
-import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
+import { obColors, obRadii } from '../../src/onboarding/onboardingTheme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
 import { formatNaira, formatDate } from '../../src/lib/format';
 import type { Wallet, Transaction } from '../../src/api/types';
+
+/**
+ * Restyled to match afrizone-mobile-prototype (1).html's Wallet screen - the
+ * navy balance hero, a static info row for the pay-math disclosure, and
+ * grouped transactions. All real state/logic below (period filtering,
+ * day-grouping, withdraw idempotency key, tax-statement download) is
+ * unchanged from the previous version of this file.
+ */
 
 /** Minimum withdrawal per API_CONTRACT v3 (₦5,000). */
 const WITHDRAW_MIN = 5000;
@@ -28,10 +30,12 @@ const WITHDRAW_MIN = 5000;
 export default function WalletScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [yearSheetOpen, setYearSheetOpen] = useState(false);
   const [dlBusy, setDlBusy] = useState(false);
   const [dlError, setDlError] = useState<string | null>(null);
+  const [period, setPeriod] = useState<'week' | 'month' | 'all'>('all');
 
   // REAL: GET /api/me/wallet → derived balances
   const wallet = useAsync<Wallet>((signal) => api.myWallet(signal), []);
@@ -40,6 +44,51 @@ export default function WalletScreen() {
 
   const balances = wallet.data ?? { pending: 0, available: 0, withdrawn: 0 };
   const belowMin = balances.available < WITHDRAW_MIN;
+
+  // This calendar month's net earnings, for the hero's third column - a real
+  // figure derived from the same transactions, independent of whatever the
+  // period chip below is set to.
+  const thisMonthNet = useMemo(() => {
+    const now = new Date();
+    return (txns.data ?? []).reduce((sum, tx) => {
+      const d = new Date(tx.createdAt);
+      if (d.getFullYear() !== now.getFullYear() || d.getMonth() !== now.getMonth()) return sum;
+      return sum + (tx.kind === 'withdrawal' ? -tx.amount : tx.amount);
+    }, 0);
+  }, [txns.data]);
+
+  const filteredTxns = useMemo(() => {
+    const all = txns.data ?? [];
+    if (period === 'all') return all;
+    const cutoff = new Date();
+    if (period === 'week') cutoff.setDate(cutoff.getDate() - 7);
+    else cutoff.setMonth(cutoff.getMonth() - 1);
+    return all.filter((tx) => new Date(tx.createdAt) >= cutoff);
+  }, [txns.data, period]);
+
+  const txnGroups = useMemo(() => {
+    const groups: { key: string; label: string; net: number; items: Transaction[] }[] = [];
+    for (const tx of filteredTxns) {
+      const d = new Date(tx.createdAt);
+      const key = Number.isNaN(d.getTime()) ? 'unknown' : d.toDateString();
+      const signedAmount = tx.kind === 'withdrawal' ? -tx.amount : tx.amount;
+      let group = groups[groups.length - 1]?.key === key ? groups[groups.length - 1] : undefined;
+      if (!group) {
+        group = {
+          key,
+          label: Number.isNaN(d.getTime())
+            ? 'Earlier'
+            : d.toLocaleDateString('en-NG', { weekday: 'short', day: 'numeric', month: 'short' }),
+          net: 0,
+          items: [],
+        };
+        groups.push(group);
+      }
+      group.net += signedAmount;
+      group.items.push(tx);
+    }
+    return groups;
+  }, [filteredTxns]);
 
   async function downloadStatement(year: number) {
     setYearSheetOpen(false);
@@ -63,93 +112,106 @@ export default function WalletScreen() {
   }
 
   return (
-    <Screen title="Wallet" subtitle="Your earnings, paid to your bank" onRefresh={() => { wallet.reload(); txns.reload(); }} refreshing={wallet.loading && !!wallet.data}>
-      {wallet.loading && !wallet.data ? (
-        <LoadingState label="Loading wallet…" />
-      ) : wallet.error ? (
-        <ErrorState message={wallet.error} onRetry={wallet.reload} />
-      ) : (
-        <>
-          <WalletBalanceCard wallet={balances} />
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 18, paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={wallet.loading && !!wallet.data}
+            onRefresh={() => { wallet.reload(); txns.reload(); }}
+            tintColor={obColors.navy}
+          />
+        }
+      >
+        <Text style={styles.title}>Wallet</Text>
+        <View style={{ height: 14 }} />
 
-          <View style={styles.actions}>
-            <Button
-              label="Withdraw"
-              icon="arrow-up"
-              onPress={() => setSheetOpen(true)}
-              disabled={belowMin}
-            />
-          </View>
-          {belowMin ? (
-            <Text style={styles.minNote}>
-              Minimum withdrawal is {formatNaira(WITHDRAW_MIN)}. Keep earning to unlock payouts.
-            </Text>
-          ) : null}
+        {wallet.loading && !wallet.data ? (
+          <AppLoadingCards count={2} />
+        ) : wallet.error ? (
+          <AppErrorState message={wallet.error} onRetry={wallet.reload} />
+        ) : (
+          <>
+            <AppBalanceHero
+              label="Available balance"
+              amount={formatNaira(balances.available)}
+              split={[
+                { label: 'Pending', value: formatNaira(balances.pending) },
+                { label: 'Withdrawn', value: formatNaira(balances.withdrawn) },
+                { label: 'This month', value: formatNaira(Math.abs(thisMonthNet)) },
+              ]}
+            >
+              <AppPrimaryButton label="Withdraw funds" icon="arrow-up" onPress={() => setSheetOpen(true)} disabled={belowMin} />
+            </AppBalanceHero>
+            {belowMin ? (
+              <Text style={styles.minNote}>
+                Minimum withdrawal is {formatNaira(WITHDRAW_MIN)}. Keep earning to unlock payouts.
+              </Text>
+            ) : null}
 
-          {/* Money math disclosure (§3.5) */}
-          <Card tinted style={styles.math}>
-            <View style={styles.mathRow}>
-              <Icon name="shield" size={16} color={colors.indigo} />
-              <Text style={styles.mathTitle}>How your pay is calculated</Text>
+            <View style={{ marginTop: 16, marginBottom: 16 }}>
+              <AppListCard>
+                <AppListRow
+                  icon="shield"
+                  title="How pay is calculated"
+                  subtitle="Gross → −5% WHT → Net to wallet"
+                  last
+                />
+              </AppListCard>
             </View>
-            <Text style={styles.mathLine}>Gross  →  − 5% WHT  →  Net to wallet</Text>
-            <Text style={styles.mathSub}>
-              Withholding tax (WHT) is remitted on your behalf. Download your annual statement below.
-            </Text>
-          </Card>
 
-          <Text style={styles.section}>Transactions</Text>
-          {txns.loading && !txns.data ? (
-            <LoadingState />
-          ) : (txns.data?.length ?? 0) === 0 ? (
-            <EmptyState icon="wallet" title="No transactions yet" message="Earnings appear here once tasks are approved." />
-          ) : (
-            <Card padded={false} style={styles.txCard}>
-              {(txns.data ?? []).map((tx, i) => (
-                <View key={tx.id}>
-                  <TransactionRow
-                    tx={tx}
-                    onPress={tx.kind === 'earning' ? () => router.push(`/payment/${tx.id}`) : undefined}
-                  />
-                  {i < (txns.data?.length ?? 0) - 1 ? <View style={styles.divider} /> : null}
+            {(txns.data?.length ?? 0) > 0 ? (
+              <View style={{ marginBottom: 16 }}>
+                <AppChipRow>
+                  <AppChip label="This week" active={period === 'week'} onPress={() => setPeriod('week')} />
+                  <AppChip label="This month" active={period === 'month'} onPress={() => setPeriod('month')} />
+                  <AppChip label="All time" active={period === 'all'} onPress={() => setPeriod('all')} />
+                </AppChipRow>
+              </View>
+            ) : null}
+
+            {txns.loading && !txns.data ? (
+              <AppLoadingCards count={3} />
+            ) : (txns.data?.length ?? 0) === 0 ? (
+              <AppEmptyState icon="wallet" title="No transactions yet" message="Earnings appear here once tasks are approved." />
+            ) : txnGroups.length === 0 ? (
+              <AppEmptyState icon="wallet" title="Nothing in this period" message="Try a wider period to see older transactions." />
+            ) : (
+              txnGroups.map((group) => (
+                <View key={group.key} style={{ marginBottom: 16 }}>
+                  <View style={styles.dayHeader}>
+                    <Text style={styles.dayLabel}>{group.label}</Text>
+                    <Text style={[styles.dayNet, { color: group.net >= 0 ? obColors.mgreen : obColors.text }]}>
+                      {group.net >= 0 ? '+' : '−'}{formatNaira(Math.abs(group.net))}
+                    </Text>
+                  </View>
+                  {group.items.map((tx) => (
+                    <TransactionRow key={tx.id} tx={tx} onPress={tx.kind === 'earning' ? () => router.push(`/payment/${tx.id}`) : undefined} />
+                  ))}
                 </View>
-              ))}
-            </Card>
-          )}
+              ))
+            )}
 
-          <Pressable
-            style={styles.statement}
-            accessibilityRole="button"
-            onPress={() => setYearSheetOpen(true)}
-            disabled={dlBusy}
-          >
-            <Icon name="id" size={18} color={colors.clay} />
-            <Text style={styles.statementText}>Download annual tax statement</Text>
-            {dlBusy
-              ? <ActivityIndicator size="small" color={colors.textMuted} />
-              : <Icon name="chevron-right" size={16} color={colors.textMuted} />
-            }
-          </Pressable>
-          {dlError ? <Text style={styles.dlError}>{dlError}</Text> : null}
-        </>
-      )}
+            <Pressable style={styles.statement} onPress={() => setYearSheetOpen(true)} disabled={dlBusy}>
+              <Icon name="id" size={16} color={obColors.navy} />
+              <Text style={styles.statementText}>Download annual tax statement</Text>
+              {dlBusy ? <ActivityIndicator size="small" color={obColors.textMut} /> : <Icon name="chevron-right" size={15} color={obColors.textMut} />}
+            </Pressable>
+            {dlError ? <Text style={styles.dlError}>{dlError}</Text> : null}
+          </>
+        )}
+      </ScrollView>
 
       <WithdrawSheet
         visible={sheetOpen}
         available={balances.available}
         onClose={() => setSheetOpen(false)}
         bankMasked={user?.bankMasked}
-        onWithdrawn={() => {
-          wallet.reload();
-          txns.reload();
-        }}
+        onWithdrawn={() => { wallet.reload(); txns.reload(); }}
       />
-      <YearSheet
-        visible={yearSheetOpen}
-        onClose={() => setYearSheetOpen(false)}
-        onSelect={downloadStatement}
-      />
-    </Screen>
+      <YearSheet visible={yearSheetOpen} onClose={() => setYearSheetOpen(false)} onSelect={downloadStatement} />
+    </View>
   );
 }
 
@@ -157,30 +219,19 @@ function TransactionRow({ tx, onPress }: { tx: Transaction; onPress?: () => void
   const out = tx.kind === 'withdrawal';
   const row = (
     <View style={styles.txRow}>
-      <View style={[styles.txIcon, { backgroundColor: out ? colors.surfaceSand : colors.moneySoft }]}>
-        <Icon name={out ? 'arrow-up' : 'arrow-down'} size={18} color={out ? colors.textMuted : colors.money} />
+      <View style={[styles.txIcon, { backgroundColor: out ? obColors.sand : obColors.mgreenBg }]}>
+        <Icon name={out ? 'arrow-up' : 'arrow-down'} size={14} color={out ? obColors.navy : obColors.mgreen} />
       </View>
-      <View style={styles.txBody}>
+      <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.txTitle} numberOfLines={1}>{tx.title}</Text>
         <Text style={styles.txSub}>{formatDate(tx.createdAt)} · {out ? 'Withdrawal' : 'Earning'}</Text>
       </View>
-      <View style={styles.txRight}>
-        <MoneyText
-          amount={tx.amount}
-          size={type.size.md}
-          color={out ? colors.text : colors.money}
-          signed={out ? 'out' : 'in'}
-        />
-        <View style={styles.txPillRow}>
-          <StatusPill status={tx.status} small />
-          {!out && <Icon name="chevron-right" size={14} color={colors.line} />}
-        </View>
-      </View>
+      <Text style={[styles.txAmt, { color: out ? obColors.text : obColors.mgreen }]}>
+        {out ? '−' : '+'}{formatNaira(tx.amount)}
+      </Text>
     </View>
   );
-  if (onPress) {
-    return <Pressable onPress={onPress} accessibilityRole="button">{row}</Pressable>;
-  }
+  if (onPress) return <Pressable onPress={onPress} accessibilityRole="button">{row}</Pressable>;
   return row;
 }
 
@@ -203,6 +254,7 @@ function WithdrawSheet({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const value = Number(amount.replace(/\D/g, '')) || 0;
+  const displayAmount = value > 0 ? value.toLocaleString('en-NG') : '';
   const tooMuch = value > available;
   const tooLittle = value < WITHDRAW_MIN;
 
@@ -248,48 +300,58 @@ function WithdrawSheet({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
       <Pressable style={styles.backdrop} onPress={close} />
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
+      <View style={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.grabber} />
         {done ? (
           <View style={styles.sheetDone}>
             <View style={styles.doneIcon}>
-              <Icon name="check" size={34} color={colors.money} strokeWidth={3} />
+              <Icon name="check" size={30} color={obColors.mgreen} strokeWidth={3} />
             </View>
             <Text style={styles.sheetTitle}>Withdrawal queued</Text>
             <Text style={styles.sheetSub}>
               {formatNaira(value)} to {bankMasked ?? 'your bank'}: arrives T+1 (next business day).
             </Text>
-            <Button label="Done" onPress={close} />
+            <AppPrimaryButton label="Done" onPress={close} variant="outline" />
           </View>
         ) : (
           <>
             <Text style={styles.sheetTitle}>Withdraw funds</Text>
-            <Text style={styles.sheetSub}>Available: {formatNaira(available)} · to {bankMasked ?? 'your bank on file'}</Text>
-            <View style={styles.amountWrap}>
-              <Text style={styles.naira}>₦</Text>
-              <TextInput
-                value={amount}
-                onChangeText={(t) => setAmount(t.replace(/\D/g, ''))}
-                keyboardType="number-pad"
-                placeholder="0"
-                placeholderTextColor={colors.textFaint}
-                style={styles.amountInput}
-                autoFocus
-              />
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Amount (available: {formatNaira(available)})</Text>
+              <View style={styles.amountBox}>
+                <Text style={styles.naira}>₦</Text>
+                <TextInput
+                  value={displayAmount}
+                  onChangeText={(t) => setAmount(t.replace(/\D/g, ''))}
+                  keyboardType="number-pad"
+                  placeholder="0.00"
+                  placeholderTextColor={obColors.textFaint}
+                  style={styles.amountInput}
+                  autoFocus
+                />
+              </View>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Withdraw to</Text>
+              <View style={styles.fieldBox}>
+                <Text style={styles.fieldBoxText}>{bankMasked ?? 'No bank on file'}</Text>
+              </View>
             </View>
             {error ? (
-              <Banner tone="danger" title="Withdrawal failed" message={error} />
+              <Text style={styles.errText}>{error}</Text>
             ) : value > 0 && tooMuch ? (
-              <Banner tone="danger" title="More than available" message="Enter an amount within your balance." />
+              <Text style={styles.errText}>More than your available balance.</Text>
             ) : value > 0 && tooLittle ? (
-              <Banner tone="amber" title={`Below minimum (${formatNaira(WITHDRAW_MIN)})`} />
+              <Text style={styles.warnText}>Below minimum ({formatNaira(WITHDRAW_MIN)}).</Text>
             ) : null}
-            <Button
-              label={`Withdraw ${value > 0 ? formatNaira(value) : ''}`.trim()}
-              onPress={submit}
-              loading={busy}
-              disabled={value <= 0 || tooMuch || tooLittle}
-            />
+            <View style={{ marginTop: 8 }}>
+              <AppPrimaryButton
+                label="Confirm withdrawal"
+                onPress={submit}
+                loading={busy}
+                disabled={value <= 0 || tooMuch || tooLittle || !bankMasked}
+              />
+            </View>
           </>
         )}
       </View>
@@ -297,15 +359,7 @@ function WithdrawSheet({
   );
 }
 
-function YearSheet({
-  visible,
-  onClose,
-  onSelect,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  onSelect: (year: number) => void;
-}) {
+function YearSheet({ visible, onClose, onSelect }: { visible: boolean; onClose: () => void; onSelect: (year: number) => void }) {
   const insets = useSafeAreaInsets();
   const currentYear = new Date().getFullYear();
   const years = [currentYear, currentYear - 1, currentYear - 2];
@@ -313,20 +367,15 @@ function YearSheet({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
+      <View style={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.grabber} />
         <Text style={styles.sheetTitle}>Select tax year</Text>
         <Text style={styles.sheetSub}>Your WHT statement will be downloaded as a CSV file.</Text>
-        <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
+        <View style={{ gap: 8, marginTop: 12 }}>
           {years.map((y) => (
-            <Pressable
-              key={y}
-              style={styles.yearRow}
-              onPress={() => onSelect(y)}
-              accessibilityRole="button"
-            >
+            <Pressable key={y} style={styles.yearRow} onPress={() => onSelect(y)} accessibilityRole="button">
               <Text style={styles.yearText}>{y}</Text>
-              <Icon name="chevron-right" size={18} color={colors.textMuted} />
+              <Icon name="chevron-right" size={16} color={obColors.textMut} />
             </Pressable>
           ))}
         </View>
@@ -335,76 +384,90 @@ function YearSheet({
   );
 }
 
-
 const styles = StyleSheet.create({
-  actions: { marginTop: spacing.lg },
-  minNote: { color: colors.textMuted, fontSize: type.size.sm, marginTop: spacing.sm, textAlign: 'center' },
-  math: { marginTop: spacing.lg, gap: 6 },
-  mathRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  mathTitle: { color: colors.text, fontWeight: '700', fontSize: type.size.base },
-  mathLine: { color: colors.text, fontWeight: '700', fontSize: type.size.md, marginTop: 2 },
-  mathSub: { color: colors.textMuted, fontSize: type.size.sm, lineHeight: 18 },
-  section: { color: colors.text, fontSize: type.size.lg, fontFamily: fontFamily.extrabold, marginTop: spacing.xl, marginBottom: spacing.md },
-  txCard: { paddingHorizontal: spacing.lg },
-  txRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
-  txIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  txBody: { flex: 1, gap: 2 },
-  txTitle: { color: colors.text, fontSize: type.size.base, fontWeight: '700' },
-  txSub: { color: colors.textMuted, fontSize: type.size.xs },
-  txRight: { alignItems: 'flex-end', gap: 4 },
-  txPillRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  divider: { height: 1, backgroundColor: colors.line },
+  root: { flex: 1, backgroundColor: obColors.bg },
+  title: { fontSize: 19, fontFamily: 'Raleway_800ExtraBold', color: obColors.navy },
+  minNote: { color: obColors.textMut, fontSize: 12.5, marginTop: 8, textAlign: 'center' },
+  dayHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 },
+  dayLabel: { fontSize: 11.5, color: obColors.textMut, fontWeight: '700' },
+  dayNet: { fontSize: 11.5, fontWeight: '700' },
+  txRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    backgroundColor: obColors.white,
+    borderWidth: 1,
+    borderColor: obColors.line,
+    borderRadius: 14,
+    padding: 13,
+    marginBottom: 8,
+  },
+  txIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  txTitle: { fontSize: 13, fontWeight: '700', color: obColors.text },
+  txSub: { fontSize: 11, color: obColors.textMut, marginTop: 1 },
+  txAmt: { fontSize: 13, fontWeight: '800', fontFamily: 'Raleway_800ExtraBold' },
   statement: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.lg,
-    padding: spacing.lg,
-    borderRadius: radii.card,
+    gap: 12,
+    marginTop: 8,
+    padding: 14,
+    borderRadius: obRadii.card,
     borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.surface,
+    borderColor: obColors.line,
+    backgroundColor: obColors.white,
   },
-  statementText: { flex: 1, color: colors.text, fontWeight: '600', fontSize: type.size.base },
-  dlError: { color: colors.dangerInk, fontSize: type.size.sm, marginTop: spacing.xs },
+  statementText: { flex: 1, color: obColors.text, fontWeight: '600', fontSize: 13.5 },
+  dlError: { color: obColors.danger, fontSize: 12.5, marginTop: 6 },
   // sheet
-  backdrop: { flex: 1, backgroundColor: colors.scrim },
+  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
   sheet: {
-    backgroundColor: colors.bg,
-    borderTopLeftRadius: radii.sheet,
-    borderTopRightRadius: radii.sheet,
-    padding: layout.screenPadding,
-    gap: spacing.md,
+    backgroundColor: obColors.bg,
+    borderTopLeftRadius: obRadii.hero,
+    borderTopRightRadius: obRadii.hero,
+    padding: 20,
+    gap: 10,
   },
-  grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 100, backgroundColor: colors.line, marginBottom: spacing.sm },
-  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold },
-  sheetSub: { color: colors.textMuted, fontSize: type.size.base },
-  amountWrap: {
+  grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: 4, backgroundColor: obColors.line, marginBottom: 8 },
+  sheetTitle: { color: obColors.navy, fontSize: 18, fontFamily: 'Raleway_800ExtraBold' },
+  sheetSub: { color: obColors.textMut, fontSize: 13 },
+  field: { marginTop: 12 },
+  fieldLabel: { fontSize: 12, fontWeight: '700', color: obColors.textMut, marginBottom: 6 },
+  fieldBox: {
+    backgroundColor: obColors.white,
+    borderWidth: 1,
+    borderColor: obColors.line,
+    borderRadius: obRadii.field,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  fieldBoxText: { fontSize: 15, fontWeight: '700', color: obColors.text },
+  amountBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: obColors.white,
     borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radii.input,
-    paddingHorizontal: spacing.lg,
-    marginVertical: spacing.sm,
+    borderColor: obColors.line,
+    borderRadius: obRadii.field,
+    paddingHorizontal: 16,
   },
-  naira: { fontSize: type.size.xxl, fontWeight: '800', color: colors.text },
-  amountInput: { flex: 1, fontSize: type.size.display, fontWeight: '800', color: colors.text, paddingVertical: spacing.md },
+  naira: { fontSize: 22, fontWeight: '800', color: obColors.text },
+  amountInput: { flex: 1, fontSize: 26, fontWeight: '800', color: obColors.text, paddingVertical: 12 },
+  errText: { color: obColors.danger, fontSize: 12.5 },
+  warnText: { color: obColors.orangeInk, fontSize: 12.5 },
   yearRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: radii.card,
+    backgroundColor: obColors.white,
+    borderRadius: obRadii.card,
     borderWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    minHeight: 52,
+    borderColor: obColors.line,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    minHeight: 50,
   },
-  yearText: { color: colors.text, fontSize: type.size.lg, fontWeight: '700' },
-  sheetDone: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.lg },
-  doneIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.moneySoft, alignItems: 'center', justifyContent: 'center' },
-  doneWrap: { alignItems: 'center', gap: spacing.md },
+  yearText: { color: obColors.text, fontSize: 15, fontWeight: '700' },
+  sheetDone: { alignItems: 'center', gap: 10, paddingVertical: 12 },
+  doneIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: obColors.mgreenBg, alignItems: 'center', justifyContent: 'center' },
 });

@@ -9,10 +9,9 @@ import {
   TextInputKeyPressEventData,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Button } from '../../src/components/Button';
 import { Banner } from '../../src/components/Feedback';
-import { AuthScreen } from '../../src/components/AuthShell';
-import { colors, spacing, radii, type } from '../../src/theme';
+import { ObScreen } from '../../src/onboarding/ObUI';
+import { obColors, obRadii } from '../../src/onboarding/onboardingTheme';
 import { useAuth } from '../../src/auth/AuthContext';
 import { ApiError } from '../../src/api/client';
 
@@ -23,13 +22,12 @@ const MASTER_CODE = '123456'; // dev/sim master (accepted when NODE_ENV !== prod
 type Status = 'idle' | 'verifying' | 'error' | 'locked';
 
 /**
- * OTP step (AUTH_FLOW §A): 6-digit code, auto-advance, paste, 60s resend timer.
- * On verify: isNewUser → KYC stepper, else → tabs. In dev/sim, a returned
- * `devCode` is shown as a hint and prefilled; master `123456` is accepted.
- *
- * Recovered from git history (bf22baa^) and adapted from the old AuthShell/
- * AuthCard shell to the current AuthScreen layout - restored for the pilot
- * launch, which needs phone-based sign-up for workers without reliable email.
+ * Onboarding screen 04. OTP step (AUTH_FLOW §A): 6-digit code, auto-advance,
+ * paste, 60s resend timer. On verify: isNewUser → onboarding, else → tabs.
+ * In dev/sim, a returned `devCode` is shown as a hint and prefilled; master
+ * `123456` is accepted. Same logic as before restyling - only the chrome
+ * (ObScreen) and the box styling changed, to match afrizone-onboarding-
+ * screens.html's screen 04.
  */
 export default function OtpScreen() {
   const router = useRouter();
@@ -102,7 +100,7 @@ export default function OtpScreen() {
     try {
       const isNewUser = await verifyOtp(phone, code);
       if (isNewUser) {
-        router.replace('/(auth)/kyc');
+        router.replace('/(auth)/personal-details');
       } else {
         router.replace('/(tabs)/home');
       }
@@ -133,10 +131,15 @@ export default function OtpScreen() {
   }
 
   return (
-    <AuthScreen
+    <ObScreen
       onBack={() => router.back()}
-      title="Verify your number"
-      subtitle={`Enter the 6-digit code we sent to ${phone || 'your phone'}.`}
+      eyebrow="Verification"
+      title="Enter the code"
+      subtitle={`Sent to ${phone || 'your phone'}`}
+      primaryLabel="Verify"
+      onPrimary={onVerify}
+      primaryDisabled={!complete || locked || status === 'verifying'}
+      primaryLoading={status === 'verifying'}
     >
       {devCode ? (
         <Banner
@@ -148,14 +151,9 @@ export default function OtpScreen() {
       ) : null}
 
       {status === 'locked' ? (
-        <Banner
-          tone="danger"
-          icon="alert"
-          title="Too many attempts"
-          message={error ?? 'Please wait and request a new code.'}
-        />
+        <Banner tone="danger" icon="alert" title="Too many attempts" message={error ?? 'Please wait and request a new code.'} />
       ) : status === 'error' ? (
-        <Banner tone="danger" icon="alert" title="Couldn’t verify" message={error ?? 'That code is wrong or expired.'} />
+        <Banner tone="danger" icon="alert" title="Couldn't verify" message={error ?? 'That code is wrong or expired.'} />
       ) : null}
 
       <View style={styles.boxes}>
@@ -179,41 +177,37 @@ export default function OtpScreen() {
         ))}
       </View>
 
-      <Button
-        label="Verify"
-        icon="check"
-        onPress={onVerify}
-        loading={status === 'verifying'}
-        disabled={!complete || locked || status === 'verifying'}
-      />
-
       <Pressable onPress={onResend} disabled={secondsLeft > 0} accessibilityRole="button" style={styles.resendRow}>
-        <Text style={[styles.resend, secondsLeft > 0 && styles.resendDisabled]}>
-          {secondsLeft > 0 ? `Resend code in ${secondsLeft}s` : 'Didn’t get it? Resend code'}
+        <Text style={styles.resend}>
+          {secondsLeft > 0 ? (
+            <>Didn't get it? <Text style={styles.resendBold}>Resend in {secondsLeft}s</Text></>
+          ) : (
+            "Didn't get it? Resend code"
+          )}
         </Text>
       </Pressable>
-    </AuthScreen>
+    </ObScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  boxes: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
+  boxes: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   box: {
     flex: 1,
     minWidth: 0,
-    height: 58,
-    backgroundColor: colors.surface,
-    borderColor: colors.line,
-    borderWidth: 1.5,
-    borderRadius: radii.input,
+    height: 52,
+    backgroundColor: obColors.white,
+    borderColor: obColors.line,
+    borderWidth: 1.3,
+    borderRadius: obRadii.otp,
     textAlign: 'center',
-    fontSize: type.size.xxl,
-    fontWeight: '800',
-    color: colors.text,
+    fontSize: 18,
+    fontFamily: 'Raleway_800ExtraBold',
+    color: obColors.navy,
   },
-  boxFilled: { borderColor: colors.clay, backgroundColor: colors.claySoft },
-  boxError: { borderColor: colors.danger },
-  resendRow: { alignItems: 'center', paddingVertical: spacing.sm },
-  resend: { color: colors.goldInk, fontSize: type.size.base, fontWeight: '700' },
-  resendDisabled: { color: colors.textMuted, fontWeight: '600' },
+  boxFilled: { borderColor: obColors.goldDeep },
+  boxError: { borderColor: obColors.danger },
+  resendRow: { alignItems: 'center', paddingVertical: 8 },
+  resend: { color: obColors.textMut, fontSize: 13, textAlign: 'center' },
+  resendBold: { color: obColors.navy, fontWeight: '700' },
 });

@@ -4,6 +4,7 @@ import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, IconName } from '../../src/components/Icon';
 import { colors, type, fontFamily } from '../../src/theme';
+import { useAuth } from '../../src/auth/AuthContext';
 
 function tabIcon(name: IconName) {
   return ({ color, focused }: { color: string; focused: boolean }) => (
@@ -29,6 +30,13 @@ export default function TabsLayout() {
   // `height` opts out of that. Without this the Android gesture bar sits on top
   // of the labels: on a Pixel 8 it struck straight through "Wallet".
   const insets = useSafeAreaInsets();
+  // Jobs is full-time/part-time listings, which don't fit a store owner -
+  // hidden via href:null (keeps the route registered, just not a tab button)
+  // rather than removed, so a direct link still works if one ever exists.
+  // Home itself renders the store dashboard for this account type instead of
+  // the worker task feed (see (tabs)/home.tsx) - no separate tab needed for it.
+  const { user } = useAuth();
+  const isStore = user?.accountType === 'STORE';
   return (
     <Tabs
       screenOptions={{
@@ -68,7 +76,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: tabIcon('home') }} />
       <Tabs.Screen name="tasks" options={{ title: 'My Tasks', tabBarIcon: tabIcon('list') }} />
       <Tabs.Screen name="wallet" options={{ title: 'Wallet', tabBarIcon: tabIcon('wallet') }} />
-      <Tabs.Screen name="jobs" options={{ title: 'Jobs', tabBarIcon: tabIcon('briefcase') }} />
+      <Tabs.Screen name="jobs" options={{ title: 'Jobs', tabBarIcon: tabIcon('briefcase'), href: isStore ? null : undefined }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: tabIcon('user') }} />
     </Tabs>
   );

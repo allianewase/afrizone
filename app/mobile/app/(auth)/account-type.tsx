@@ -17,14 +17,16 @@
  *
  * Which is also why signing in skips this screen entirely. You do not have to
  * declare what you are in order to log in; the server already knows.
+ *
+ * Restyled to afrizone-onboarding-screens.html's screen 02: select-then-
+ * "Continue" (was tap-a-card-and-go-immediately) - the mock's own
+ * interaction model, still routing the same way once confirmed.
  */
-import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { AuthScreen, AuthFooterLink } from '../../src/components/AuthShell';
-import { Icon, type IconName } from '../../src/components/Icon';
-import { colors, spacing, type, radii, fontFamily } from '../../src/theme';
+import { ObScreen, ObRoleCard } from '../../src/onboarding/ObUI';
 import type { AccountType } from '../../src/api/types';
+import type { IconName } from '../../src/components/Icon';
 
 type Option = {
   key: AccountType;
@@ -39,21 +41,23 @@ const OPTIONS: Option[] = [
   {
     key: 'INDIVIDUAL',
     icon: 'user',
-    title: 'For myself',
+    title: 'Individual',
     blurb: 'Pick up tasks, source products, get paid for the work you do.',
-    route: '/(auth)/otp',
+    // Was '/(auth)/otp' directly - that skipped collecting a phone number
+    // entirely, so otp.tsx opened with no number to send a code to.
+    route: '/(auth)/phone',
   },
   {
     key: 'STORE',
     icon: 'cart',
-    title: 'For my store',
+    title: 'AZM Store',
     blurb: 'Receive and fulfil orders from AfriZoneMart customers.',
     route: '/(auth)/register',
   },
   {
     key: 'COURIER',
     icon: 'map-pin',
-    title: 'For deliveries',
+    title: 'Courier',
     blurb: 'Pick up and deliver orders, on your own or with a courier company.',
     route: '/(auth)/register',
   },
@@ -61,86 +65,37 @@ const OPTIONS: Option[] = [
 
 export default function AccountTypeScreen() {
   const router = useRouter();
+  const [selected, setSelected] = useState<Option | null>(null);
 
-  function choose(opt: Option) {
+  function onContinue() {
+    if (!selected) return;
     // Carried as a param rather than stored: it is a hint for the next screen,
     // not a fact about anybody yet. Nothing has been created, so there is
     // nothing worth persisting - and a stale choice left lying around is how a
     // person ends up signed up as something they picked days ago.
-    router.push({ pathname: opt.route as never, params: { accountType: opt.key } as never });
+    router.push({ pathname: selected.route as never, params: { accountType: selected.key } as never });
   }
 
   return (
-    <AuthScreen
-      title="How will you use Afrizone?"
-      subtitle="This sets up the right account for you."
-      footer={
-        <AuthFooterLink
-          text="Already have an account?"
-          linkText="Sign in"
-          onPress={() => router.push('/(auth)/login')}
-        />
-      }
+    <ObScreen
+      onBack={() => router.back()}
+      eyebrow="Get started"
+      title="Join as"
+      subtitle="Pick the account that fits how you'll work with AZM."
+      primaryLabel="Continue"
+      onPrimary={onContinue}
+      primaryDisabled={!selected}
     >
-      <View style={styles.list}>
-        {OPTIONS.map((opt) => (
-          <Pressable
-            key={opt.key}
-            onPress={() => choose(opt)}
-            accessibilityRole="button"
-            accessibilityLabel={`${opt.title}. ${opt.blurb}`}
-            style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-          >
-            <View style={styles.iconWrap}>
-              <Icon name={opt.icon} size={20} color={colors.clay} />
-            </View>
-            <View style={styles.body}>
-              <Text style={styles.title}>{opt.title}</Text>
-              <Text style={styles.blurb}>{opt.blurb}</Text>
-            </View>
-            <Icon name="chevron-right" size={18} color={colors.textMuted} />
-          </Pressable>
-        ))}
-      </View>
-
-      <Text style={styles.note}>
-        Not sure? Choose “For myself”. You can always talk to us about adding a store or
-        deliveries later.
-      </Text>
-    </AuthScreen>
+      {OPTIONS.map((opt) => (
+        <ObRoleCard
+          key={opt.key}
+          icon={opt.icon}
+          title={opt.title}
+          blurb={opt.blurb}
+          selected={selected?.key === opt.key}
+          onPress={() => setSelected(opt)}
+        />
+      ))}
+    </ObScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  list: { gap: spacing.md },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderRadius: radii.card,
-    borderTopRightRadius: radii.cut,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.surface,
-  },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: colors.claySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  body: { flex: 1, gap: 3 },
-  title: { color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.bold },
-  blurb: { color: colors.textMuted, fontSize: type.size.sm, lineHeight: 19 },
-  note: {
-    color: colors.textMuted,
-    fontSize: type.size.sm,
-    lineHeight: 19,
-    textAlign: 'center',
-    marginTop: spacing.lg,
-  },
-});

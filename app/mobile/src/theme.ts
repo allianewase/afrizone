@@ -92,13 +92,24 @@ export const colors = {
   // literals were still the pre-rebrand warm black.
   scrim: 'rgba(44,44,44,0.45)',
 
-  // Pill fills: the exact tints web-admin composes (each status colour at 10 to
-  // 16% over white), so a pill renders identically in both apps rather than
-  // merely similarly, which is what DESIGN_SPEC 0.4 asks for.
+  // Pill fills: web-admin composes these live as rgba(status, 10-16%) over
+  // white (global.css .pill.*), which a static hex can only mirror, not
+  // reference - so each value here is that composite pre-computed, checked
+  // against web-admin's actual rendered output, not assumed from the alpha
+  // alone. moneySoft and dangerSoft are the one deliberate exception: they
+  // use the shop's own tint instead of web-admin's composite, which the shop
+  // itself defines for those two colours and web-admin does not.
   amberSoft: '#FBF1E4',
   pendingSoft: '#F0ECF4',
-  claySoft: '#FFF5E7',
-  indigoSoft: '#E6EBF5',
+  // Twin of web-admin's --gold-soft (its VERIFIED shop value), not a
+  // recompute of rgba(251,172,52,0.16)/white (#FEF2DF) - the two are a hair
+  // apart and --gold-soft is the reusable named token admin actually ships.
+  // Was #FFF5E7, an independently derived value that matched neither.
+  claySoft: '#FEF3E2',
+  // rgba(45,91,168,0.1) over white - admin has no named --indigo-soft var,
+  // only this composite (.pill.review), so it's the only thing to mirror.
+  // Was #E6EBF5, independently derived and off by up to 4 per channel.
+  indigoSoft: '#EAEFF6',
   moneySoft: '#EAFAF1', // the shop's tint for `money`, not web-admin's
   forestSoft: '#E3E6E5',
   dangerSoft: '#FDEDEC', // the shop's tint for `danger`, not web-admin's

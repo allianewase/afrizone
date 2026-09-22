@@ -44,7 +44,8 @@ export type IconName =
   | 'dollar'
   | 'cart'
   | 'eye'
-  | 'eye-off';
+  | 'eye-off'
+  | 'edit';
 
 interface IconProps {
   name: IconName;
@@ -334,6 +335,8 @@ function renderGlyph(
           <Path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" {...c} />
         </>
       );
+    case 'edit':
+      return <Path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" {...c} />;
     default:
       return null;
   }
