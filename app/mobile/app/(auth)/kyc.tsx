@@ -31,8 +31,8 @@ import type { Tier } from '../../src/api/types';
  * to POST /api/me/kyc/submit (kycStatus = PENDING).
  *
  * Restyled to the same afrizone-onboarding-screens.html chrome as the rest of
- * (auth)/ - ObField/ObChip/ObButton/ObCheckCircle, KycUploadStep's `flat`
- * variant (the same dropzone id-upload.tsx and selfie.tsx already use). This
+ * (auth)/ - ObField/ObChip/ObButton/ObCheckCircle, and the same KycUploadStep
+ * dropzone id-upload.tsx and selfie.tsx use. This
  * is a standalone re-verification wizard reached later from Profile/Home
  * (not the first-time OnboardingContext-driven flow those two screens are
  * part of), so it keeps its own local step state exactly as before - only
@@ -273,7 +273,6 @@ export default function KycScreen() {
                 </View>
               </View>
               <KycUploadStep
-                variant="flat"
                 icon="id"
                 title="Upload your ID"
                 sub="NIN slip, voter's card, or passport photo page."
@@ -286,7 +285,6 @@ export default function KycScreen() {
 
           {step === 'selfie' && (
             <KycUploadStep
-              variant="flat"
               icon="camera"
               title="Take a selfie"
               sub="Clear, well-lit photo of your face. Use the front camera."
@@ -299,7 +297,6 @@ export default function KycScreen() {
 
           {step === 'docs' && (
             <KycUploadStep
-              variant="flat"
               icon="id"
               title={selectedTier ? `${selectedTier.key} documents` : 'Tier documents'}
               sub={selectedTier?.docLabel ?? 'Supporting documents for your tier.'}

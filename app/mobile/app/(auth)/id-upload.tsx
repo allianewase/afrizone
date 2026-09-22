@@ -48,7 +48,6 @@ export default function IdUploadScreen() {
       </View>
 
       <KycUploadStep
-        variant="flat"
         icon="id"
         title="Your ID document"
         sub="NIN slip, voter's card, or passport photo page. Make sure all four corners are visible and text is readable."
@@ -58,7 +57,6 @@ export default function IdUploadScreen() {
       />
 
       <KycUploadStep
-        variant="flat"
         icon="id"
         title={selectedTier ? `${selectedTier.key} documents` : 'Tier documents'}
         sub={selectedTier?.docLabel ?? 'Supporting documents for your tier.'}

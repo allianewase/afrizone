@@ -113,7 +113,6 @@ export default function CourierSetupScreen() {
       ) : null}
 
       <KycUploadStep
-        variant="flat"
         icon="id"
         title="Driver's licence"
         sub="A clear photo of your licence."
@@ -123,7 +122,6 @@ export default function CourierSetupScreen() {
       />
 
       <KycUploadStep
-        variant="flat"
         icon="id"
         title="Proof of insurance (optional)"
         sub="If you have it - not required to continue."

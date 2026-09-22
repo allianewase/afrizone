@@ -75,7 +75,6 @@ export default function SelfieScreen() {
       </LinearGradient>
 
       <KycUploadStep
-        variant="flat"
         icon="camera"
         title="Selfie photo"
         sub="Clear, well-lit photo of your face. Use the front camera, centered in the frame."
