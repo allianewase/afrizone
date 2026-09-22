@@ -214,7 +214,7 @@ export function ObPasswordField({
           <Icon name={visible ? 'eye-off' : 'eye'} size={17} color={obColors.textMut} />
         </Pressable>
       </View>
-      {error ? <Text style={[styles.fieldHint, { color: obColors.danger }]}>{error}</Text> : hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
+      {error ? <Text style={[styles.fieldHint, { color: obColors.dangerInk }]}>{error}</Text> : hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
     </View>
   );
 }

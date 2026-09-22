@@ -207,9 +207,11 @@ const PILL_TONE: Record<AppPillTone, { fg: string; bg: string }> = {
   await: { fg: obColors.violet, bg: obColors.violetBg },
   progress: { fg: obColors.orangeInk, bg: obColors.orangeInkBg },
   review: { fg: obColors.indigo, bg: obColors.indigoBg },
-  ready: { fg: obColors.mgreen, bg: obColors.mgreenBg },
+  // forest, not mgreen: mgreen on its own tint is 3.10:1, well under what an
+  // 11px label needs. `paid` keeps its own darker tint so the two stay apart.
+  ready: { fg: obColors.forest, bg: obColors.mgreenBg },
   paid: { fg: obColors.forest, bg: obColors.forestBg },
-  attn: { fg: obColors.danger, bg: obColors.dangerBg },
+  attn: { fg: obColors.dangerInk, bg: obColors.dangerBg },
 };
 
 export function AppStatusPill({ tone, label }: { tone: AppPillTone; label: string }) {

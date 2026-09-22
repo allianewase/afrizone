@@ -28,14 +28,11 @@ export function ClockInButton({
 }: ClockInButtonProps) {
   const blocked = blockOutOfFence && geofence === 'out-of-fence';
   const disabled = busy || blocked;
-  // The fill has to carry a white label, and the palette swap re-opened the
-  // contrast question the old comment here settled. `mgreen` is 3.45:1 under
-  // white - the identical figure that got the old `money` rejected - so
-  // clock-in uses `forest` at 8.0:1. Clock-out keeps red, but the new
-  // `danger` is 4.38:1 where the old one was 4.81:1, which is why the label
-  // below is 19px: bold type at 18.66px or more is large text, so the floor
-  // it must clear is 3:1 rather than 4.5:1.
-  const color = clockedIn ? obColors.danger : obColors.forest;
+  // The fill has to carry a white label, so both of these are the palette's
+  // ink-weight tones rather than its fills: `mgreen` is 3.45:1 under white -
+  // the identical figure that got the old `money` rejected - and `danger` is
+  // 4.38:1. `forest` is 8.0:1 and `dangerInk` 6.59:1.
+  const color = clockedIn ? obColors.dangerInk : obColors.forest;
 
   return (
     <View style={styles.wrap}>
@@ -105,7 +102,7 @@ const styles = StyleSheet.create({
   },
   pressed: { transform: [{ scale: 0.97 }] },
   disabled: { opacity: 0.5 },
-  label: { color: obColors.white, fontSize: 19, fontFamily: 'Raleway_800ExtraBold' },
+  label: { color: obColors.white, fontSize: 18, fontFamily: 'Raleway_800ExtraBold' },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',

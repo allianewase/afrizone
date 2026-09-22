@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
   notifRowDivider: { borderBottomWidth: 1, borderBottomColor: obColors.line },
   notifIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: obColors.sand, alignItems: 'center', justifyContent: 'center' },
   notifLabel: { flex: 1, fontSize: 13.5, fontWeight: '600', color: obColors.text },
-  notifError: { color: obColors.danger, fontSize: 12.5, marginTop: 8 },
+  notifError: { color: obColors.dangerInk, fontSize: 12.5, marginTop: 8 },
 
   version: { color: obColors.textMut, fontSize: 12.5, textAlign: 'center', marginTop: 16 },
 

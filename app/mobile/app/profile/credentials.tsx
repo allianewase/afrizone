@@ -9,11 +9,10 @@
  * Restyled onto the navy/gold palette. The type filtering, the per-type
  * required fields, the upload round-trip and the delete are unchanged.
  *
- * On red: the palette's one red is 4.38:1 on white and 3.77:1 on its own
- * tint, both short of the 4.5 small text needs. It is kept for the two places
- * red IS the message - the destructive "Remove" link and the rejection
- * marker - while the reviewer's prose sits on `text` so it can actually be
- * read. A darker red token is the real fix.
+ * Red here is `dangerInk` (6.59:1 on white, 5.67:1 on its tint), not the
+ * `danger` fill, which is 4.38:1 and cannot legibly carry small text. The
+ * alert glyph keeps the brighter fill, where the 3:1 floor for graphics
+ * applies.
  */
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput, Modal, ScrollView, RefreshControl } from 'react-native';
@@ -424,11 +423,11 @@ const styles = StyleSheet.create({
     borderRadius: obRadii.field,
     padding: 10,
   },
-  reasonText: { flex: 1, color: obColors.text, fontSize: 12.5, lineHeight: 18 },
+  reasonText: { flex: 1, color: obColors.dangerInk, fontSize: 12.5, lineHeight: 18 },
   actionHint: { color: obColors.textMut, fontSize: 11.5 },
   removeBtn: { alignSelf: 'flex-start', paddingVertical: 4 },
-  removeText: { color: obColors.danger, fontSize: 12.5, fontWeight: '800' },
-  error: { color: obColors.danger, fontSize: 12.5 },
+  removeText: { color: obColors.dangerInk, fontSize: 12.5, fontWeight: '800' },
+  error: { color: obColors.dangerInk, fontSize: 12.5 },
   backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
   sheet: {
     backgroundColor: obColors.bg,

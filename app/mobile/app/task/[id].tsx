@@ -251,5 +251,5 @@ const styles = StyleSheet.create({
     color: obColors.text,
     textAlignVertical: 'top',
   },
-  blockerLine: { color: obColors.danger, fontSize: 12.5, lineHeight: 18, marginTop: 2 },
+  blockerLine: { color: obColors.dangerInk, fontSize: 12.5, lineHeight: 18, marginTop: 2 },
 });

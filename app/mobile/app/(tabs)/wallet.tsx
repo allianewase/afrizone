@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     backgroundColor: obColors.white,
   },
   statementText: { flex: 1, color: obColors.text, fontWeight: '600', fontSize: 13.5 },
-  dlError: { color: obColors.danger, fontSize: 12.5, marginTop: 6 },
+  dlError: { color: obColors.dangerInk, fontSize: 12.5, marginTop: 6 },
   // sheet
   backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
   sheet: {
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
   },
   naira: { fontSize: 22, fontWeight: '800', color: obColors.text },
   amountInput: { flex: 1, fontSize: 26, fontWeight: '800', color: obColors.text, paddingVertical: 12 },
-  errText: { color: obColors.danger, fontSize: 12.5 },
+  errText: { color: obColors.dangerInk, fontSize: 12.5 },
   warnText: { color: obColors.orangeInk, fontSize: 12.5 },
   yearRow: {
     flexDirection: 'row',

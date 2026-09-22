@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     minHeight: 96,
   },
   inputHint: { color: obColors.textMut, fontSize: 11.5 },
-  inputError: { color: obColors.danger, fontSize: 12.5 },
+  inputError: { color: obColors.dangerInk, fontSize: 12.5 },
   doneWrap: { gap: 10, alignItems: 'center', paddingVertical: 8 },
   doneIcon: {
     width: 64,

@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   markAll: { color: obColors.goldDeep, fontSize: 13, fontWeight: '700' },
   markAllBusy: { opacity: 0.5 },
   actionError: {
-    color: obColors.danger,
+    color: obColors.dangerInk,
     fontSize: 13,
     marginBottom: 10,
   },

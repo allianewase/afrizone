@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   chipRetired: { opacity: 0.6, borderStyle: 'dashed' },
   chipText: { color: obColors.text, fontSize: 13, fontWeight: '600' },
   chipTextOn: { color: obColors.navy, fontWeight: '800' },
-  error: { color: obColors.danger, fontSize: 12.5, marginBottom: 8 },
+  error: { color: obColors.dangerInk, fontSize: 12.5, marginBottom: 8 },
   saved: { color: obColors.forest, fontSize: 12.5, fontWeight: '700', marginBottom: 8 },
   actions: { gap: 10, marginTop: 12 },
 });

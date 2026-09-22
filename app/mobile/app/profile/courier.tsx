@@ -31,10 +31,11 @@ import { useAsync } from '../../src/lib/useAsync';
 import type { CourierReadiness, CourierStep, CourierStepState } from '../../src/api/types';
 
 /**
- * `dot` is the state's colour and `ink` is its label's, and they differ on
- * purpose. A label only keeps the state colour where that colour clears
- * 4.5:1 on white: amber is 3.12:1 and red is 4.38:1 at this size, so those
- * two states put the colour in the dot and leave the words legible.
+ * `dot` is the state's colour and `ink` is its label's. They match except for
+ * WAITING: amber has no ink-weight variant, and `orangeInk` on white is
+ * 3.12:1, so that one label falls back to `text` while its dot keeps the
+ * colour. Everything else clears 4.5:1 on its own (forest 8.0, dangerInk
+ * 6.59, textMut 5.15).
  *
  * WAITING is amber rather than red for the reason the file header gives:
  * waiting on Afrizone is not the rider's problem, and a red mark against a
@@ -44,7 +45,7 @@ const MARK: Record<CourierStepState, { label: string; dot: string; ink: string; 
   DONE: { label: 'Done', dot: obColors.forest, ink: obColors.forest, icon: 'check' },
   WAITING: { label: 'With Afrizone', dot: obColors.orangeInk, ink: obColors.text, icon: 'clock' },
   TODO: { label: 'To do', dot: obColors.textMut, ink: obColors.textMut, icon: 'clock' },
-  PROBLEM: { label: 'Needs fixing', dot: obColors.danger, ink: obColors.text, icon: 'alert' },
+  PROBLEM: { label: 'Needs fixing', dot: obColors.danger, ink: obColors.dangerInk, icon: 'alert' },
 };
 
 export default function CourierScreen() {
@@ -259,7 +260,7 @@ const styles = StyleSheet.create({
     backgroundColor: obColors.white,
     fontSize: 15,
   },
-  error: { color: obColors.danger, fontSize: 12.5 },
+  error: { color: obColors.dangerInk, fontSize: 12.5 },
   footnote: {
     color: obColors.textMut,
     fontSize: 12.5,

@@ -45,8 +45,16 @@ export const obColors = {
    * see global.css). */
   forest: '#215B3B',
   forestBg: '#E3EEE7',
+  /** Fills, borders and icons only. `danger` is 4.38:1 on white and 3.77:1
+   * on its own tint, so it cannot legibly carry small text either way -
+   * exactly the same trap `gold` has, and the reason `orangeInk` exists. */
   danger: '#D64545',
   dangerBg: '#FBEAEA',
+  /** Red as TEXT: 6.59:1 on white, 5.67:1 on dangerBg. Not a new colour -
+   * this is the old theme's own `dangerInk`, which the palette swap dropped
+   * while keeping the fill, leaving every error message and destructive
+   * label below the 4.5 floor. */
+  dangerInk: '#A6362C',
   roleSelectedBg: '#FFF8EC',
   /** The mint-green splash-only ground (screen 01 in the earlier reference) -
    * unused now that Splash reverted to navy, kept in case that changes back. */

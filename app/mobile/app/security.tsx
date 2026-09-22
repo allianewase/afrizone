@@ -231,10 +231,10 @@ export default function SecurityScreen() {
 }
 
 /**
- * Destructive action. The palette has one red, and white-on-it is 4.38:1
- * while red-on-white is the same - both short of the 4.5 a 15px label needs.
- * So the red lives in the border and the icon, where the 3:1 floor for
- * graphics applies, and the label itself stays on `text`.
+ * Destructive action: outlined rather than filled, so it reads as the
+ * serious option without competing with the gold primary. The label is
+ * `dangerInk` at 5.67:1 on this tint; the border and glyph keep the brighter
+ * `danger` fill, which would be 3.77:1 as text.
  */
 function DangerButton({
   label,
@@ -328,5 +328,5 @@ const styles = StyleSheet.create({
     backgroundColor: obColors.dangerBg,
   },
   dangerBtnDisabled: { opacity: 0.5 },
-  dangerBtnText: { color: obColors.text, fontSize: 15, fontFamily: 'Raleway_800ExtraBold' },
+  dangerBtnText: { color: obColors.dangerInk, fontSize: 15, fontFamily: 'Raleway_800ExtraBold' },
 });
