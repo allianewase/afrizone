@@ -3,26 +3,34 @@ import { View, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, IconName } from '../../src/components/Icon';
-import { colors, type, fontFamily } from '../../src/theme';
+import { obColors } from '../../src/onboarding/onboardingTheme';
 import { useAuth } from '../../src/auth/AuthContext';
 
+/**
+ * The prototype's `.tab-bar`: a white strip under a hairline, and the active
+ * tab marked by a short gold bar above its icon (`.tab .ind`, which carries
+ * the same flat-left/rounded-right cut as the cards).
+ */
 function tabIcon(name: IconName) {
   return ({ color, focused }: { color: string; focused: boolean }) => (
-    <View style={[iconStyles.wrap, focused && iconStyles.wrapActive]}>
-      <Icon name={name} size={22} color={color} strokeWidth={focused ? 2.4 : 2} />
+    <View style={iconStyles.wrap}>
+      <View style={[iconStyles.ind, focused && iconStyles.indActive]} />
+      <Icon name={name} size={20} color={color} strokeWidth={1.9} />
     </View>
   );
 }
 
 const iconStyles = StyleSheet.create({
-  wrap: {
-    width: 40,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
+  wrap: { width: 40, height: 26, alignItems: 'center', justifyContent: 'flex-start' },
+  ind: {
+    width: 16,
+    height: 3,
+    marginBottom: 2,
+    borderTopRightRadius: 3,
+    borderBottomRightRadius: 3,
+    backgroundColor: 'transparent',
   },
-  wrapActive: { backgroundColor: colors.claySoft },
+  indActive: { backgroundColor: obColors.goldDeep },
 });
 
 export default function TabsLayout() {
@@ -41,23 +49,23 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        // goldInk, not clay: the tint colours both a 12px label and a 24px icon
-        // against colors.surface, where clay is 1.90:1. goldInk is 5.92:1.
-        tabBarActiveTintColor: colors.goldInk,
-        tabBarInactiveTintColor: colors.textMuted,
+        // Navy tints the active icon and label; the gold `ind` bar above the
+        // icon is what actually reads as "you are here", exactly as the
+        // prototype does it. The prototype tints the label itself gold-deep,
+        // which is 2.5:1 on white - the same failure this bar already had once
+        // with clay at 1.90:1 (see src/theme.ts). Navy is 17:1, and the gold
+        // affordance survives in the bar, which is a graphic and not 10px type.
+        tabBarActiveTintColor: obColors.navy,
+        tabBarInactiveTintColor: obColors.textFaint,
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopWidth: 0,
+          backgroundColor: obColors.white,
+          // The prototype's hairline, not the lifted/shadowed bar this had
+          // before - nothing else in the restyled app carries that shadow now.
+          borderTopWidth: 1,
+          borderTopColor: obColors.line,
           height: 70 + insets.bottom,
           paddingBottom: 10 + insets.bottom,
           paddingTop: 8,
-          // Lifted bar instead of a flat hairline-bordered strip: matches the
-          // shadow treatment every card in the app now carries.
-          shadowColor: colors.text,
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.08,
-          shadowRadius: 16,
-          elevation: 12,
         },
         // This pre-existed the polish pass, not something it introduced: the
         // icon+label column (tabBarStyle.height minus its padding) landed
@@ -69,8 +77,11 @@ export default function TabsLayout() {
         // flexbox shrank the label toward 0 instead of just clipping its tail,
         // truncating it to a few-pixel sliver. Fix is height budget, not the
         // label style: `70` (was 64) + a smaller icon wrap gives the column
-        // real slack instead of an exact, fragile fit.
-        tabBarLabelStyle: { fontSize: type.size.xs, lineHeight: 16, fontWeight: '700' },
+        // real slack instead of an exact, fragile fit. Still true after the
+        // restyle, with more room than before: the 26px wrap (3px bar + 2px +
+        // a 20px icon) plus a 14px label line is 40px inside a 52px content
+        // box, where it used to be 42. Keep the explicit lineHeight.
+        tabBarLabelStyle: { fontSize: 10, lineHeight: 14, fontWeight: '700' },
       }}
     >
       <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: tabIcon('home') }} />
