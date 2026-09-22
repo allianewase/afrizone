@@ -25,17 +25,23 @@
  * screen looks the same whether there is no work or the phone would not say
  * where it is, and a rider deciding whether to go home needs those to look
  * different. The reason is the server's sentence, never one composed here.
+ *
+ * Restyled onto the navy/gold palette. Every judgement above survives it,
+ * including the two buttons that keep a pill shape and a lift while the rest
+ * of the app uses the cut rectangle. One thing did change on purpose: the
+ * directions link was raw `clay` gold at about 1.9:1 on white, so its words
+ * are now amberInk and the glyph keeps the gold.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, Linking } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, Linking, ScrollView, RefreshControl } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { canPoint, directionsLabel, openDirections, openPlace, type Place } from '../src/lib/directions';
 import * as Location from 'expo-location';
-import { Screen } from '../src/components/Screen';
-import { Card } from '../src/components/Card';
-import { Button } from '../src/components/Button';
+import { LinearGradient } from 'expo-linear-gradient';
+import { AppBackHeader, AppPrimaryButton, AppEmptyState, AppErrorState, AppLoadingCards } from '../src/appui/AppUI';
 import { Icon, IconName } from '../src/components/Icon';
-import { LoadingState, ErrorState, EmptyState } from '../src/components/Feedback';
-import { colors, spacing, type, radii, fontFamily, shadow } from '../src/theme';
+import { obColors, obRadii } from '../src/onboarding/onboardingTheme';
 import { api, ApiError } from '../src/api/client';
 import { useAsync } from '../src/lib/useAsync';
 import type { Delivery, DeliveryOffer, DeliveryStatus } from '../src/api/types';
@@ -80,22 +86,26 @@ function Directions({
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <Icon name={place ? 'map-pin' : 'navigation'} size={15} color={colors.clay} />
+      <Icon name={place ? 'map-pin' : 'navigation'} size={15} color={obColors.goldDeep} />
       <Text style={styles.directionsText}>{label}</Text>
     </Pressable>
   );
 }
 
-/** Colours for the state badge. Nothing here composes the WORDING - the server does. */
+/**
+ * Colours for the state badge. Nothing here composes the WORDING - the server
+ * does. Each pair is a tint with its ink-weight partner, never the brighter
+ * fill: amber and red cannot carry 11px type on their own backgrounds.
+ */
 const TONE: Record<DeliveryStatus, { fg: string; bg: string }> = {
-  RECEIVED: { fg: colors.textMuted, bg: colors.surfaceSand },
-  STORE_ACCEPTED: { fg: colors.goldInk, bg: colors.claySoft },
-  STORE_REJECTED: { fg: colors.textMuted, bg: colors.surfaceSand },
-  COURIER_ASSIGNED: { fg: colors.goldInk, bg: colors.claySoft },
-  PICKED_UP: { fg: colors.indigo, bg: colors.indigoSoft },
-  DELIVERED: { fg: colors.moneyInk, bg: colors.moneySoft },
-  FAILED: { fg: colors.dangerInk, bg: colors.dangerSoft },
-  CANCELLED: { fg: colors.textMuted, bg: colors.surfaceSand },
+  RECEIVED: { fg: obColors.textMut, bg: obColors.sand },
+  STORE_ACCEPTED: { fg: obColors.amberInk, bg: obColors.orangeInkBg },
+  STORE_REJECTED: { fg: obColors.textMut, bg: obColors.sand },
+  COURIER_ASSIGNED: { fg: obColors.amberInk, bg: obColors.orangeInkBg },
+  PICKED_UP: { fg: obColors.indigo, bg: obColors.indigoBg },
+  DELIVERED: { fg: obColors.forest, bg: obColors.mgreenBg },
+  FAILED: { fg: obColors.dangerInk, bg: obColors.dangerBg },
+  CANCELLED: { fg: obColors.textMut, bg: obColors.sand },
 };
 
 function Badge({ d }: { d: Delivery }) {
@@ -104,6 +114,53 @@ function Badge({ d }: { d: Delivery }) {
     <View style={[styles.badge, { backgroundColor: tone.bg }]}>
       <Text style={[styles.badgeText, { color: tone.fg }]}>{d.statusLabel}</Text>
     </View>
+  );
+}
+
+/**
+ * The one unmistakable action on a card: a pill, and optionally lifted.
+ *
+ * Every other button in the app is AppPrimaryButton's cut rectangle. These
+ * two moments - the goods are in the bag, the delivery is done - were given a
+ * shape nothing else has, and that was a deliberate call worth keeping
+ * through the restyle. Local rather than a kit variant because nothing
+ * outside this screen has earned it.
+ */
+function PillAction({
+  label,
+  onPress,
+  loading,
+  disabled,
+  lifted,
+}: {
+  label: string;
+  onPress: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+  lifted?: boolean;
+}) {
+  const isDisabled = disabled || loading;
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!isDisabled }}
+      style={({ pressed }) => [
+        styles.pillAction,
+        lifted && styles.pillActionLifted,
+        isDisabled && { opacity: 0.5 },
+        pressed && !isDisabled && { opacity: 0.85 },
+      ]}
+    >
+      <LinearGradient
+        colors={[obColors.gold, obColors.goldDeep]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <Text style={styles.pillActionText}>{loading ? 'Please wait…' : label}</Text>
+    </Pressable>
   );
 }
 
@@ -130,7 +187,7 @@ function Line({
   return (
     <View style={styles.line}>
       <View style={styles.lineHead}>
-        <Icon name={icon} size={13} color={colors.textFaint} />
+        <Icon name={icon} size={13} color={obColors.textFaint} />
         <Text style={styles.lineLabel}>{label}</Text>
       </View>
       <View style={styles.lineBody}>{children}</View>
@@ -138,7 +195,7 @@ function Line({
   );
 }
 
-export function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => void }) {
+function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => void }) {
   const [busy, setBusy] = useState<'pickup' | 'complete' | 'fail' | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Set only when the check could not be MADE. Deliberately its own state. */
@@ -189,7 +246,7 @@ export function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
   }
 
   return (
-    <Card style={styles.card}>
+    <View style={styles.card}>
       <View style={styles.cardTop}>
         <Text style={styles.order}>{d.martOrderId}</Text>
         <Badge d={d} />
@@ -200,7 +257,7 @@ export function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
         {d.pickupAddress ? <Text style={styles.body}>{d.pickupAddress}</Text> : null}
         {d.preparedAt && d.status === 'COURIER_ASSIGNED' ? (
           <View style={styles.readyPill}>
-            <Icon name="check-circle" size={12} color={colors.moneyInk} />
+            <Icon name="check-circle" size={12} color={obColors.forest} />
             <Text style={styles.readyText}>Packed and ready</Text>
           </View>
         ) : null}
@@ -242,7 +299,7 @@ export function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
                 accessibilityRole="button"
                 accessibilityLabel={`Call ${d.customerName ?? 'the customer'}`}
               >
-                <Icon name="phone" size={15} color={colors.goldInk} />
+                <Icon name="phone" size={15} color={obColors.orangeInk} />
                 <Text style={styles.callText}>{d.customerPhone}</Text>
               </Pressable>
             ) : null}
@@ -296,15 +353,13 @@ export function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
       ) : null}
 
       {d.status === 'COURIER_ASSIGNED' ? (
-        // Pill-shaped rather than the standard "Sunrise Cut" rectangle every
-        // other button in this app uses: this is the one thing to do on this
-        // card at this moment, and it earns a shape nothing else here has.
-        <Button
-          label="Collected from the store"
-          onPress={pickUp}
-          loading={busy === 'pickup'}
-          style={[styles.action, styles.pillButton]}
-        />
+        <View style={styles.action}>
+          <PillAction
+            label="Collected from the store"
+            onPress={pickUp}
+            loading={busy === 'pickup'}
+          />
+        </View>
       ) : null}
 
       {d.status === 'PICKED_UP' && !failing ? (
@@ -316,7 +371,7 @@ export function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
               of where the trip started and where it ends, not a real one. */}
           <View style={styles.route}>
             <View style={styles.routeEnd}>
-              <Icon name="check-circle" size={16} color={colors.moneyInk} />
+              <Icon name="check-circle" size={16} color={obColors.forest} />
               <Text style={styles.routeLabel} numberOfLines={1}>
                 {d.storeName ?? 'the store'}
               </Text>
@@ -326,7 +381,7 @@ export function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
               <Text style={[styles.routeLabel, styles.routeLabelRight]} numberOfLines={1}>
                 {d.customerName ?? 'the customer'}
               </Text>
-              <Icon name="map-pin" size={16} color={colors.clay} />
+              <Icon name="map-pin" size={16} color={obColors.goldDeep} />
             </View>
           </View>
 
@@ -337,7 +392,7 @@ export function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
               onChangeText={setCode}
               keyboardType="number-pad"
               placeholder="4821"
-              placeholderTextColor={colors.textFaint}
+              placeholderTextColor={obColors.textFaint}
               style={styles.codeInput}
               accessibilityLabel="The code the customer received"
             />
@@ -347,13 +402,15 @@ export function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
             </Text>
           </View>
 
-          <Button
-            label="Complete delivery"
-            onPress={complete}
-            loading={busy === 'complete'}
-            disabled={code.trim().length === 0}
-            style={[styles.gap, styles.pillButton, styles.completeButton]}
-          />
+          <View style={styles.gap}>
+            <PillAction
+              label="Complete delivery"
+              onPress={complete}
+              loading={busy === 'complete'}
+              disabled={code.trim().length === 0}
+              lifted
+            />
+          </View>
           <Pressable onPress={() => setFailing(true)} style={styles.secondary}>
             <Text style={styles.secondaryText}>Could not deliver</Text>
           </Pressable>
@@ -367,26 +424,27 @@ export function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
             value={reason}
             onChangeText={setReason}
             placeholder="Nobody at the address after three calls"
-            placeholderTextColor={colors.textFaint}
+            placeholderTextColor={obColors.textFaint}
             style={styles.input}
             multiline
           />
           <Text style={styles.hint}>
             Afrizone reads this. It decides what happens to the goods and to your pay for the trip.
           </Text>
-          <Button
-            label="Report it"
-            onPress={fail}
-            loading={busy === 'fail'}
-            disabled={reason.trim().length === 0}
-            style={styles.gap}
-          />
+          <View style={styles.gap}>
+            <AppPrimaryButton
+              label="Report it"
+              onPress={fail}
+              loading={busy === 'fail'}
+              disabled={reason.trim().length === 0}
+            />
+          </View>
           <Pressable onPress={() => setFailing(false)} style={styles.secondary}>
             <Text style={styles.secondaryText}>Back</Text>
           </Pressable>
         </View>
       ) : null}
-    </Card>
+    </View>
   );
 }
 
@@ -405,7 +463,7 @@ export function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Deliver
 function Stat({ icon, children }: { icon: 'navigation' | 'cart'; children: React.ReactNode }) {
   return (
     <View style={styles.stat}>
-      <Icon name={icon} size={14} color={colors.textMuted} />
+      <Icon name={icon} size={14} color={obColors.textMut} />
       <Text style={styles.statText}>{children}</Text>
     </View>
   );
@@ -426,7 +484,7 @@ function Stat({ icon, children }: { icon: 'navigation' | 'cart'; children: React
  * because the two are different questions: "should I take this" against
  * "what do I do next with what I already have".
  */
-export function OfferCard({
+function OfferCard({
   o,
   at,
   onTaken,
@@ -456,7 +514,7 @@ export function OfferCard({
   }
 
   return (
-    <Card style={styles.offerCard} accent>
+    <View style={[styles.card, styles.offerCard]}>
       <Text style={styles.offerFee}>{naira(o.fee)}</Text>
       <Text style={styles.offerStore} numberOfLines={1}>
         {o.storeName ?? 'Pickup'}
@@ -490,13 +548,15 @@ export function OfferCard({
           minutes is worth knowing about before riding to it. */}
       {o.offer.stage !== 'OFFERED' ? (
         <View style={styles.waitingRow}>
-          <Icon name="clock" size={13} color={colors.goldInk} />
+          <Icon name="clock" size={13} color={obColors.orangeInk} />
           <Text style={styles.waiting}>{o.offer.label}</Text>
         </View>
       ) : null}
 
       {o.claimable ? (
-        <Button label="Take this job" onPress={claim} loading={busy} style={styles.action} />
+        <View style={styles.action}>
+          <AppPrimaryButton label="Take this job" onPress={claim} loading={busy} />
+        </View>
       ) : (
         <View style={styles.blocked}>
           <Text style={styles.blockedText}>{o.reason}</Text>
@@ -509,11 +569,13 @@ export function OfferCard({
       )}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
-    </Card>
+    </View>
   );
 }
 
 export default function DeliveriesScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const load = useAsync((signal) => api.myDeliveries(signal));
   const [jobs, setJobs] = useState<Delivery[] | null>(null);
 
@@ -578,21 +640,6 @@ export default function DeliveriesScreen() {
     setJobs((cur) => (cur ?? []).map((j) => (j.id === next.id ? { ...j, ...next } : j)));
   }
 
-  if (load.loading && !jobs) {
-    return (
-      <Screen title="Deliveries" back>
-        <LoadingState />
-      </Screen>
-    );
-  }
-  if (load.error && !jobs) {
-    return (
-      <Screen title="Deliveries" back>
-        <ErrorState message={load.error} onRetry={load.reload} />
-      </Screen>
-    );
-  }
-
   const all = jobs ?? [];
   const live = all.filter((j) => LIVE.includes(j.status));
   const done = all.filter((j) => !LIVE.includes(j.status));
@@ -604,94 +651,111 @@ export default function DeliveriesScreen() {
     .reduce((sum, j) => sum + (j.deliveryFee ?? 0), 0);
 
   return (
-    <Screen
-      title="Deliveries"
-      subtitle={live.length > 0 ? `${live.length} on the go` : undefined}
-      back
-      onRefresh={refreshAll}
-      refreshing={load.loading}
-    >
-      {available.length > 0 ? (
-        <>
-          <Text style={styles.sectionFirst}>Available now</Text>
-          {available.map((o) => (
-            <OfferCard key={o.id} o={o} at={at} onTaken={refreshAll} />
-          ))}
-        </>
-      ) : null}
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 18, paddingBottom: insets.bottom + 40 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={load.loading && !!jobs} onRefresh={refreshAll} tintColor={obColors.navy} />}
+      >
+        <AppBackHeader title="Deliveries" onBack={() => router.back()} />
+        {live.length > 0 ? <Text style={styles.subtitle}>{live.length} on the go</Text> : null}
 
-      {all.length === 0 && available.length === 0 ? (
-        <EmptyState
-          icon="map-pin"
-          title="Nothing to carry yet"
-          message={
-            selfClaim
-              ? 'Orders appear here as stores accept them. Take one and it is yours straight away.'
-              : 'Delivery jobs are being assigned by the Afrizone team just now. Apply for one and it appears here once it is yours.'
-          }
-        />
-      ) : null}
-
-      {live.length > 0 && available.length > 0 ? (
-        <Text style={styles.sectionTitle}>Carrying</Text>
-      ) : null}
-
-      {live.map((j) => (
-        <JobCard key={j.id} d={j} onChange={replace} />
-      ))}
-
-      {done.length > 0 ? (
-        <>
-          <View style={styles.sectionHead}>
-            <Text style={[styles.sectionTitle, styles.sectionTitleInRow]}>Finished</Text>
-            {finishedEarned > 0 ? (
-              <Text style={styles.sectionTotal}>{naira(finishedEarned)} earned</Text>
+        {load.loading && !jobs ? (
+          <AppLoadingCards count={2} />
+        ) : load.error && !jobs ? (
+          <AppErrorState message={load.error} onRetry={load.reload} />
+        ) : (
+          <>
+            {available.length > 0 ? (
+              <>
+                <Text style={styles.sectionFirst}>Available now</Text>
+                {available.map((o) => (
+                  <OfferCard key={o.id} o={o} at={at} onTaken={refreshAll} />
+                ))}
+              </>
             ) : null}
-          </View>
-          {done.map((j) => (
-            <JobCard key={j.id} d={j} onChange={replace} />
-          ))}
-        </>
-      ) : null}
-    </Screen>
+
+            {all.length === 0 && available.length === 0 ? (
+              <AppEmptyState
+                icon="map-pin"
+                title="Nothing to carry yet"
+                message={
+                  selfClaim
+                    ? 'Orders appear here as stores accept them. Take one and it is yours straight away.'
+                    : 'Delivery jobs are being assigned by the Afrizone team just now. Apply for one and it appears here once it is yours.'
+                }
+              />
+            ) : null}
+
+            {live.length > 0 && available.length > 0 ? (
+              <Text style={styles.sectionTitle}>Carrying</Text>
+            ) : null}
+
+            {live.map((j) => (
+              <JobCard key={j.id} d={j} onChange={replace} />
+            ))}
+
+            {done.length > 0 ? (
+              <>
+                <View style={styles.sectionHead}>
+                  <Text style={[styles.sectionTitle, styles.sectionTitleInRow]}>Finished</Text>
+                  {finishedEarned > 0 ? (
+                    <Text style={styles.sectionTotal}>{naira(finishedEarned)} earned</Text>
+                  ) : null}
+                </View>
+                {done.map((j) => (
+                  <JobCard key={j.id} d={j} onChange={replace} />
+                ))}
+              </>
+            ) : null}
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { marginBottom: spacing.lg },
+  root: { flex: 1, backgroundColor: obColors.bg },
+  subtitle: { fontSize: 13, color: obColors.textMut, marginTop: -8, marginBottom: 16 },
+  card: {
+    backgroundColor: obColors.white,
+    borderWidth: 1,
+    borderColor: obColors.line,
+    borderRadius: obRadii.card,
+    borderTopRightRadius: obRadii.cardCut,
+    padding: 16,
+    marginBottom: 14,
+  },
   cardTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
-    gap: spacing.sm,
+    marginBottom: 12,
+    gap: 10,
   },
-  order: {
-    fontSize: type.size.base,
-    fontFamily: fontFamily.bold,
-    color: colors.text,
-    flexShrink: 1,
-  },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radii.pill },
-  badgeText: { fontSize: type.size.xs, fontFamily: fontFamily.bold },
+  order: { fontSize: 14, fontFamily: 'Raleway_800ExtraBold', color: obColors.navy, flexShrink: 1 },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: obRadii.pill },
+  badgeText: { fontSize: 11, fontWeight: '700' },
 
   // No more fixed-width label column - an icon plus a small caption above
   // the content instead, so the address, phone and directions link below get
   // the full card width rather than sharing the row with a 66px label.
-  line: { paddingVertical: spacing.sm, gap: 4 },
+  line: { paddingVertical: 8, gap: 4 },
   lineHead: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   lineLabel: {
-    fontSize: 11,
-    fontFamily: fontFamily.bold,
+    fontSize: 10.5,
+    fontWeight: '700',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
-    color: colors.textFaint,
+    color: obColors.textFaint,
   },
   lineBody: { gap: 2 },
 
-  strong: { fontSize: type.size.base, fontFamily: fontFamily.bold, color: colors.text },
-  body: { fontSize: type.size.base, color: colors.text },
-  muted: { fontSize: type.size.sm, color: colors.textMuted },
+  strong: { fontSize: 14, fontWeight: '800', color: obColors.text },
+  body: { fontSize: 13.5, color: obColors.text },
+  muted: { fontSize: 12.5, color: obColors.textMut },
 
   // "Packed and ready" as a small chip rather than plain bold text - the
   // same status-chip language used everywhere else on this card, so it does
@@ -704,10 +768,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: radii.pill,
-    backgroundColor: colors.moneySoft,
+    borderRadius: obRadii.pill,
+    backgroundColor: obColors.mgreenBg,
   },
-  readyText: { fontSize: type.size.xs, fontFamily: fontFamily.bold, color: colors.moneyInk },
+  readyText: { fontSize: 11, fontWeight: '700', color: obColors.forest },
 
   // The packing list. qty in a small fixed column so the numbers line up and
   // read as a column, the way somebody actually counts a bag out.
@@ -716,10 +780,10 @@ const styles = StyleSheet.create({
   itemQty: {
     minWidth: 20,
     textAlign: 'center',
-    fontSize: type.size.xs,
-    fontFamily: fontFamily.bold,
-    color: colors.textMuted,
-    backgroundColor: colors.surfaceSand,
+    fontSize: 11,
+    fontWeight: '700',
+    color: obColors.textMut,
+    backgroundColor: obColors.sand,
     borderRadius: 6,
     paddingHorizontal: 5,
     paddingVertical: 1,
@@ -727,69 +791,62 @@ const styles = StyleSheet.create({
   },
 
   directions: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  directionsText: { fontSize: type.size.base, color: colors.clay, fontFamily: fontFamily.bold },
+  // amberInk, not the gold the glyph beside it uses: raw gold is about 1.9:1
+  // on white, which is the same trap the tab bar's own comment records.
+  directionsText: { fontSize: 13.5, color: obColors.amberInk, fontWeight: '800' },
 
   call: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  callText: { fontSize: type.size.base, color: colors.goldInk, fontFamily: fontFamily.bold },
+  callText: { fontSize: 13.5, color: obColors.amberInk, fontWeight: '800' },
 
-  error: {
-    fontSize: type.size.sm,
-    color: colors.dangerInk,
-    marginTop: spacing.sm,
-  },
+  error: { fontSize: 12.5, color: obColors.dangerInk, marginTop: 10 },
   notice: {
-    backgroundColor: colors.claySoft,
-    borderRadius: radii.input,
-    padding: spacing.md,
-    marginTop: spacing.md,
+    backgroundColor: obColors.orangeInkBg,
+    borderRadius: obRadii.field,
+    padding: 13,
+    marginTop: 12,
   },
-  noticeTitle: { fontSize: type.size.base, fontFamily: fontFamily.bold, color: colors.goldInk },
-  noticeBody: { fontSize: type.size.sm, color: colors.text, marginTop: 4, lineHeight: 19 },
+  noticeTitle: { fontSize: 13.5, fontWeight: '800', color: obColors.amberInk },
+  noticeBody: { fontSize: 12.5, color: obColors.text, marginTop: 4, lineHeight: 18 },
 
-  action: { marginTop: spacing.lg },
-  gap: { marginTop: spacing.md },
-  fieldLabel: {
-    fontSize: type.size.sm,
-    fontFamily: fontFamily.bold,
-    color: colors.text,
-    marginBottom: 6,
-  },
+  action: { marginTop: 18 },
+  gap: { marginTop: 12 },
+  fieldLabel: { fontSize: 12.5, fontWeight: '700', color: obColors.text, marginBottom: 6 },
   codeInput: {
     borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radii.input,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontSize: type.size.xl,
+    borderColor: obColors.line,
+    borderRadius: obRadii.field,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 20,
     // Read out loud, digit by digit, usually in a hurry. Wide tracking makes a
     // mistyped code visible before it is submitted.
     letterSpacing: 6,
-    color: colors.text,
-    backgroundColor: colors.surface,
+    color: obColors.text,
+    backgroundColor: obColors.white,
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radii.input,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontSize: type.size.base,
-    color: colors.text,
-    backgroundColor: colors.surface,
+    borderColor: obColors.line,
+    borderRadius: obRadii.field,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 14,
+    color: obColors.text,
+    backgroundColor: obColors.white,
     minHeight: 72,
     textAlignVertical: 'top',
   },
-  hint: { fontSize: type.size.xs, color: colors.textFaint, marginTop: 6, lineHeight: 17 },
+  hint: { fontSize: 11.5, color: obColors.textMut, marginTop: 6, lineHeight: 16 },
 
-  secondary: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },
-  secondaryText: { fontSize: type.size.base, color: colors.textMuted, fontFamily: fontFamily.bold },
+  secondary: { alignItems: 'center', paddingVertical: 13, marginTop: 4 },
+  secondaryText: { fontSize: 13.5, color: obColors.textMut, fontWeight: '800' },
 
   sectionTitle: {
-    fontSize: type.size.md,
-    fontFamily: fontFamily.bold,
-    color: colors.text,
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
+    fontSize: 15.5,
+    fontFamily: 'Raleway_800ExtraBold',
+    color: obColors.navy,
+    marginTop: 18,
+    marginBottom: 12,
   },
   // The "Finished" title shares a row with its earned total (the reference's
   // date-header/total anatomy) rather than sitting on its own line, so its
@@ -798,78 +855,60 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
+    marginTop: 18,
+    marginBottom: 12,
   },
   sectionTitleInRow: { marginTop: 0, marginBottom: 0 },
-  sectionTotal: { fontSize: type.size.sm, fontFamily: fontFamily.bold, color: colors.moneyInk },
+  sectionTotal: { fontSize: 12.5, fontWeight: '800', color: obColors.forest },
   sectionFirst: {
-    fontSize: type.size.md,
-    fontFamily: fontFamily.bold,
-    color: colors.text,
-    marginBottom: spacing.md,
+    fontSize: 15.5,
+    fontFamily: 'Raleway_800ExtraBold',
+    color: obColors.navy,
+    marginBottom: 12,
   },
 
-  // What the courier is paid, and the thing they are deciding on. Kept for
-  // any other call site still using the old fee treatment.
-  fee: { fontSize: type.size.lg, fontFamily: fontFamily.bold, color: colors.moneyInk },
-
   // ── OfferCard: fee-led, icon-stat row ──────────────────────────────────
-  offerCard: { marginBottom: spacing.lg },
+  // The gold edge that says OFFERED rather than carried. A left border, not
+  // the cut corner every other card uses, so the two read apart at a glance
+  // in a mixed list.
+  offerCard: { borderLeftWidth: 3, borderLeftColor: obColors.goldDeep },
   // Deliberately larger than the standard `.strong`/`.order` text anywhere
   // else on this screen — three digits of Naira is the single fact a rider
   // decides on, and it should read from an arm's length before anything
-  // else on the card does. moneyInk, not clay: this is what the job is
+  // else on the card does. forest, not gold: this is what the job is
   // worth, not a call to action - the button below is the action.
   offerFee: {
     fontSize: 30,
     lineHeight: 34,
-    fontFamily: fontFamily.bold,
-    color: colors.moneyInk,
+    fontFamily: 'Raleway_800ExtraBold',
+    color: obColors.forest,
     fontVariant: ['tabular-nums'],
   },
-  offerStore: {
-    fontSize: type.size.sm,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  statRow: {
-    flexDirection: 'row',
-    gap: spacing.lg,
-    marginTop: spacing.md,
-  },
+  offerStore: { fontSize: 12.5, color: obColors.textMut, marginTop: 2 },
+  statRow: { flexDirection: 'row', gap: 18, marginTop: 12 },
   stat: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  statText: { fontSize: type.size.sm, fontFamily: fontFamily.bold, color: colors.textMuted },
-  offerAddress: {
-    fontSize: type.size.sm,
-    color: colors.textMuted,
-    marginTop: spacing.sm,
-  },
-  waitingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginTop: spacing.sm,
-  },
-  waiting: { fontSize: type.size.sm, color: colors.goldInk },
+  statText: { fontSize: 12.5, fontWeight: '700', color: obColors.textMut },
+  offerAddress: { fontSize: 12.5, color: obColors.textMut, marginTop: 10 },
+  waitingRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
+  waiting: { fontSize: 12.5, color: obColors.amberInk, fontWeight: '700' },
   blocked: {
-    backgroundColor: colors.surfaceSand,
-    borderRadius: radii.input,
-    padding: spacing.md,
-    marginTop: spacing.md,
+    backgroundColor: obColors.sand,
+    borderRadius: obRadii.field,
+    padding: 13,
+    marginTop: 12,
   },
-  blockedText: { fontSize: type.size.sm, color: colors.text, lineHeight: 19 },
-  blockedHint: { fontSize: type.size.xs, color: colors.textMuted, marginTop: 4 },
+  blockedText: { fontSize: 12.5, color: obColors.text, lineHeight: 18 },
+  blockedHint: { fontSize: 11.5, color: obColors.textMut, marginTop: 4 },
 
   // ── The delivery-completion moment ─────────────────────────────────────
   // A schematic trip, not a map: where the goods came from, where they are
   // going. check-circle on the left because that leg is already done by the
   // time this renders; map-pin on the right because that is where the rider
   // is headed next.
-  route: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
+  route: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
   routeEnd: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
   routeEndRight: { flexDirection: 'row-reverse' },
-  routeLabel: { fontSize: type.size.xs, fontFamily: fontFamily.bold, color: colors.textMuted },
+  routeLabel: { fontSize: 11, fontWeight: '700', color: obColors.textMut },
   routeLabelRight: { textAlign: 'right' },
   // A dashed rule reads as a path in a way a solid one reads as a divider.
   // height: 0 with only borderTopWidth set, not backgroundColor - a filled
@@ -877,22 +916,34 @@ const styles = StyleSheet.create({
   routeLine: {
     flex: 1,
     height: 0,
-    marginHorizontal: spacing.sm,
+    marginHorizontal: 10,
     borderTopWidth: 1,
     borderStyle: 'dashed',
-    borderColor: colors.line,
+    borderColor: obColors.line,
   },
 
   codePanel: {
-    backgroundColor: colors.surfaceSand,
-    borderRadius: radii.input,
-    padding: spacing.lg,
+    backgroundColor: obColors.sand,
+    borderRadius: obRadii.field,
+    padding: 16,
   },
 
-  // The one unmistakable action on this card. Pill rather than the standard
-  // "Sunrise Cut" rectangle, and lifted with a shadow every other button in
-  // this file goes without - the same instinct as the route strip above it,
-  // that this moment gets treated as the one that matters.
-  pillButton: { borderRadius: radii.pill, borderTopRightRadius: radii.pill },
-  completeButton: { minHeight: 56, ...shadow.soft },
+  // The one unmistakable action on a card: a pill rather than the cut
+  // rectangle, and for the completion moment a lift as well.
+  pillAction: {
+    minHeight: 50,
+    borderRadius: obRadii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  pillActionLifted: {
+    minHeight: 56,
+    shadowColor: obColors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  pillActionText: { fontFamily: 'Raleway_800ExtraBold', fontSize: 15, color: obColors.navyPress },
 });
