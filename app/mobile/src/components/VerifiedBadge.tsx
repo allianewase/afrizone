@@ -26,14 +26,14 @@ const STATES: Record<CredentialState, { label: string; tone: Tone; icon: IconNam
 };
 
 /**
- * `icon` and `ink` differ only where the tone's own colour cannot carry a
- * 10px label on its own tint. That is amber alone: `orangeInk` is 3.12:1
- * there and has no darker variant, so it keeps the colour in the glyph. The
- * rest clear 4.5:1 (forest 7.2, dangerInk 5.67 on its tint).
+ * The glyph takes the tone's brighter fill and the label its ink-weight
+ * twin, because none of the fills clear 4.5:1 on their own tint at 10px
+ * (amber 3.12, red 3.77) while the inks do (forest 7.2, amberInk 5.18,
+ * dangerInk 5.67).
  */
 const TONES: Record<Tone, { bg: string; icon: string; ink: string }> = {
   ok: { bg: obColors.mgreenBg, icon: obColors.forest, ink: obColors.forest },
-  wait: { bg: obColors.orangeInkBg, icon: obColors.orangeInk, ink: obColors.text },
+  wait: { bg: obColors.orangeInkBg, icon: obColors.orangeInk, ink: obColors.amberInk },
   bad: { bg: obColors.dangerBg, icon: obColors.danger, ink: obColors.dangerInk },
   plain: { bg: obColors.sand, icon: obColors.textMut, ink: obColors.text },
 };

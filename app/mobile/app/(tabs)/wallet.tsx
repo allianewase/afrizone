@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
   naira: { fontSize: 22, fontWeight: '800', color: obColors.text },
   amountInput: { flex: 1, fontSize: 26, fontWeight: '800', color: obColors.text, paddingVertical: 12 },
   errText: { color: obColors.dangerInk, fontSize: 12.5 },
-  warnText: { color: obColors.orangeInk, fontSize: 12.5 },
+  warnText: { color: obColors.amberInk, fontSize: 12.5 },
   yearRow: {
     flexDirection: 'row',
     alignItems: 'center',

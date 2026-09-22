@@ -31,11 +31,10 @@ import { useAsync } from '../../src/lib/useAsync';
 import type { CourierReadiness, CourierStep, CourierStepState } from '../../src/api/types';
 
 /**
- * `dot` is the state's colour and `ink` is its label's. They match except for
- * WAITING: amber has no ink-weight variant, and `orangeInk` on white is
- * 3.12:1, so that one label falls back to `text` while its dot keeps the
- * colour. Everything else clears 4.5:1 on its own (forest 8.0, dangerInk
- * 6.59, textMut 5.15).
+ * `dot` is the state's colour and `ink` is its label's. The dot takes the
+ * brighter fill and the label its ink-weight twin, because none of the fills
+ * can carry 11px type: forest 8.0:1, dangerInk 6.59, amberInk 5.92, textMut
+ * 5.15, against 3.57 for `orangeInk` and 4.38 for `danger`.
  *
  * WAITING is amber rather than red for the reason the file header gives:
  * waiting on Afrizone is not the rider's problem, and a red mark against a
@@ -43,7 +42,7 @@ import type { CourierReadiness, CourierStep, CourierStepState } from '../../src/
  */
 const MARK: Record<CourierStepState, { label: string; dot: string; ink: string; icon: 'check' | 'clock' | 'alert' }> = {
   DONE: { label: 'Done', dot: obColors.forest, ink: obColors.forest, icon: 'check' },
-  WAITING: { label: 'With Afrizone', dot: obColors.orangeInk, ink: obColors.text, icon: 'clock' },
+  WAITING: { label: 'With Afrizone', dot: obColors.orangeInk, ink: obColors.amberInk, icon: 'clock' },
   TODO: { label: 'To do', dot: obColors.textMut, ink: obColors.textMut, icon: 'clock' },
   PROBLEM: { label: 'Needs fixing', dot: obColors.danger, ink: obColors.dangerInk, icon: 'alert' },
 };

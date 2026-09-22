@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   cardTitle: { color: obColors.text, fontSize: 14, fontFamily: 'Raleway_800ExtraBold' },
   cardType: { color: obColors.textMut, fontSize: 11.5, marginTop: 2 },
   meta: { color: obColors.textMut, fontSize: 12.5 },
-  metaWarn: { color: obColors.orangeInk, fontWeight: '700' },
+  metaWarn: { color: obColors.amberInk, fontWeight: '700' },
   reason: {
     flexDirection: 'row',
     gap: 8,

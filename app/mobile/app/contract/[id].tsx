@@ -194,9 +194,7 @@ const styles = StyleSheet.create({
   },
   signedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   signedText: { flex: 1, color: obColors.forest, fontSize: 12.5, fontWeight: '700' },
-  // Amber has no ink-weight variant (orangeInk is 3.57:1 on white), so the
-  // glyph carries the colour and the words stay legible.
-  pendingText: { flex: 1, color: obColors.text, fontSize: 12.5, fontWeight: '600' },
+  pendingText: { flex: 1, color: obColors.amberInk, fontSize: 12.5, fontWeight: '700' },
   sections: { gap: 20 },
   section: { gap: 5 },
   sectionHeading: {

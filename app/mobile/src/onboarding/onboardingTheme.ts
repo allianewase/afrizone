@@ -33,9 +33,16 @@ export const obColors = {
   violetBg: '#EFEDFC',
   /** Prototype's "in progress" pill tone - amber/orange, distinct from `gold`
    * (which is a fill only, illegible as small text - see design-decisions.md
-   * on the same problem with the app-wide --amber). */
+   * on the same problem with the app-wide --amber). Good for a glyph or a
+   * fill; it is 3.57:1 on white and 3.12:1 on its own tint, so it is NOT the
+   * one to write words in - use `amberInk`. */
   orangeInk: '#C2760F',
   orangeInkBg: '#FCEEDA',
+  /** Amber as TEXT: 5.92:1 on white, 5.18:1 on orangeInkBg. Same story as
+   * dangerInk - this is the old theme's `goldInk`, which the palette swap
+   * left behind, and without it every amber label had to fall back to plain
+   * `text` and lose the state colour entirely. */
+  amberInk: '#8A5A0F',
   indigo: '#4A4FA0',
   indigoBg: '#ECEDF8',
   mgreen: '#1E9E5A',

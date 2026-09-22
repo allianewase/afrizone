@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   period: { color: obColors.textMut, fontSize: 12.5, flex: 1 },
   filed: { color: obColors.textFaint, fontSize: 11 },
   disputedNote: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  disputedText: { color: obColors.orangeInk, fontSize: 11.5, flex: 1 },
+  disputedText: { color: obColors.amberInk, fontSize: 11.5, flex: 1 },
   disputeBtn: { marginTop: 4, alignSelf: 'flex-start' },
   disputeBtnText: { color: obColors.goldDeep, fontSize: 12.5, fontWeight: '700' },
 

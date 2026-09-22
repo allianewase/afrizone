@@ -65,27 +65,27 @@ export function ClockInButton({
 }
 
 /**
- * The state colour lives in the fill and the icon; the words are `text`
- * throughout. Tinting 13px labels to match their own pill puts the amber
- * state at 3.12:1 on its own background, and picking a darker ink for that
- * one case only would leave three pills that disagree about what a pill is.
+ * Each state's fill and glyph take its brighter colour; the label takes the
+ * ink-weight twin, since none of the fills carry 13px type on their own tint
+ * (amber is 3.12:1 there).
  */
 function GeofencePill({ state, blocked }: { state: GeofenceState; blocked: boolean }) {
   const meta =
     state === 'in-fence'
-      ? { word: 'Inside work zone', fg: obColors.forest, bg: obColors.mgreenBg, icon: 'map-pin' as const }
+      ? { word: 'Inside work zone', fg: obColors.forest, ink: obColors.forest, bg: obColors.mgreenBg, icon: 'map-pin' as const }
       : state === 'syncing'
-        ? { word: 'Checking location…', fg: obColors.indigo, bg: obColors.indigoBg, icon: 'globe' as const }
+        ? { word: 'Checking location…', fg: obColors.indigo, ink: obColors.indigo, bg: obColors.indigoBg, icon: 'globe' as const }
         : {
             word: blocked ? 'Outside zone: blocked' : 'Outside work zone',
             fg: obColors.orangeInk,
+            ink: obColors.amberInk,
             bg: obColors.orangeInkBg,
             icon: 'alert' as const,
           };
   return (
     <View style={[styles.pill, { backgroundColor: meta.bg }]}>
       <Icon name={meta.icon} size={14} color={meta.fg} />
-      <Text style={styles.pillText}>{meta.word}</Text>
+      <Text style={[styles.pillText, { color: meta.ink }]}>{meta.word}</Text>
     </View>
   );
 }
@@ -111,5 +111,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 100,
   },
-  pillText: { color: obColors.text, fontWeight: '700', fontSize: 13 },
+  pillText: { fontWeight: '700', fontSize: 13 },
 });
