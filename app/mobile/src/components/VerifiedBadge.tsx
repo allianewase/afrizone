@@ -11,7 +11,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Icon, type IconName } from './Icon';
-import { colors, spacing, type, fontFamily } from '../theme';
+import { obColors } from '../onboarding/onboardingTheme';
 import type { CredentialState } from '../api/types';
 
 type Tone = 'ok' | 'wait' | 'bad' | 'plain';
@@ -25,11 +25,17 @@ const STATES: Record<CredentialState, { label: string; tone: Tone; icon: IconNam
   SELF_DECLARED: { label: 'Added by you', tone: 'plain', icon: 'id' },
 };
 
-const TONES: Record<Tone, { bg: string; fg: string }> = {
-  ok: { bg: colors.moneySoft, fg: colors.moneyInk },
-  wait: { bg: colors.amberSoft, fg: colors.goldInk },
-  bad: { bg: colors.dangerSoft, fg: colors.dangerInk },
-  plain: { bg: colors.surfaceSand, fg: colors.textMuted },
+/**
+ * `icon` and `ink` differ wherever the tone's own colour cannot carry a 10px
+ * label on its own tint: amber is 3.12:1 there and red 3.77:1, so those keep
+ * the colour in the glyph and put the words on `text`. Green clears it at
+ * 7.2:1 and keeps both.
+ */
+const TONES: Record<Tone, { bg: string; icon: string; ink: string }> = {
+  ok: { bg: obColors.mgreenBg, icon: obColors.forest, ink: obColors.forest },
+  wait: { bg: obColors.orangeInkBg, icon: obColors.orangeInk, ink: obColors.text },
+  bad: { bg: obColors.dangerBg, icon: obColors.danger, ink: obColors.text },
+  plain: { bg: obColors.sand, icon: obColors.textMut, ink: obColors.text },
 };
 
 export function VerifiedBadge({ state, small }: { state: CredentialState; small?: boolean }) {
@@ -37,8 +43,8 @@ export function VerifiedBadge({ state, small }: { state: CredentialState; small?
   const tone = TONES[cfg.tone];
   return (
     <View style={[styles.wrap, { backgroundColor: tone.bg }, small && styles.small]}>
-      <Icon name={cfg.icon} size={small ? 11 : 13} color={tone.fg} />
-      <Text style={[styles.label, { color: tone.fg }, small && styles.labelSmall]} numberOfLines={1}>
+      <Icon name={cfg.icon} size={small ? 11 : 13} color={tone.icon} />
+      <Text style={[styles.label, { color: tone.ink }, small && styles.labelSmall]} numberOfLines={1}>
         {cfg.label}
       </Text>
     </View>
@@ -50,12 +56,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: 100,
     alignSelf: 'flex-start',
   },
   small: { paddingHorizontal: 7, paddingVertical: 3 },
-  label: { fontSize: type.size.xs, fontFamily: fontFamily.bold },
+  label: { fontSize: 11, fontWeight: '700' },
   labelSmall: { fontSize: 10 },
 });

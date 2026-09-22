@@ -6,7 +6,7 @@ import {
   NativeSyntheticEvent,
   TextInputKeyPressEventData,
 } from 'react-native';
-import { colors, spacing, radii, type } from '../theme';
+import { obColors, obRadii } from '../onboarding/onboardingTheme';
 
 const CODE_LEN = 6;
 
@@ -100,20 +100,24 @@ export function CodeInput({
 }
 
 const styles = StyleSheet.create({
-  boxes: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
+  boxes: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   box: {
     flex: 1,
+    // Load-bearing on web, do not drop: an <input> defaults to CSS
+    // `min-width: auto`, so without this the flex boxes refuse to shrink
+    // below their content width and overflow the row instead of dividing it
+    // evenly. No-op on native.
     minWidth: 0,
     height: 58,
-    backgroundColor: colors.surface,
-    borderColor: colors.line,
+    backgroundColor: obColors.white,
+    borderColor: obColors.line,
     borderWidth: 1.5,
-    borderRadius: radii.input,
+    borderRadius: obRadii.otp,
     textAlign: 'center',
-    fontSize: type.size.xxl,
+    fontSize: 22,
     fontWeight: '800',
-    color: colors.text,
+    color: obColors.text,
   },
-  boxFilled: { borderColor: colors.clay, backgroundColor: colors.claySoft },
-  boxError: { borderColor: colors.danger },
+  boxFilled: { borderColor: obColors.goldDeep, backgroundColor: obColors.roleSelectedBg },
+  boxError: { borderColor: obColors.danger },
 });

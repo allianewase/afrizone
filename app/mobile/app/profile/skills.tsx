@@ -10,22 +10,33 @@
  * There is deliberately no verified badge anywhere on this screen. Skills are
  * the worker's own word and unlock nothing; only credentials do. Saying
  * otherwise here would be a promise the eligibility engine breaks.
+ *
+ * Restyled onto the navy/gold palette; the selection, grouping, search,
+ * dirty-tracking and replace-set save are all unchanged. The chips are local
+ * rather than AppChip because a multi-select needs a tick to say what is
+ * chosen - AppChip's single-select fill carries no such mark.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Screen } from '../../src/components/Screen';
-import { Card } from '../../src/components/Card';
-import { Button } from '../../src/components/Button';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  AppBackHeader,
+  AppSearchBar,
+  AppPrimaryButton,
+  AppEmptyState,
+  AppErrorState,
+  AppLoadingCards,
+} from '../../src/appui/AppUI';
 import { Icon } from '../../src/components/Icon';
-import { LoadingState, ErrorState, EmptyState } from '../../src/components/Feedback';
-import { colors, spacing, type, radii, fontFamily } from '../../src/theme';
+import { obColors, obRadii } from '../../src/onboarding/onboardingTheme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import type { Skill, MySkill } from '../../src/api/types';
 
 export default function SkillsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const catalogue = useAsync((signal) => api.skillCatalogue(signal));
   const mine = useAsync((signal) => api.mySkills(signal));
 
@@ -97,148 +108,137 @@ export default function SkillsScreen() {
   const count = selected?.size ?? 0;
 
   return (
-    <Screen
-      title="Your skills"
-      subtitle={count > 0 ? `${count} selected` : 'What can you do?'}
-      back
-    >
-      <Card style={styles.explainer}>
-        <Icon name="alert" size={15} color={colors.goldInk} />
-        <Text style={styles.explainerText}>
-          Skills help us match you to work. They are not checked, so they do not unlock locked
-          tasks on their own — add your documents for that.
-        </Text>
-      </Card>
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 18, paddingBottom: insets.bottom + 40 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <AppBackHeader title="Your skills" onBack={() => router.back()} />
+        <Text style={styles.subtitle}>{count > 0 ? `${count} selected` : 'What can you do?'}</Text>
 
-      {loading ? (
-        <LoadingState label="Loading skills…" />
-      ) : error ? (
-        <ErrorState message={error} onRetry={() => { catalogue.reload(); mine.reload(); }} />
-      ) : (
-        <>
-          <View style={styles.searchWrap}>
-            <Icon name="search" size={16} color={colors.textMuted} />
-            <TextInput
-              style={styles.search}
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search skills"
-              placeholderTextColor={colors.textMuted}
-              autoCorrect={false}
-            />
-          </View>
+        <View style={styles.explainer}>
+          <Icon name="alert" size={15} color={obColors.orangeInk} />
+          <Text style={styles.explainerText}>
+            Skills help us match you to work. They are not checked, so they do not unlock locked
+            tasks on their own — add your documents for that.
+          </Text>
+        </View>
 
-          {groups.length === 0 ? (
-            <EmptyState icon="search" title="No matches" message="Try a different word." />
-          ) : (
-            groups.map(([group, items]) => (
-              <View key={group} style={styles.group}>
-                <Text style={styles.groupTitle}>{group}</Text>
+        {loading ? (
+          <AppLoadingCards count={2} />
+        ) : error ? (
+          <AppErrorState message={error} onRetry={() => { catalogue.reload(); mine.reload(); }} />
+        ) : (
+          <>
+            <View style={{ marginBottom: 16 }}>
+              <AppSearchBar value={query} onChangeText={setQuery} placeholder="Search skills" />
+            </View>
+
+            {groups.length === 0 ? (
+              <AppEmptyState icon="search" title="No matches" message="Try a different word." />
+            ) : (
+              groups.map(([group, items]) => (
+                <View key={group} style={styles.group}>
+                  <Text style={styles.groupTitle}>{group}</Text>
+                  <View style={styles.chips}>
+                    {items.map((s) => {
+                      const on = selected?.has(s.id) ?? false;
+                      return (
+                        <Pressable
+                          key={s.id}
+                          onPress={() => toggle(s.id)}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: on }}
+                          accessibilityLabel={s.name}
+                          style={[styles.chip, on && styles.chipOn]}
+                        >
+                          {on ? <Icon name="check" size={13} color={obColors.goldDeep} /> : null}
+                          <Text style={[styles.chipText, on && styles.chipTextOn]}>{s.name}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              ))
+            )}
+
+            {retired.length > 0 && (
+              <View style={styles.group}>
+                <Text style={styles.groupTitle}>No longer offered</Text>
+                <Text style={styles.retiredNote}>
+                  These stay on your profile, but cannot be re-added if you remove them.
+                </Text>
                 <View style={styles.chips}>
-                  {items.map((s) => {
-                    const on = selected?.has(s.id) ?? false;
-                    return (
-                      <Pressable
-                        key={s.id}
-                        onPress={() => toggle(s.id)}
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked: on }}
-                        accessibilityLabel={s.name}
-                        style={[styles.chip, on && styles.chipOn]}
-                      >
-                        {on ? <Icon name="check" size={13} color={colors.clayDeep} /> : null}
-                        <Text style={[styles.chipText, on && styles.chipTextOn]}>{s.name}</Text>
-                      </Pressable>
-                    );
-                  })}
+                  {retired.map((s) => (
+                    <View key={s.skillId} style={[styles.chip, styles.chipRetired]}>
+                      <Text style={styles.chipText}>{s.name}</Text>
+                    </View>
+                  ))}
                 </View>
               </View>
-            ))
-          )}
+            )}
 
-          {retired.length > 0 && (
-            <View style={styles.group}>
-              <Text style={styles.groupTitle}>No longer offered</Text>
-              <Text style={styles.retiredNote}>
-                These stay on your profile, but cannot be re-added if you remove them.
-              </Text>
-              <View style={styles.chips}>
-                {retired.map((s) => (
-                  <View key={s.skillId} style={[styles.chip, styles.chipRetired]}>
-                    <Text style={styles.chipText}>{s.name}</Text>
-                  </View>
-                ))}
-              </View>
+            {saveError ? <Text style={styles.error}>{saveError}</Text> : null}
+            {saved && !dirty ? <Text style={styles.saved}>Saved</Text> : null}
+
+            <View style={styles.actions}>
+              <AppPrimaryButton
+                label={dirty ? 'Save skills' : 'No changes to save'}
+                onPress={save}
+                loading={saving}
+                disabled={!dirty || saving}
+              />
+              <AppPrimaryButton label="Back to profile" variant="outline" onPress={() => router.back()} />
             </View>
-          )}
-
-          {saveError ? <Text style={styles.error}>{saveError}</Text> : null}
-          {saved && !dirty ? <Text style={styles.saved}>Saved</Text> : null}
-
-          <View style={styles.actions}>
-            <Button
-              label={dirty ? 'Save skills' : 'No changes to save'}
-              onPress={save}
-              loading={saving}
-              disabled={!dirty || saving}
-            />
-            <Button label="Back to profile" variant="ghost" onPress={() => router.back()} />
-          </View>
-        </>
-      )}
-    </Screen>
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: obColors.bg },
+  subtitle: { fontSize: 13, color: obColors.textMut, marginTop: -8, marginBottom: 16 },
   explainer: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: 9,
     alignItems: 'flex-start',
-    backgroundColor: colors.amberSoft,
-    borderColor: colors.amberSoft,
-    marginBottom: spacing.md,
+    backgroundColor: obColors.orangeInkBg,
+    borderRadius: obRadii.card,
+    padding: 13,
+    marginBottom: 16,
   },
-  explainerText: { flex: 1, color: colors.text, fontSize: type.size.sm, lineHeight: 19 },
-  searchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radii.input,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
-  },
-  search: { flex: 1, paddingVertical: spacing.sm, color: colors.text, fontSize: type.size.base },
-  group: { marginBottom: spacing.lg },
+  explainerText: { flex: 1, color: obColors.text, fontSize: 12.5, lineHeight: 18 },
+  group: { marginBottom: 20 },
   groupTitle: {
-    color: colors.textMuted,
-    fontSize: type.size.xs,
-    fontFamily: fontFamily.bold,
+    color: obColors.textMut,
+    fontSize: 10.5,
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-    marginBottom: spacing.sm,
+    marginBottom: 8,
   },
-  retiredNote: { color: colors.textMuted, fontSize: type.size.xs, marginBottom: spacing.sm },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  retiredNote: { color: obColors.textMut, fontSize: 11.5, marginBottom: 8 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.surface,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    minHeight: 40,
+    borderRadius: obRadii.chip,
+    borderWidth: 1.3,
+    borderColor: obColors.line,
+    backgroundColor: obColors.white,
   },
-  chipOn: { borderColor: colors.clay, backgroundColor: colors.claySoft },
+  chipOn: { borderColor: obColors.goldDeep, backgroundColor: obColors.roleSelectedBg },
   chipRetired: { opacity: 0.6, borderStyle: 'dashed' },
-  chipText: { color: colors.text, fontSize: type.size.sm },
-  chipTextOn: { color: colors.clayDeep, fontFamily: fontFamily.bold },
-  error: { color: colors.dangerInk, fontSize: type.size.sm, marginBottom: spacing.sm },
-  saved: { color: colors.moneyInk, fontSize: type.size.sm, marginBottom: spacing.sm },
-  actions: { gap: spacing.sm, marginTop: spacing.md },
+  chipText: { color: obColors.text, fontSize: 13, fontWeight: '600' },
+  chipTextOn: { color: obColors.navy, fontWeight: '800' },
+  error: { color: obColors.danger, fontSize: 12.5, marginBottom: 8 },
+  saved: { color: obColors.forest, fontSize: 12.5, fontWeight: '700', marginBottom: 8 },
+  actions: { gap: 10, marginTop: 12 },
 });

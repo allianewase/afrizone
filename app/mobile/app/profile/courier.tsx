@@ -15,31 +15,41 @@
  * Nothing here decides whether a delivery can be taken. That is the server's
  * eligibility engine, per task. This screen is a progress report, and if it
  * ever starts refusing things it has become the wrong screen.
+ *
+ * Restyled onto the navy/gold palette; the step order, the routing, the
+ * vehicle form and the save round-trip are unchanged.
  */
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, ScrollView, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Screen } from '../../src/components/Screen';
-import { Card } from '../../src/components/Card';
-import { Button } from '../../src/components/Button';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppBackHeader, AppPrimaryButton, AppErrorState, AppLoadingCards } from '../../src/appui/AppUI';
 import { Icon } from '../../src/components/Icon';
-import { LoadingState, ErrorState } from '../../src/components/Feedback';
-import { colors, spacing, type, radii, fontFamily, layout } from '../../src/theme';
+import { obColors, obRadii } from '../../src/onboarding/onboardingTheme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import type { CourierReadiness, CourierStep, CourierStepState } from '../../src/api/types';
 
-const MARK: Record<CourierStepState, { label: string; color: string; icon: 'check' | 'clock' | 'alert' }> = {
-  DONE: { label: 'Done', color: colors.money, icon: 'check' },
-  // Gold, not red. Waiting on Afrizone is not the rider's problem, and a red
-  // badge against a step they have finished reads as something they did wrong.
-  WAITING: { label: 'With Afrizone', color: colors.gold, icon: 'clock' },
-  TODO: { label: 'To do', color: colors.textMuted, icon: 'clock' },
-  PROBLEM: { label: 'Needs fixing', color: colors.danger, icon: 'alert' },
+/**
+ * `dot` is the state's colour and `ink` is its label's, and they differ on
+ * purpose. A label only keeps the state colour where that colour clears
+ * 4.5:1 on white: amber is 3.12:1 and red is 4.38:1 at this size, so those
+ * two states put the colour in the dot and leave the words legible.
+ *
+ * WAITING is amber rather than red for the reason the file header gives:
+ * waiting on Afrizone is not the rider's problem, and a red mark against a
+ * step they have finished reads as something they did wrong.
+ */
+const MARK: Record<CourierStepState, { label: string; dot: string; ink: string; icon: 'check' | 'clock' | 'alert' }> = {
+  DONE: { label: 'Done', dot: obColors.forest, ink: obColors.forest, icon: 'check' },
+  WAITING: { label: 'With Afrizone', dot: obColors.orangeInk, ink: obColors.text, icon: 'clock' },
+  TODO: { label: 'To do', dot: obColors.textMut, ink: obColors.textMut, icon: 'clock' },
+  PROBLEM: { label: 'Needs fixing', dot: obColors.danger, ink: obColors.text, icon: 'alert' },
 };
 
 export default function CourierScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const load = useAsync((signal) => api.courierReadiness(signal));
 
   const [data, setData] = useState<CourierReadiness | null>(null);
@@ -56,21 +66,12 @@ export default function CourierScreen() {
     }
   }, [load.data, data]);
 
-  if (load.loading && !data) return <Screen title="Courier setup" back><LoadingState /></Screen>;
-  if (load.error && !data) {
-    return (
-      <Screen title="Courier setup" back>
-        <ErrorState message={load.error} onRetry={load.reload} />
-      </Screen>
-    );
-  }
-  if (!data) return <Screen title="Courier setup" back><LoadingState /></Screen>;
-
-  const chosen = data.vehicleTypes.find((v) => v.value === vehicleType);
+  const chosen = data?.vehicleTypes.find((v) => v.value === vehicleType);
   const needsPlate = chosen?.requiresPlate ?? false;
-  const changed =
-    vehicleType !== (data.vehicle?.type ?? '') ||
-    (needsPlate && plate.trim() !== (data.vehicle?.plateNumber ?? ''));
+  const changed = data
+    ? vehicleType !== (data.vehicle?.type ?? '') ||
+      (needsPlate && plate.trim() !== (data.vehicle?.plateNumber ?? ''))
+    : false;
 
   async function save() {
     setSaving(true);
@@ -88,158 +89,181 @@ export default function CourierScreen() {
     }
   }
 
+  const subtitle = data
+    ? data.ready
+      ? 'You are set up for delivery work.'
+      : data.outstanding === 0
+        ? 'Everything is with Afrizone. Nothing for you to do.'
+        : `${data.outstanding} thing${data.outstanding === 1 ? '' : 's'} left for you to do.`
+    : '';
+
   return (
-    <Screen
-      title="Courier setup"
-      subtitle={
-        data.ready
-          ? 'You are set up for delivery work.'
-          : data.outstanding === 0
-            ? 'Everything is with Afrizone. Nothing for you to do.'
-            : `${data.outstanding} thing${data.outstanding === 1 ? '' : 's'} left for you to do.`
-      }
-      back
-      onRefresh={load.reload}
-      refreshing={load.loading}
-    >
-      <Card padded={false} style={styles.list}>
-        {data.steps.map((step: CourierStep, i: number) => {
-          const mark = MARK[step.state];
-          const actionable = step.state === 'TODO' || step.state === 'PROBLEM';
-          const target =
-            step.key === 'identity'
-              ? '/(auth)/kyc'
-              : step.key === 'vehicle'
-                ? null
-                : '/profile/credentials';
-          return (
-            <Pressable
-              key={step.key}
-              style={[styles.row, i > 0 && styles.rowDivider]}
-              // A row that leads nowhere must not look pressable. The vehicle
-              // step is answered on this screen, so it has no destination.
-              onPress={actionable && target ? () => router.push(target as never) : undefined}
-              disabled={!actionable || !target}
-            >
-              <View style={[styles.dot, { backgroundColor: mark.color }]}>
-                <Icon name={mark.icon} size={12} color="#fff" />
-              </View>
-              <View style={styles.rowBody}>
-                <Text style={styles.rowTitle}>{step.label}</Text>
-                <Text style={styles.rowDetail}>{step.detail}</Text>
-              </View>
-              <Text style={[styles.mark, { color: mark.color }]}>{mark.label}</Text>
-            </Pressable>
-          );
-        })}
-      </Card>
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 18, paddingBottom: insets.bottom + 40 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={load.loading && !!data} onRefresh={load.reload} tintColor={obColors.navy} />}
+      >
+        <AppBackHeader title="Courier setup" onBack={() => router.back()} />
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
 
-      <Text style={styles.section}>What do you deliver on?</Text>
-      <Card>
-        <View style={styles.chips}>
-          {data.vehicleTypes.map((v) => {
-            const on = v.value === vehicleType;
-            return (
-              <Pressable
-                key={v.value}
-                onPress={() => {
-                  setVehicleType(v.value);
-                  setSaveError(null);
-                }}
-                style={[styles.chip, on && styles.chipOn]}
-              >
-                <Text style={[styles.chipText, on && styles.chipTextOn]}>{v.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {load.loading && !data ? (
+          <AppLoadingCards count={2} />
+        ) : load.error && !data ? (
+          <AppErrorState message={load.error} onRetry={load.reload} />
+        ) : !data ? (
+          <AppLoadingCards count={2} />
+        ) : (
+          <>
+            <View style={styles.list}>
+              {data.steps.map((step: CourierStep, i: number) => {
+                const mark = MARK[step.state];
+                const actionable = step.state === 'TODO' || step.state === 'PROBLEM';
+                const target =
+                  step.key === 'identity'
+                    ? '/(auth)/kyc'
+                    : step.key === 'vehicle'
+                      ? null
+                      : '/profile/credentials';
+                return (
+                  <Pressable
+                    key={step.key}
+                    style={[styles.row, i > 0 && styles.rowDivider]}
+                    // A row that leads nowhere must not look pressable. The vehicle
+                    // step is answered on this screen, so it has no destination.
+                    onPress={actionable && target ? () => router.push(target as never) : undefined}
+                    disabled={!actionable || !target}
+                  >
+                    <View style={[styles.dot, { backgroundColor: mark.dot }]}>
+                      <Icon name={mark.icon} size={12} color={obColors.white} />
+                    </View>
+                    <View style={styles.rowBody}>
+                      <Text style={styles.rowTitle}>{step.label}</Text>
+                      <Text style={styles.rowDetail}>{step.detail}</Text>
+                    </View>
+                    <Text style={[styles.mark, { color: mark.ink }]}>{mark.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
 
-        {needsPlate && (
-          <View style={styles.plateWrap}>
-            <Text style={styles.label}>Plate number</Text>
-            <TextInput
-              value={plate}
-              onChangeText={setPlate}
-              placeholder="ABC 123 DE"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              style={styles.input}
-            />
-          </View>
+            <Text style={styles.section}>What do you deliver on?</Text>
+            <View style={styles.card}>
+              <View style={styles.chips}>
+                {data.vehicleTypes.map((v) => {
+                  const on = v.value === vehicleType;
+                  return (
+                    <Pressable
+                      key={v.value}
+                      onPress={() => {
+                        setVehicleType(v.value);
+                        setSaveError(null);
+                      }}
+                      style={[styles.chip, on && styles.chipOn]}
+                    >
+                      <Text style={[styles.chipText, on && styles.chipTextOn]}>{v.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {needsPlate && (
+                <View style={styles.plateWrap}>
+                  <Text style={styles.label}>Plate number</Text>
+                  <TextInput
+                    value={plate}
+                    onChangeText={setPlate}
+                    placeholder="ABC 123 DE"
+                    placeholderTextColor={obColors.textFaint}
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    style={styles.input}
+                  />
+                </View>
+              )}
+
+              {saveError && <Text style={styles.error}>{saveError}</Text>}
+
+              <AppPrimaryButton
+                label={data.vehicle ? 'Update vehicle' : 'Save vehicle'}
+                onPress={save}
+                loading={saving}
+                disabled={!vehicleType || !changed || (needsPlate && !plate.trim())}
+              />
+            </View>
+
+            <Text style={styles.footnote}>
+              Being set up does not guarantee any particular delivery. Each job still has its own
+              requirements, and you will always be told which one is missing.
+            </Text>
+          </>
         )}
-
-        {saveError && <Text style={styles.error}>{saveError}</Text>}
-
-        <Button
-          label={data.vehicle ? 'Update vehicle' : 'Save vehicle'}
-          onPress={save}
-          loading={saving}
-          disabled={!vehicleType || !changed || (needsPlate && !plate.trim())}
-          style={styles.save}
-        />
-      </Card>
-
-      <Text style={styles.footnote}>
-        Being set up does not guarantee any particular delivery. Each job still has its own
-        requirements, and you will always be told which one is missing.
-      </Text>
-    </Screen>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { marginBottom: spacing.lg },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
-  rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
-  dot: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  root: { flex: 1, backgroundColor: obColors.bg },
+  subtitle: { fontSize: 13, color: obColors.textMut, marginTop: -8, marginBottom: 16, lineHeight: 18 },
+  list: {
+    backgroundColor: obColors.white,
+    borderWidth: 1,
+    borderColor: obColors.line,
+    borderRadius: obRadii.card,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  rowDivider: { borderTopWidth: 1, borderTopColor: obColors.line },
+  dot: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   rowBody: { flex: 1, gap: 2 },
-  rowTitle: {
-    color: colors.text,
-    fontSize: type.size.base,
-    fontFamily: fontFamily.bold,
+  rowTitle: { color: obColors.text, fontSize: 13.5, fontWeight: '700' },
+  rowDetail: { color: obColors.textMut, fontSize: 12, lineHeight: 17 },
+  mark: { fontSize: 11, fontWeight: '700', flexShrink: 0 },
+  section: { color: obColors.navy, fontSize: 15.5, fontFamily: 'Raleway_800ExtraBold', marginBottom: 10 },
+  card: {
+    backgroundColor: obColors.white,
+    borderWidth: 1,
+    borderColor: obColors.line,
+    borderRadius: obRadii.card,
+    borderTopRightRadius: obRadii.cardCut,
+    padding: 16,
+    gap: 12,
   },
-  rowDetail: { color: colors.textMuted, fontSize: type.size.sm, lineHeight: 18 },
-  mark: { fontSize: type.size.xs, fontFamily: fontFamily.bold },
-  section: {
-    color: colors.text,
-    fontSize: type.size.md,
-    fontFamily: fontFamily.bold,
-    marginBottom: spacing.sm,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: 14,
     // 44px minimum touch target, per DESIGN_SPEC 7 - a chip row is exactly the
     // place that quietly drops below it.
-    minHeight: layout.hitTarget,
+    minHeight: 44,
     justifyContent: 'center',
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.surface,
+    borderRadius: obRadii.chip,
+    borderWidth: 1.3,
+    borderColor: obColors.line,
+    backgroundColor: obColors.white,
   },
-  chipOn: { backgroundColor: colors.navy, borderColor: colors.navy },
-  chipText: { color: colors.text, fontSize: type.size.sm },
-  chipTextOn: { color: '#fff', fontFamily: fontFamily.bold },
-  plateWrap: { marginBottom: spacing.md },
-  label: { color: colors.textMuted, fontSize: type.size.sm, marginBottom: spacing.xs },
+  chipOn: { backgroundColor: obColors.navy, borderColor: obColors.navy },
+  chipText: { color: obColors.text, fontSize: 13, fontWeight: '600' },
+  chipTextOn: { color: obColors.white, fontWeight: '800' },
+  plateWrap: { gap: 6 },
+  label: { color: obColors.textMut, fontSize: 12, fontWeight: '700' },
   input: {
-    height: layout.hitTarget,
+    minHeight: 50,
     borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radii.input,
-    paddingHorizontal: spacing.md,
-    color: colors.text,
-    backgroundColor: colors.surface,
-    fontSize: type.size.base,
+    borderColor: obColors.line,
+    borderRadius: obRadii.field,
+    paddingHorizontal: 13,
+    color: obColors.text,
+    backgroundColor: obColors.white,
+    fontSize: 15,
   },
-  error: { color: colors.danger, fontSize: type.size.sm, marginBottom: spacing.sm },
-  save: { marginTop: spacing.xs },
+  error: { color: obColors.danger, fontSize: 12.5 },
   footnote: {
-    color: colors.textMuted,
-    fontSize: type.size.sm,
-    marginTop: spacing.lg,
-    lineHeight: 19,
+    color: obColors.textMut,
+    fontSize: 12.5,
+    marginTop: 20,
+    lineHeight: 18,
   },
 });

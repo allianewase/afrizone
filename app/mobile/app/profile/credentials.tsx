@@ -5,24 +5,40 @@
  * This is the screen that makes the review loop honest. A rejection is only
  * useful if the person can see the reason and act on it, and the reason shown
  * here is the exact text the reviewer chose - not a status word.
+ *
+ * Restyled onto the navy/gold palette. The type filtering, the per-type
+ * required fields, the upload round-trip and the delete are unchanged.
+ *
+ * On red: the palette's one red is 4.38:1 on white and 3.77:1 on its own
+ * tint, both short of the 4.5 small text needs. It is kept for the two places
+ * red IS the message - the destructive "Remove" link and the rejection
+ * marker - while the reviewer's prose sits on `text` so it can actually be
+ * read. A darker red token is the real fix.
  */
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, Modal, ScrollView, RefreshControl } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { Screen } from '../../src/components/Screen';
-import { Card } from '../../src/components/Card';
-import { Button } from '../../src/components/Button';
+import {
+  AppBackHeader,
+  AppPrimaryButton,
+  AppEmptyState,
+  AppErrorState,
+  AppLoadingCards,
+} from '../../src/appui/AppUI';
 import { Icon } from '../../src/components/Icon';
 import { VerifiedBadge } from '../../src/components/VerifiedBadge';
-import { LoadingState, ErrorState, EmptyState } from '../../src/components/Feedback';
-import { colors, spacing, type, radii, fontFamily } from '../../src/theme';
+import { obColors, obRadii } from '../../src/onboarding/onboardingTheme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { formatDateWithYear } from '../../src/lib/format';
 import type { Credential, CredentialType } from '../../src/api/types';
 
 export default function CredentialsScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const list = useAsync((signal) => api.myCredentials(signal));
   const types = useAsync((signal) => api.credentialTypes(signal));
   const [adding, setAdding] = useState<CredentialType | null>(null);
@@ -39,51 +55,59 @@ export default function CredentialsScreen() {
   );
 
   return (
-    <Screen
-      title="Your documents"
-      subtitle={credentials.length ? `${credentials.length} on file` : 'Licences, certificates, CV'}
-      back
-      onRefresh={list.reload}
-      refreshing={list.loading && !!list.data}
-    >
-      <Card style={styles.explainer}>
-        <Icon name="shield" size={15} color={colors.goldInk} />
-        <Text style={styles.explainerText}>
-          Only documents we have checked can unlock locked work. Send a clear photo or PDF and we
-          will review it.
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 18, paddingBottom: insets.bottom + 40 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={list.loading && !!list.data}
+            onRefresh={list.reload}
+            tintColor={obColors.navy}
+          />
+        }
+      >
+        <AppBackHeader title="Your documents" onBack={() => router.back()} />
+        <Text style={styles.subtitle}>
+          {credentials.length ? `${credentials.length} on file` : 'Licences, certificates, CV'}
         </Text>
-      </Card>
 
-      {list.loading && !list.data ? (
-        <LoadingState label="Loading your documents…" />
-      ) : list.error ? (
-        <ErrorState message={list.error} onRetry={list.reload} />
-      ) : credentials.length === 0 ? (
-        <EmptyState
-          icon="id"
-          title="Nothing on file yet"
-          message="Add a licence, certificate or your CV to unlock more work."
-        />
-      ) : (
-        <View style={styles.list}>
-          {credentials.map((c: Credential) => (
-            <CredentialCard key={c.id} credential={c} onChanged={list.reload} />
-          ))}
+        <View style={styles.explainer}>
+          <Icon name="shield" size={15} color={obColors.orangeInk} />
+          <Text style={styles.explainerText}>
+            Only documents we have checked can unlock locked work. Send a clear photo or PDF and we
+            will review it.
+          </Text>
         </View>
-      )}
 
-      <Button
-        label="Add a document"
-        icon="camera"
-        onPress={() => setPicking(true)}
-        style={{ marginTop: spacing.lg }}
-      />
+        {list.loading && !list.data ? (
+          <AppLoadingCards count={2} />
+        ) : list.error ? (
+          <AppErrorState message={list.error} onRetry={list.reload} />
+        ) : credentials.length === 0 ? (
+          <AppEmptyState
+            icon="id"
+            title="Nothing on file yet"
+            message="Add a licence, certificate or your CV to unlock more work."
+          />
+        ) : (
+          <View style={{ gap: 10 }}>
+            {credentials.map((c: Credential) => (
+              <CredentialCard key={c.id} credential={c} onChanged={list.reload} />
+            ))}
+          </View>
+        )}
+
+        <View style={{ marginTop: 20 }}>
+          <AppPrimaryButton label="Add a document" icon="camera" onPress={() => setPicking(true)} />
+        </View>
+      </ScrollView>
 
       {/* Choose which kind of document first: what a credential needs from the
           worker depends entirely on its type. */}
       <Modal visible={picking} transparent animationType="slide" onRequestClose={() => setPicking(false)}>
         <Pressable style={styles.backdrop} onPress={() => setPicking(false)} />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}>
           <View style={styles.grabber} />
           <Text style={styles.sheetTitle}>What are you adding?</Text>
           <ScrollView style={{ maxHeight: 380 }}>
@@ -104,7 +128,7 @@ export default function CredentialsScreen() {
                       : 'We will check this one'}
                   </Text>
                 </View>
-                <Icon name="chevron-right" size={16} color={colors.textMuted} />
+                <Icon name="chevron-right" size={16} color={obColors.textMut} />
               </Pressable>
             ))}
           </ScrollView>
@@ -121,7 +145,7 @@ export default function CredentialsScreen() {
           }}
         />
       )}
-    </Screen>
+    </View>
   );
 }
 
@@ -145,7 +169,7 @@ function CredentialCard({ credential, onChanged }: { credential: Credential; onC
   const needsAction = credential.state === 'REJECTED' || credential.state === 'EXPIRED';
 
   return (
-    <Card style={styles.card}>
+    <View style={styles.card}>
       <View style={styles.cardTop}>
         <View style={{ flex: 1 }}>
           <Text style={styles.cardTitle}>{credential.title}</Text>
@@ -165,7 +189,7 @@ function CredentialCard({ credential, onChanged }: { credential: Credential; onC
           worker nothing they can act on. */}
       {credential.rejectionReason ? (
         <View style={styles.reason}>
-          <Icon name="alert" size={13} color={colors.dangerInk} />
+          <Icon name="alert" size={13} color={obColors.danger} />
           <Text style={styles.reasonText}>{credential.rejectionReason}</Text>
         </View>
       ) : null}
@@ -176,10 +200,10 @@ function CredentialCard({ credential, onChanged }: { credential: Credential; onC
         <Text style={styles.actionHint}>Remove this and add it again with a clearer copy.</Text>
       ) : null}
 
-      <Pressable onPress={remove} disabled={busy} style={styles.removeBtn}>
+      <Pressable onPress={remove} disabled={busy} style={styles.removeBtn} accessibilityRole="button">
         <Text style={styles.removeText}>{busy ? 'Removing…' : 'Remove'}</Text>
       </Pressable>
-    </Card>
+    </View>
   );
 }
 
@@ -192,6 +216,7 @@ function AddCredentialSheet({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(type.name);
   const [issuer, setIssuer] = useState('');
   const [reference, setReference] = useState('');
@@ -271,7 +296,7 @@ function AddCredentialSheet({
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.grabber} />
         <ScrollView style={{ maxHeight: 460 }} keyboardShouldPersistTaps="handled">
           <Text style={styles.sheetTitle}>{type.name}</Text>
@@ -287,7 +312,7 @@ function AddCredentialSheet({
                 value={issuer}
                 onChangeText={setIssuer}
                 placeholder={type.issuerHint ?? 'Name of the issuer'}
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={obColors.textFaint}
               />
             </>
           ) : null}
@@ -301,7 +326,7 @@ function AddCredentialSheet({
                 onChangeText={setReference}
                 autoCapitalize="characters"
                 placeholder="As printed on the document"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={obColors.textFaint}
               />
             </>
           ) : null}
@@ -314,7 +339,7 @@ function AddCredentialSheet({
                 value={expiresAt}
                 onChangeText={setExpiresAt}
                 placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={obColors.textFaint}
               />
             </>
           ) : null}
@@ -324,19 +349,29 @@ function AddCredentialSheet({
               <Text style={styles.label}>The document itself</Text>
               {documentId ? (
                 <View style={styles.attached}>
-                  <Icon name="check-circle" size={15} color={colors.moneyInk} />
+                  <Icon name="check-circle" size={15} color={obColors.forest} />
                   <Text style={styles.attachedText}>Attached</Text>
                 </View>
               ) : (
                 <View style={styles.uploadRow}>
-                  <Button
-                    label="Photo"
-                    icon="camera"
-                    variant="ghost"
-                    onPress={attachPhoto}
-                    loading={uploading}
-                  />
-                  <Button label="PDF" icon="id" variant="ghost" onPress={attachPdf} loading={uploading} />
+                  <View style={{ flex: 1 }}>
+                    <AppPrimaryButton
+                      label="Photo"
+                      icon="camera"
+                      variant="outline"
+                      onPress={attachPhoto}
+                      loading={uploading}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppPrimaryButton
+                      label="PDF"
+                      icon="id"
+                      variant="outline"
+                      onPress={attachPdf}
+                      loading={uploading}
+                    />
+                  </View>
                 </View>
               )}
             </>
@@ -344,9 +379,9 @@ function AddCredentialSheet({
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <View style={{ gap: spacing.sm, marginTop: spacing.md }}>
-            <Button label="Send for checking" onPress={submit} loading={busy} disabled={missing || busy} />
-            <Button label="Cancel" variant="ghost" onPress={onClose} />
+          <View style={{ gap: 10, marginTop: 16 }}>
+            <AppPrimaryButton label="Send for checking" onPress={submit} loading={busy} disabled={missing || busy} />
+            <AppPrimaryButton label="Cancel" variant="outline" onPress={onClose} />
           </View>
         </ScrollView>
       </View>
@@ -355,93 +390,95 @@ function AddCredentialSheet({
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: obColors.bg },
+  subtitle: { fontSize: 13, color: obColors.textMut, marginTop: -8, marginBottom: 16 },
   explainer: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: 9,
     alignItems: 'flex-start',
-    backgroundColor: colors.amberSoft,
-    borderColor: colors.amberSoft,
-    marginBottom: spacing.md,
+    backgroundColor: obColors.orangeInkBg,
+    borderRadius: obRadii.card,
+    padding: 13,
+    marginBottom: 16,
   },
-  explainerText: { flex: 1, color: colors.text, fontSize: type.size.sm, lineHeight: 19 },
-  list: { gap: spacing.sm },
-  card: { gap: spacing.sm },
-  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  cardTitle: { color: colors.text, fontSize: type.size.base, fontFamily: fontFamily.bold },
-  cardType: { color: colors.textMuted, fontSize: type.size.xs, marginTop: 2 },
-  meta: { color: colors.textMuted, fontSize: type.size.sm },
-  metaWarn: { color: colors.goldInk },
+  explainerText: { flex: 1, color: obColors.text, fontSize: 12.5, lineHeight: 18 },
+  card: {
+    backgroundColor: obColors.white,
+    borderWidth: 1,
+    borderColor: obColors.line,
+    borderRadius: obRadii.card,
+    borderTopRightRadius: obRadii.cardCut,
+    padding: 14,
+    gap: 8,
+  },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  cardTitle: { color: obColors.text, fontSize: 14, fontFamily: 'Raleway_800ExtraBold' },
+  cardType: { color: obColors.textMut, fontSize: 11.5, marginTop: 2 },
+  meta: { color: obColors.textMut, fontSize: 12.5 },
+  metaWarn: { color: obColors.orangeInk, fontWeight: '700' },
   reason: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: 8,
     alignItems: 'flex-start',
-    backgroundColor: colors.dangerSoft,
-    borderRadius: radii.input,
-    padding: spacing.sm,
+    backgroundColor: obColors.dangerBg,
+    borderRadius: obRadii.field,
+    padding: 10,
   },
-  reasonText: { flex: 1, color: colors.dangerInk, fontSize: type.size.sm, lineHeight: 18 },
-  actionHint: { color: colors.textMuted, fontSize: type.size.xs },
-  removeBtn: { alignSelf: 'flex-start' },
-  removeText: { color: colors.dangerInk, fontSize: type.size.sm, fontFamily: fontFamily.bold },
-  error: { color: colors.dangerInk, fontSize: type.size.sm },
-  backdrop: { flex: 1, backgroundColor: colors.scrim },
+  reasonText: { flex: 1, color: obColors.text, fontSize: 12.5, lineHeight: 18 },
+  actionHint: { color: obColors.textMut, fontSize: 11.5 },
+  removeBtn: { alignSelf: 'flex-start', paddingVertical: 4 },
+  removeText: { color: obColors.danger, fontSize: 12.5, fontWeight: '800' },
+  error: { color: obColors.danger, fontSize: 12.5 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
   sheet: {
-    backgroundColor: colors.bg,
-    borderTopLeftRadius: radii.sheet,
-    borderTopRightRadius: radii.sheet,
-    padding: spacing.lg,
-    paddingBottom: spacing.xl * 2,
-    gap: spacing.sm,
+    backgroundColor: obColors.bg,
+    borderTopLeftRadius: obRadii.hero,
+    borderTopRightRadius: obRadii.hero,
+    padding: 20,
+    gap: 8,
   },
-  grabber: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 100,
-    backgroundColor: colors.line,
-    marginBottom: spacing.sm,
-  },
+  grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: 4, backgroundColor: obColors.line, marginBottom: 8 },
   sheetTitle: {
-    color: colors.text,
-    fontSize: type.size.xl,
-    fontFamily: fontFamily.extrabold,
-    marginBottom: spacing.sm,
+    color: obColors.navy,
+    fontSize: 18,
+    fontFamily: 'Raleway_800ExtraBold',
+    marginBottom: 8,
   },
   typeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
+    gap: 10,
+    paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: colors.line,
+    borderBottomColor: obColors.line,
   },
-  typeName: { color: colors.text, fontSize: type.size.base },
-  typeHint: { color: colors.textMuted, fontSize: type.size.xs, marginTop: 2 },
+  typeName: { color: obColors.text, fontSize: 14, fontWeight: '700' },
+  typeHint: { color: obColors.textMut, fontSize: 11.5, marginTop: 2 },
   label: {
-    color: colors.text,
-    fontSize: type.size.sm,
-    fontFamily: fontFamily.bold,
-    marginTop: spacing.md,
+    color: obColors.textMut,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 14,
     marginBottom: 6,
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radii.input,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    color: colors.text,
-    backgroundColor: colors.surface,
-    fontSize: type.size.base,
+    borderColor: obColors.line,
+    borderRadius: obRadii.field,
+    paddingHorizontal: 13,
+    paddingVertical: 13,
+    color: obColors.text,
+    backgroundColor: obColors.white,
+    fontSize: 15,
   },
-  uploadRow: { flexDirection: 'row', gap: spacing.sm },
+  uploadRow: { flexDirection: 'row', gap: 10 },
   attached: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.moneySoft,
-    borderRadius: radii.input,
-    padding: spacing.sm,
+    gap: 8,
+    backgroundColor: obColors.mgreenBg,
+    borderRadius: obRadii.field,
+    padding: 12,
   },
-  attachedText: { color: colors.moneyInk, fontSize: type.size.sm, fontFamily: fontFamily.bold },
+  attachedText: { color: obColors.forest, fontSize: 13, fontWeight: '800' },
 });

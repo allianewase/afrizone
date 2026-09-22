@@ -8,16 +8,22 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  ScrollView,
 } from 'react-native';
-import { Screen } from '../src/components/Screen';
-import { Card } from '../src/components/Card';
-import { Icon } from '../src/components/Icon';
-import { colors, spacing, type, radii, fontFamily } from '../src/theme';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppBackHeader } from '../src/appui/AppUI';
+import { Icon, IconName } from '../src/components/Icon';
+import { obColors, obRadii } from '../src/onboarding/onboardingTheme';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+/**
+ * Restyled onto the navy/gold palette. Every answer below, the contact
+ * details and the expand/collapse behaviour are unchanged.
+ */
 const FAQS: { q: string; a: string }[] = [
   {
     q: 'How do I apply for a task?',
@@ -65,50 +71,60 @@ function openWhatsApp() {
 }
 
 export default function SupportScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
   return (
-    <Screen title="Help & support" back scroll>
-      {/* Quick contact */}
-      <Card style={styles.contactCard}>
-        <Text style={styles.contactTitle}>Reach us directly</Text>
-        <Text style={styles.contactSub}>
-          Our team is available Mon – Sat, 8 am – 6 pm WAT.
-        </Text>
-        <View style={styles.contactRow}>
-          <ContactBtn
-            icon="phone"
-            label="WhatsApp"
-            color={colors.money}
-            bg={colors.moneySoft}
-            onPress={openWhatsApp}
-          />
-          <ContactBtn
-            icon="mail"
-            label="Email us"
-            color={colors.clay}
-            bg={colors.claySoft}
-            onPress={openEmail}
-          />
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 18, paddingBottom: insets.bottom + 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <AppBackHeader title="Help & support" onBack={() => router.back()} />
+
+        {/* Quick contact */}
+        <View style={styles.contactCard}>
+          <Text style={styles.contactTitle}>Reach us directly</Text>
+          <Text style={styles.contactSub}>
+            Our team is available Mon – Sat, 8 am – 6 pm WAT.
+          </Text>
+          <View style={styles.contactRow}>
+            <ContactBtn
+              icon="phone"
+              label="WhatsApp"
+              color={obColors.forest}
+              bg={obColors.mgreenBg}
+              onPress={openWhatsApp}
+            />
+            <ContactBtn
+              icon="mail"
+              label="Email us"
+              color={obColors.navy}
+              bg={obColors.sand}
+              onPress={openEmail}
+            />
+          </View>
         </View>
-      </Card>
 
-      <Text style={styles.faqHeader}>Frequently asked questions</Text>
+        <Text style={styles.faqHeader}>Frequently asked questions</Text>
 
-      <View style={styles.faqList}>
-        {FAQS.map((faq, i) => (
-          <FaqItem key={i} q={faq.q} a={faq.a} />
-        ))}
-      </View>
+        <View style={styles.faqList}>
+          {FAQS.map((faq, i) => (
+            <FaqItem key={i} q={faq.q} a={faq.a} last={i === FAQS.length - 1} />
+          ))}
+        </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Still stuck? Email us at{' '}
-          <Text style={styles.footerLink} onPress={openEmail}>
-            {CONTACT_EMAIL}
-          </Text>{' '}
-          and we'll get back to you within 24 hours.
-        </Text>
-      </View>
-    </Screen>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Still stuck? Email us at{' '}
+            <Text style={styles.footerLink} onPress={openEmail}>
+              {CONTACT_EMAIL}
+            </Text>{' '}
+            and we'll get back to you within 24 hours.
+          </Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -119,7 +135,7 @@ function ContactBtn({
   bg,
   onPress,
 }: {
-  icon: any;
+  icon: IconName;
   label: string;
   color: string;
   bg: string;
@@ -138,7 +154,7 @@ function ContactBtn({
   );
 }
 
-function FaqItem({ q, a }: { q: string; a: string }) {
+function FaqItem({ q, a, last }: { q: string; a: string; last: boolean }) {
   const [open, setOpen] = useState(false);
 
   function toggle() {
@@ -147,7 +163,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   }
 
   return (
-    <View style={styles.faqItem}>
+    <View style={[!last && styles.faqItemDivider]}>
       <Pressable
         onPress={toggle}
         style={styles.faqQuestion}
@@ -156,7 +172,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
       >
         <Text style={styles.faqQ}>{q}</Text>
         <View style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }}>
-          <Icon name="chevron-down" size={18} color={colors.textMuted} />
+          <Icon name="chevron-down" size={18} color={obColors.textMut} />
         </View>
       </Pressable>
       {open ? <Text style={styles.faqA}>{a}</Text> : null}
@@ -165,75 +181,82 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 }
 
 const styles = StyleSheet.create({
-  contactCard: { gap: spacing.md },
-  contactTitle: { color: colors.text, fontSize: type.size.lg, fontFamily: fontFamily.extrabold },
-  contactSub: { color: colors.textMuted, fontSize: type.size.base, lineHeight: 20 },
-  contactRow: { flexDirection: 'row', gap: spacing.md },
+  root: { flex: 1, backgroundColor: obColors.bg },
+  contactCard: {
+    gap: 10,
+    backgroundColor: obColors.white,
+    borderWidth: 1,
+    borderColor: obColors.line,
+    borderRadius: obRadii.card,
+    borderTopRightRadius: obRadii.cardCut,
+    padding: 16,
+  },
+  contactTitle: { color: obColors.navy, fontSize: 15.5, fontFamily: 'Raleway_800ExtraBold' },
+  contactSub: { color: obColors.textMut, fontSize: 12.5, lineHeight: 18 },
+  contactRow: { flexDirection: 'row', gap: 10, marginTop: 2 },
   contactBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: spacing.md,
-    borderRadius: radii.card,
-    minHeight: 44,
+    paddingVertical: 13,
+    borderRadius: obRadii.btn,
+    borderTopRightRadius: obRadii.btnCut,
+    minHeight: 48,
   },
-  contactBtnText: { fontWeight: '700', fontSize: type.size.base },
+  contactBtnText: { fontWeight: '700', fontSize: 13.5 },
   faqHeader: {
-    color: colors.text,
-    fontSize: type.size.lg,
-    fontFamily: fontFamily.extrabold,
-    marginTop: spacing.xl,
-    marginBottom: spacing.md,
+    color: obColors.navy,
+    fontSize: 15.5,
+    fontFamily: 'Raleway_800ExtraBold',
+    marginTop: 24,
+    marginBottom: 10,
   },
   faqList: {
-    borderRadius: radii.card,
+    borderRadius: obRadii.card,
     borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.surface,
+    borderColor: obColors.line,
+    backgroundColor: obColors.white,
     overflow: 'hidden',
   },
-  faqItem: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.line,
-  },
+  faqItemDivider: { borderBottomWidth: 1, borderBottomColor: obColors.line },
   faqQuestion: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    gap: spacing.md,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    gap: 12,
     minHeight: 52,
   },
   faqQ: {
     flex: 1,
-    color: colors.text,
-    fontSize: type.size.base,
+    color: obColors.text,
+    fontSize: 13.5,
     fontWeight: '700',
-    lineHeight: 20,
+    lineHeight: 19,
   },
   faqA: {
-    color: colors.textMuted,
-    fontSize: type.size.base,
-    lineHeight: 22,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
+    color: obColors.textMut,
+    fontSize: 13,
+    lineHeight: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   footer: {
-    marginTop: spacing.xl,
-    padding: spacing.lg,
-    borderRadius: radii.card,
-    backgroundColor: colors.surface,
+    marginTop: 24,
+    padding: 16,
+    borderRadius: obRadii.card,
+    backgroundColor: obColors.sand,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: obColors.line,
   },
   footerText: {
-    color: colors.textMuted,
-    fontSize: type.size.sm,
-    lineHeight: 20,
+    color: obColors.textMut,
+    fontSize: 12.5,
+    lineHeight: 19,
     textAlign: 'center',
   },
-  footerLink: { color: colors.goldInk, fontWeight: '700' },
+  footerLink: { color: obColors.goldDeep, fontWeight: '700' },
 });
