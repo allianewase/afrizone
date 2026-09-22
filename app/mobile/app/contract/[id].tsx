@@ -2,19 +2,29 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Screen } from '../../src/components/Screen';
-import { Card } from '../../src/components/Card';
-import { Button } from '../../src/components/Button';
-import { TierBadge } from '../../src/components/TierBadge';
-import { StatusPill } from '../../src/components/StatusPill';
-import { LoadingState, ErrorState, Banner } from '../../src/components/Feedback';
+import { AppBackHeader, AppPrimaryButton, AppStatusPill, AppErrorState, AppLoadingCards } from '../../src/appui/AppUI';
+import { Banner } from '../../src/components/Feedback';
 import { Icon } from '../../src/components/Icon';
-import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
+import { obColors, obRadii } from '../../src/onboarding/onboardingTheme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { useAuth } from '../../src/auth/AuthContext';
 import type { ContractDetail } from '../../src/api/types';
 
+/**
+ * Restyled onto the navy/gold palette. The signature flow is unchanged,
+ * including that `signed` is read from `signedAt` and never from `status` -
+ * see the comment at its declaration.
+ *
+ * The task title moved from the header into the card, as on the active-task
+ * screen: the header holds one line and a real title did not fit. TierBadge
+ * left with it, for the reason it left the task cards - tier and category are
+ * usually the same word and read as a duplicate.
+ *
+ * The signature field keeps its italic face. It is the one place in the app
+ * where type is meant to look like handwriting, because what is typed there
+ * IS the signature (server-side it becomes signerName + a SHA-256 hash).
+ */
 export default function ContractDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -52,50 +62,35 @@ export default function ContractDetailScreen() {
   const signed = c?.signedAt != null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Custom header: Screen's built-in scroll prop doesn't let us pin a footer */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <Button
-          label=""
-          icon="chevron-left"
-          variant="ghost"
-          full={false}
-          onPress={() => router.back()}
-        />
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {c?.task.title ?? 'Service agreement'}
-        </Text>
-        <View style={{ width: 40 }} />
+    <View style={styles.root}>
+      <View style={[styles.headerWrap, { paddingTop: insets.top + 16 }]}>
+        <AppBackHeader title="Service agreement" onBack={() => router.back()} />
       </View>
 
       {contractQ.loading && !c ? (
-        <LoadingState label="Loading agreement…" />
+        <View style={styles.pad}><AppLoadingCards count={2} /></View>
       ) : contractQ.error ? (
-        <ErrorState message={contractQ.error} onRetry={contractQ.reload} />
+        <View style={styles.pad}><AppErrorState message={contractQ.error} onRetry={contractQ.reload} /></View>
       ) : c ? (
         <>
           <ScrollView
-            contentContainerStyle={[
-              styles.scroll,
-              { paddingBottom: insets.bottom + 120 },
-            ]}
+            contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 140 }]}
+            showsVerticalScrollIndicator={false}
           >
             {/* Meta card */}
-            <Card style={styles.metaCard}>
+            <View style={styles.metaCard}>
               <View style={styles.metaTop}>
-                <TierBadge tier={c.task.tier} small />
                 <Text style={styles.category}>{c.task.category}</Text>
                 <View style={{ flex: 1 }} />
-                <StatusPill
-                  status={signed ? 'paid' : 'pending'}
+                <AppStatusPill
+                  tone={signed ? 'paid' : 'await'}
                   label={signed ? 'Signed' : 'Awaiting signature'}
-                  small
                 />
               </View>
               <Text style={styles.taskTitle}>{c.task.title}</Text>
               {signed && c.signedAt ? (
                 <View style={styles.signedRow}>
-                  <Icon name="check-circle" size={14} color={colors.money} />
+                  <Icon name="check-circle" size={14} color={obColors.forest} />
                   <Text style={styles.signedText}>
                     Digitally signed {new Date(c.signedAt).toLocaleDateString('en-NG', {
                       day: 'numeric', month: 'long', year: 'numeric',
@@ -104,13 +99,13 @@ export default function ContractDetailScreen() {
                 </View>
               ) : (
                 <View style={styles.signedRow}>
-                  <Icon name="alert" size={14} color={colors.goldInk} />
-                  <Text style={[styles.signedText, { color: colors.goldInk }]}>
+                  <Icon name="alert" size={14} color={obColors.orangeInk} />
+                  <Text style={styles.pendingText}>
                     Review and sign to confirm your engagement
                   </Text>
                 </View>
               )}
-            </Card>
+            </View>
 
             {/* Contract sections */}
             <View style={styles.sections}>
@@ -128,10 +123,10 @@ export default function ContractDetailScreen() {
           </ScrollView>
 
           {/* Pinned footer */}
-          <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
+          <View style={[styles.footer, { paddingBottom: insets.bottom + 14 }]}>
             {signed ? (
               <View style={styles.signedFooter}>
-                <Icon name="check-circle" size={20} color={colors.money} />
+                <Icon name="check-circle" size={20} color={obColors.forest} />
                 <Text style={styles.signedFooterText}>Agreement signed</Text>
               </View>
             ) : (
@@ -142,7 +137,7 @@ export default function ContractDetailScreen() {
                   value={signerName}
                   onChangeText={setSignerName}
                   placeholder="Full name"
-                  placeholderTextColor={colors.textFaint}
+                  placeholderTextColor={obColors.textFaint}
                   autoCapitalize="words"
                 />
                 <Text style={styles.footerHint}>
@@ -150,7 +145,7 @@ export default function ContractDetailScreen() {
                   and agree to the terms above, and that this typed name is your electronic
                   signature.
                 </Text>
-                <Button
+                <AppPrimaryButton
                   label="Sign agreement"
                   icon="check"
                   onPress={sign}
@@ -167,114 +162,77 @@ export default function ContractDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: layout.screenPadding,
-    paddingBottom: spacing.sm,
-    gap: spacing.sm,
-    backgroundColor: colors.bg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.line,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    color: colors.text,
-    fontSize: type.size.base,
-    fontWeight: '700',
-  },
-  scroll: {
-    padding: layout.screenPadding,
-    gap: spacing.lg,
-  },
+  root: { flex: 1, backgroundColor: obColors.bg },
+  headerWrap: { paddingHorizontal: 18 },
+  pad: { paddingHorizontal: 18 },
+  scroll: { paddingHorizontal: 18, gap: 20 },
   metaCard: {
-    gap: spacing.sm,
+    backgroundColor: obColors.white,
+    borderWidth: 1,
+    borderColor: obColors.line,
+    borderRadius: obRadii.card,
+    borderTopRightRadius: obRadii.cardCut,
+    padding: 16,
+    gap: 8,
   },
-  metaTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
+  metaTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   category: {
-    color: colors.textMuted,
-    fontSize: type.size.sm,
+    fontSize: 10.5,
     fontWeight: '700',
+    color: obColors.navy,
+    backgroundColor: obColors.sand,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   taskTitle: {
-    color: colors.text,
-    fontSize: type.size.lg,
-    fontFamily: fontFamily.extrabold,
-    lineHeight: 26,
+    color: obColors.navy,
+    fontSize: 16.5,
+    fontFamily: 'Raleway_800ExtraBold',
+    lineHeight: 23,
   },
-  signedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: spacing.xs,
-  },
-  signedText: {
-    color: colors.moneyInk,
-    fontSize: type.size.sm,
-    fontWeight: '600',
-  },
-  sections: {
-    gap: spacing.xl,
-  },
-  section: {
-    gap: spacing.xs,
-  },
+  signedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  signedText: { flex: 1, color: obColors.forest, fontSize: 12.5, fontWeight: '700' },
+  // Amber has no ink-weight variant (orangeInk is 3.57:1 on white), so the
+  // glyph carries the colour and the words stay legible.
+  pendingText: { flex: 1, color: obColors.text, fontSize: 12.5, fontWeight: '600' },
+  sections: { gap: 20 },
+  section: { gap: 5 },
   sectionHeading: {
-    color: colors.text,
-    fontSize: type.size.base,
-    fontFamily: fontFamily.extrabold,
+    color: obColors.navy,
+    fontSize: 14.5,
+    fontFamily: 'Raleway_800ExtraBold',
     letterSpacing: 0.1,
   },
-  sectionBody: {
-    color: colors.textMuted,
-    fontSize: type.size.sm,
-    lineHeight: 20,
-  },
+  sectionBody: { color: obColors.textMut, fontSize: 13, lineHeight: 20 },
   footer: {
-    backgroundColor: colors.bg,
+    backgroundColor: obColors.bg,
     borderTopWidth: 1,
-    borderTopColor: colors.line,
-    paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.md,
-    gap: spacing.sm,
+    borderTopColor: obColors.line,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    gap: 8,
   },
-  footerHint: {
-    color: colors.textMuted,
-    fontSize: type.size.xs,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  label: {
-    color: colors.textMuted,
-    fontSize: type.size.sm,
-    fontWeight: '600',
-  },
+  footerHint: { color: obColors.textMut, fontSize: 11, textAlign: 'center', lineHeight: 16 },
+  label: { color: obColors.textMut, fontSize: 12, fontWeight: '700' },
   signatureInput: {
-    minHeight: layout.hitTarget,
-    backgroundColor: colors.surface,
-    borderColor: colors.line,
+    minHeight: 50,
+    backgroundColor: obColors.white,
+    borderColor: obColors.line,
     borderWidth: 1,
-    borderRadius: radii.input,
-    paddingHorizontal: spacing.md,
-    fontSize: type.size.md,
+    borderRadius: obRadii.field,
+    paddingHorizontal: 13,
+    fontSize: 16,
     fontStyle: 'italic',
-    color: colors.text,
+    color: obColors.text,
   },
   signedFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
+    gap: 8,
+    paddingVertical: 12,
   },
-  signedFooterText: {
-    color: colors.moneyInk,
-    fontWeight: '700',
-    fontSize: type.size.base,
-  },
+  signedFooterText: { color: obColors.forest, fontWeight: '800', fontSize: 14 },
 });

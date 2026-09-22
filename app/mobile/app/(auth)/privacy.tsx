@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { AuthScreen } from '../../src/components/AuthShell';
+import { ObScreen } from '../../src/onboarding/ObUI';
 import { Banner } from '../../src/components/Feedback';
-import { colors, spacing, type } from '../../src/theme';
+import { obColors } from '../../src/onboarding/onboardingTheme';
 
 const LAST_UPDATED = '20 August 2026';
 const SUPPORT_EMAIL = 'support@afrizonemart.com';
@@ -19,7 +19,7 @@ export default function PrivacyScreen() {
   const router = useRouter();
 
   return (
-    <AuthScreen onBack={() => router.back()} title="Privacy Policy">
+    <ObScreen onBack={() => router.back()} title="Privacy Policy">
       <Banner
         tone="amber"
         icon="alert"
@@ -90,7 +90,7 @@ export default function PrivacyScreen() {
       <Section title="9. Contact">
         Questions about your data or this policy? Reach us at {SUPPORT_EMAIL}.
       </Section>
-    </AuthScreen>
+    </ObScreen>
   );
 }
 
@@ -104,8 +104,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 const styles = StyleSheet.create({
-  updated: { color: colors.textMuted, fontSize: type.size.sm },
-  section: { gap: spacing.xs },
-  heading: { color: colors.text, fontSize: type.size.md, fontWeight: '700' },
-  body: { color: colors.textMuted, fontSize: type.size.base, lineHeight: 22 },
+  updated: { color: obColors.textMut, fontSize: 12.5 },
+  section: { gap: 5 },
+  heading: { color: obColors.navy, fontSize: 14.5, fontFamily: 'Raleway_800ExtraBold' },
+  body: { color: obColors.textMut, fontSize: 13.5, lineHeight: 21 },
 });

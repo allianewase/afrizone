@@ -8,7 +8,7 @@ import * as Linking from 'expo-linking';
 import { useFonts, Raleway_500Medium, Raleway_700Bold, Raleway_800ExtraBold } from '@expo-google-fonts/raleway';
 import { AuthProvider, useAuth } from '../src/auth/AuthContext';
 import { homeRouteFor } from '../src/lib/accountType';
-import { colors } from '../src/theme';
+import { obColors } from '../src/onboarding/onboardingTheme';
 import Splash from '../src/components/Splash';
 import {
   configureNotificationHandler,
@@ -173,7 +173,7 @@ export default function RootLayout() {
           <NotificationHandler />
           <DeepLinkHandler />
           <AuthGate>
-            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: obColors.bg } }}>
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen

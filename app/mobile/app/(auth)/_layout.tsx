@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { colors } from '../../src/theme';
+import { obColors } from '../../src/onboarding/onboardingTheme';
 import { OnboardingProvider } from '../../src/onboarding/OnboardingContext';
 
 export default function AuthLayout() {
@@ -11,7 +11,10 @@ export default function AuthLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: colors.bg },
+          // The restyled screens' own ground. The old theme's bg was #F7F7F7,
+          // a cool grey that showed as a flash of the wrong colour behind
+          // every slide transition once the screens went warm.
+          contentStyle: { backgroundColor: obColors.bg },
           animation: 'slide_from_right',
         }}
       >

@@ -3,16 +3,20 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Logo from '../../src/components/Logo';
-import { colors, spacing, type, fontFamily } from '../../src/theme';
+import { obColors } from '../../src/onboarding/onboardingTheme';
 
 /**
  * Front door of the auth flow. Navy, per explicit direction - reverting the
  * white/peach attempt, same call as Splash.tsx right before it (this is the
  * screen that shows immediately after Splash's ~1.1s hold, so a still-white
  * welcome screen is what "still white" was actually pointing at).
- * Real brand navy/gold (src/theme.ts), not the onboarding flow's own
- * obColors - those are still the green AgriPlant palette from a few turns
- * ago, which would read as an odd navy+green mix here.
+ *
+ * This used to read from src/theme.ts with a comment warning that obColors
+ * was the green AgriPlant palette and would clash here. That stopped being
+ * true when obColors became the whole app's navy/gold palette: its `navy`
+ * and `gold` are the same hex values this screen already used. The screen
+ * looks as it did - the only changes are that the gradient's second stop and
+ * the button label now match every other gold button in the app.
  */
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -27,7 +31,7 @@ export default function WelcomeScreen() {
       <View style={styles.footer}>
         <Pressable onPress={() => router.push('/(auth)/login')} style={styles.primaryBtn}>
           <LinearGradient
-            colors={[colors.gold, colors.clayDeep]}
+            colors={[obColors.gold, obColors.goldDeep]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={StyleSheet.absoluteFillObject}
@@ -45,13 +49,20 @@ export default function WelcomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.navy, justifyContent: 'space-between', padding: spacing.xl, paddingTop: 80, paddingBottom: spacing.xxl },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
-  title: { fontSize: type.size.xxl, fontFamily: fontFamily.extrabold, color: colors.white, textAlign: 'center' },
-  footer: { gap: spacing.md },
+  root: {
+    flex: 1,
+    backgroundColor: obColors.navy,
+    justifyContent: 'space-between',
+    padding: 24,
+    paddingTop: 80,
+    paddingBottom: 32,
+  },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 20 },
+  title: { fontSize: 22, fontFamily: 'Raleway_800ExtraBold', color: obColors.white, textAlign: 'center' },
+  footer: { gap: 14 },
   primaryBtn: { minHeight: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  primaryBtnText: { fontFamily: fontFamily.extrabold, fontSize: type.size.md, color: colors.onGold },
-  forgot: { color: colors.railMuted, fontSize: type.size.sm, textAlign: 'center' },
-  footnote: { color: colors.railMuted, fontSize: type.size.sm, textAlign: 'center' },
-  footnoteLink: { color: colors.gold, fontWeight: '700' },
+  primaryBtnText: { fontFamily: 'Raleway_800ExtraBold', fontSize: 15, color: obColors.navyPress },
+  forgot: { color: obColors.textFaint, fontSize: 13, textAlign: 'center' },
+  footnote: { color: obColors.textFaint, fontSize: 13, textAlign: 'center' },
+  footnoteLink: { color: obColors.gold, fontWeight: '700' },
 });

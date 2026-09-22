@@ -1,20 +1,22 @@
 import React, { useState } from 'react';
+import { Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Button } from '../../src/components/Button';
 import { CodeInput } from '../../src/components/CodeInput';
 import { Banner } from '../../src/components/Feedback';
-import { AuthScreen, AuthFooterLink } from '../../src/components/AuthShell';
+import { ObScreen } from '../../src/onboarding/ObUI';
+import { obColors } from '../../src/onboarding/onboardingTheme';
 import { useAuth } from '../../src/auth/AuthContext';
 
 const CODE_LEN = 6;
 
 /**
- * Two-factor challenge, restyled with the "Activate Account" code-entry
- * pattern from the reference design (the closest real analog - this app has
- * no separate email-activation step, only this TOTP verification). Reached
- * from the sign-in hub when /api/auth/login returns {requires2fa, challenge}.
- * Dev bypass `000000` (NODE_ENV !== prod). On success: new/never-completed →
- * onboarding, else tabs.
+ * Two-factor challenge. Reached from the sign-in hub when /api/auth/login
+ * returns {requires2fa, challenge}. Dev bypass `000000` (NODE_ENV !== prod).
+ * On success: new/never-completed → onboarding, else tabs.
+ *
+ * Moved from AuthShell to ObScreen, which is what every other screen in this
+ * stack uses. AuthShell was the navy-hero-and-wave-divider shell from an
+ * earlier design pass and this was its last caller.
  */
 export default function TwoFactorScreen() {
   const router = useRouter();
@@ -43,11 +45,22 @@ export default function TwoFactorScreen() {
   }
 
   return (
-    <AuthScreen
+    <ObScreen
       onBack={() => router.back()}
-      title="Two-Factor Authentication"
+      eyebrow="Security"
+      title="Two-factor authentication"
       subtitle="Enter the 6-digit code from your authenticator app."
-      footer={<AuthFooterLink text="Not you?" linkText="Use a different account" onPress={() => router.back()} />}
+      primaryLabel="Verify"
+      onPrimary={() => onVerify()}
+      primaryLoading={busy}
+      primaryDisabled={code.length !== CODE_LEN || busy}
+      footnote={
+        <Pressable onPress={() => router.back()} accessibilityRole="button">
+          <Text style={styles.footnote}>
+            Not you? <Text style={styles.footnoteLink}>Use a different account</Text>
+          </Text>
+        </Pressable>
+      }
     >
       <Banner
         tone="indigo"
@@ -66,14 +79,11 @@ export default function TwoFactorScreen() {
         error={!!error}
         autoFocus
       />
-
-      <Button
-        label="Verify"
-        icon="shield"
-        onPress={() => onVerify()}
-        loading={busy}
-        disabled={code.length !== CODE_LEN || busy}
-      />
-    </AuthScreen>
+    </ObScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  footnote: { color: obColors.textMut, fontSize: 13, textAlign: 'center' },
+  footnoteLink: { color: obColors.goldDeep, fontWeight: '700' },
+});
