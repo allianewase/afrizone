@@ -8,25 +8,36 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Screen } from '../src/components/Screen';
-import { Card } from '../src/components/Card';
-import { Button } from '../src/components/Button';
+import {
+  AppBackHeader,
+  AppPrimaryButton,
+  AppStatusPill,
+  AppEmptyState,
+  AppErrorState,
+  AppLoadingCards,
+  type AppPillTone,
+} from '../src/appui/AppUI';
 import { Icon } from '../src/components/Icon';
-import { StatusPill } from '../src/components/StatusPill';
-import { Banner, LoadingState, ErrorState, EmptyState } from '../src/components/Feedback';
-import { colors, spacing, type, radii, layout, fontFamily } from '../src/theme';
+import { obColors, obRadii } from '../src/onboarding/onboardingTheme';
 import { api, ApiError } from '../src/api/client';
 import { useAsync } from '../src/lib/useAsync';
 import { formatDate } from '../src/lib/format';
 import type { Timesheet } from '../src/api/types';
 
-const STATUS_MAP: Record<string, { label: string; status: string }> = {
-  SUBMITTED: { label: 'Pending',  status: 'PENDING'  },
-  APPROVED:  { label: 'Approved', status: 'APPROVED' },
-  DISPUTED:  { label: 'Disputed', status: 'DISPUTED' },
+/**
+ * Restyled onto the navy/gold palette. The status mapping, the hours
+ * formatting, which statuses may be disputed, and the whole dispute-filing
+ * flow (including its 10-character floor) are unchanged.
+ */
+const STATUS_MAP: Record<string, { label: string; tone: AppPillTone }> = {
+  SUBMITTED: { label: 'Pending', tone: 'review' },
+  APPROVED: { label: 'Approved', tone: 'ready' },
+  DISPUTED: { label: 'Disputed', tone: 'attn' },
 };
 
 function TimesheetCard({
@@ -36,22 +47,22 @@ function TimesheetCard({
   ts: Timesheet;
   onDispute: (ts: Timesheet) => void;
 }) {
-  const cfg = STATUS_MAP[ts.status] ?? { label: ts.status, status: 'PENDING' };
+  const cfg = STATUS_MAP[ts.status] ?? { label: ts.status, tone: 'review' as AppPillTone };
   const h = ts.hours;
   const hoursLabel = `${h % 1 === 0 ? h.toFixed(0) : h.toFixed(2)} hr${h !== 1 ? 's' : ''}`;
   const canDispute = ts.status === 'SUBMITTED' || ts.status === 'APPROVED';
   const alreadyDisputed = ts.status === 'DISPUTED';
 
   return (
-    <Card style={styles.card}>
+    <View style={styles.card}>
       <View style={styles.cardTop}>
         <Text style={styles.taskTitle} numberOfLines={2}>{ts.task.title}</Text>
-        <StatusPill status={cfg.status as any} small label={cfg.label} />
+        <AppStatusPill tone={cfg.tone} label={cfg.label} />
       </View>
       <View style={styles.meta}>
         <Text style={styles.hours}>{hoursLabel}</Text>
         <Text style={styles.dot}>·</Text>
-        <Text style={styles.period}>
+        <Text style={styles.period} numberOfLines={1}>
           {formatDate(ts.periodStart)} – {formatDate(ts.periodEnd)}
         </Text>
       </View>
@@ -59,7 +70,7 @@ function TimesheetCard({
 
       {alreadyDisputed ? (
         <View style={styles.disputedNote}>
-          <Icon name="alert" size={13} color={colors.goldInk} />
+          <Icon name="alert" size={13} color={obColors.orangeInk} />
           <Text style={styles.disputedText}>Dispute open: check Disputes for updates</Text>
         </View>
       ) : canDispute ? (
@@ -71,7 +82,7 @@ function TimesheetCard({
           <Text style={styles.disputeBtnText}>Report an issue</Text>
         </Pressable>
       ) : null}
-    </Card>
+    </View>
   );
 }
 
@@ -121,24 +132,26 @@ function DisputeSheet({
     <Modal visible={!!ts} transparent animationType="slide" onRequestClose={close}>
       <Pressable style={styles.backdrop} onPress={close} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}>
           <View style={styles.grabber} />
 
           {done ? (
             <View style={styles.doneWrap}>
               <View style={styles.doneIcon}>
-                <Icon name="check-circle" size={32} color={colors.money} strokeWidth={2} />
+                <Icon name="check-circle" size={32} color={obColors.mgreen} strokeWidth={2} />
               </View>
               <Text style={styles.sheetTitle}>Dispute filed</Text>
               <Text style={styles.sheetSub}>
                 Our team will review within 2 business days.
               </Text>
-              <Button
-                label="View disputes"
-                icon="list"
-                onPress={() => { close(); router.push('/disputes'); }}
-              />
-              <Button label="Done" variant="ghost" onPress={close} />
+              <View style={{ alignSelf: 'stretch', gap: 10, marginTop: 4 }}>
+                <AppPrimaryButton
+                  label="View disputes"
+                  icon="list"
+                  onPress={() => { close(); router.push('/disputes'); }}
+                />
+                <AppPrimaryButton label="Done" variant="outline" onPress={close} />
+              </View>
             </View>
           ) : (
             <>
@@ -146,11 +159,11 @@ function DisputeSheet({
               <Text style={styles.sheetSub} numberOfLines={2}>{ts?.task.title}</Text>
 
               <View style={styles.summaryRow}>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.summaryLabel}>Hours submitted</Text>
                   <Text style={styles.summaryValue}>{hoursLabel}</Text>
                 </View>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.summaryLabel}>Period</Text>
                   <Text style={styles.summaryValue}>
                     {ts ? `${formatDate(ts.periodStart)} – ${formatDate(ts.periodEnd)}` : ''}
@@ -164,7 +177,7 @@ function DisputeSheet({
                 value={reason}
                 onChangeText={setReason}
                 placeholder="e.g. I clocked 8 hours but only 6 were recorded. GPS dropped during the last shift."
-                placeholderTextColor={colors.textFaint}
+                placeholderTextColor={obColors.textFaint}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
@@ -173,7 +186,7 @@ function DisputeSheet({
                 <Text style={styles.inputHint}>{10 - reason.trim().length} more characters needed</Text>
               ) : null}
               {error ? <Text style={styles.inputError}>{error}</Text> : null}
-              <Button
+              <AppPrimaryButton
                 label="Submit dispute"
                 icon="alert"
                 onPress={submit}
@@ -189,37 +202,49 @@ function DisputeSheet({
 }
 
 export default function TimesheetsScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const timesheets = useAsync<Timesheet[]>((signal) => api.myTimesheets(signal), []);
   const [disputeTs, setDisputeTs] = useState<Timesheet | null>(null);
 
   return (
-    <Screen
-      title="Timesheets"
-      subtitle="Your submitted hour records"
-      back
-      onRefresh={timesheets.reload}
-      refreshing={timesheets.loading && !!timesheets.data}
-    >
-      {timesheets.loading && !timesheets.data ? (
-        <LoadingState />
-      ) : timesheets.error && !timesheets.data ? (
-        <ErrorState message={timesheets.error} onRetry={timesheets.reload} />
-      ) : (timesheets.data ?? []).length === 0 ? (
-        <EmptyState
-          title="No timesheets yet"
-          message="After clocking out of a task, submit your hours. They'll appear here for approval."
-        />
-      ) : (
-        <View style={styles.list}>
-          {(timesheets.data ?? []).map((ts) => (
-            <TimesheetCard
-              key={ts.id}
-              ts={ts}
-              onDispute={setDisputeTs}
-            />
-          ))}
-        </View>
-      )}
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 18, paddingBottom: insets.bottom + 40 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={timesheets.loading && !!timesheets.data}
+            onRefresh={timesheets.reload}
+            tintColor={obColors.navy}
+          />
+        }
+      >
+        <AppBackHeader title="Timesheets" onBack={() => router.back()} />
+        <Text style={styles.subtitle}>Your submitted hour records</Text>
+
+        {timesheets.loading && !timesheets.data ? (
+          <AppLoadingCards count={2} />
+        ) : timesheets.error && !timesheets.data ? (
+          <AppErrorState message={timesheets.error} onRetry={timesheets.reload} />
+        ) : (timesheets.data ?? []).length === 0 ? (
+          <AppEmptyState
+            icon="clock"
+            title="No timesheets yet"
+            message="After clocking out of a task, submit your hours. They'll appear here for approval."
+          />
+        ) : (
+          <View style={{ gap: 10 }}>
+            {(timesheets.data ?? []).map((ts) => (
+              <TimesheetCard
+                key={ts.id}
+                ts={ts}
+                onDispute={setDisputeTs}
+              />
+            ))}
+          </View>
+        )}
+      </ScrollView>
 
       <DisputeSheet
         ts={disputeTs}
@@ -229,87 +254,80 @@ export default function TimesheetsScreen() {
           timesheets.reload();
         }}
       />
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { gap: spacing.sm },
-  card: { gap: spacing.xs },
+  root: { flex: 1, backgroundColor: obColors.bg },
+  subtitle: { fontSize: 13, color: obColors.textMut, marginTop: -8, marginBottom: 16 },
+  card: {
+    backgroundColor: obColors.white,
+    borderWidth: 1,
+    borderColor: obColors.line,
+    borderRadius: obRadii.card,
+    borderTopRightRadius: obRadii.cardCut,
+    padding: 14,
+    gap: 4,
+  },
   cardTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: spacing.sm,
+    gap: 10,
   },
-  taskTitle: { flex: 1, color: colors.text, fontSize: type.size.md, fontFamily: fontFamily.bold },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
-  hours: { color: colors.goldInk, fontSize: type.size.sm, fontWeight: '700' },
-  dot: { color: colors.textFaint, fontSize: type.size.sm },
-  period: { color: colors.textMuted, fontSize: type.size.sm, flex: 1 },
-  filed: { color: colors.textMuted, fontSize: type.size.xs },
-  disputedNote: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: spacing.xs,
-  },
-  disputedText: { color: colors.goldInk, fontSize: type.size.xs, flex: 1 },
-  disputeBtn: { marginTop: spacing.xs, alignSelf: 'flex-start' },
-  disputeBtnText: {
-    color: colors.goldInk,
-    fontSize: type.size.sm,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
-  },
+  taskTitle: { flex: 1, color: obColors.text, fontSize: 14, fontFamily: 'Raleway_800ExtraBold', lineHeight: 19 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  hours: { color: obColors.navy, fontSize: 13, fontWeight: '800' },
+  dot: { color: obColors.textFaint, fontSize: 12.5 },
+  period: { color: obColors.textMut, fontSize: 12.5, flex: 1 },
+  filed: { color: obColors.textFaint, fontSize: 11 },
+  disputedNote: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  disputedText: { color: obColors.orangeInk, fontSize: 11.5, flex: 1 },
+  disputeBtn: { marginTop: 4, alignSelf: 'flex-start' },
+  disputeBtnText: { color: obColors.goldDeep, fontSize: 12.5, fontWeight: '700' },
 
   // Sheet
-  backdrop: { flex: 1, backgroundColor: colors.scrim },
+  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
   sheet: {
-    backgroundColor: colors.bg,
-    borderTopLeftRadius: radii.sheet,
-    borderTopRightRadius: radii.sheet,
-    padding: layout.screenPadding,
-    gap: spacing.md,
+    backgroundColor: obColors.bg,
+    borderTopLeftRadius: obRadii.hero,
+    borderTopRightRadius: obRadii.hero,
+    padding: 20,
+    gap: 10,
   },
-  grabber: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 100,
-    backgroundColor: colors.line,
-    marginBottom: spacing.sm,
-  },
-  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold },
-  sheetSub: { color: colors.textMuted, fontSize: type.size.base },
+  grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: 4, backgroundColor: obColors.line, marginBottom: 8 },
+  sheetTitle: { color: obColors.navy, fontSize: 18, fontFamily: 'Raleway_800ExtraBold' },
+  sheetSub: { color: obColors.textMut, fontSize: 13 },
   summaryRow: {
     flexDirection: 'row',
-    gap: spacing.xl,
-    backgroundColor: colors.surfaceSand,
-    borderRadius: radii.card,
-    padding: spacing.md,
+    gap: 16,
+    backgroundColor: obColors.sand,
+    borderRadius: obRadii.card,
+    padding: 14,
+    marginTop: 2,
   },
-  summaryLabel: { color: colors.textMuted, fontSize: type.size.xs, marginBottom: 2 },
-  summaryValue: { color: colors.text, fontSize: type.size.base, fontWeight: '700' },
-  inputLabel: { color: colors.text, fontWeight: '600', fontSize: type.size.base },
+  summaryLabel: { color: obColors.textMut, fontSize: 11, marginBottom: 2 },
+  summaryValue: { color: obColors.text, fontSize: 13, fontWeight: '700' },
+  inputLabel: { color: obColors.text, fontWeight: '700', fontSize: 13, marginTop: 2 },
   input: {
     borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radii.input,
-    padding: spacing.md,
-    fontSize: type.size.base,
-    color: colors.text,
-    backgroundColor: colors.surface,
+    borderColor: obColors.line,
+    borderRadius: obRadii.field,
+    padding: 14,
+    fontSize: 14,
+    color: obColors.text,
+    backgroundColor: obColors.white,
     minHeight: 96,
   },
-  inputHint: { color: colors.textMuted, fontSize: type.size.xs },
-  inputError: { color: colors.dangerInk, fontSize: type.size.sm },
-  doneWrap: { gap: spacing.md, alignItems: 'center' },
+  inputHint: { color: obColors.textMut, fontSize: 11.5 },
+  inputError: { color: obColors.danger, fontSize: 12.5 },
+  doneWrap: { gap: 10, alignItems: 'center', paddingVertical: 8 },
   doneIcon: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.moneySoft,
+    backgroundColor: obColors.mgreenBg,
     alignItems: 'center',
     justifyContent: 'center',
   },

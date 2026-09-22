@@ -8,25 +8,45 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Screen } from '../../src/components/Screen';
-import { Card } from '../../src/components/Card';
-import { Button } from '../../src/components/Button';
+import {
+  AppBackHeader,
+  AppPrimaryButton,
+  AppStatusPill,
+  AppErrorState,
+  AppLoadingCards,
+  type AppPillTone,
+} from '../../src/appui/AppUI';
 import { MoneyText } from '../../src/components/MoneyText';
 import { Icon } from '../../src/components/Icon';
-import { StatusPill } from '../../src/components/StatusPill';
-import { Banner, LoadingState, ErrorState } from '../../src/components/Feedback';
-import { colors, spacing, type, radii, layout, fontFamily } from '../../src/theme';
+import { Banner } from '../../src/components/Feedback';
+import { obColors, obRadii } from '../../src/onboarding/onboardingTheme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { formatDate, formatNaira } from '../../src/lib/format';
-import type { PaymentDetail } from '../../src/api/types';
+import type { PaymentDetail, PaymentStatus } from '../../src/api/types';
+
+/**
+ * Restyled onto the navy/gold palette. The gross/WHT/net breakdown, which
+ * statuses may be disputed, and the dispute-filing flow are unchanged.
+ *
+ * MoneyText stays: its colour and size are props, so it carries the new
+ * palette without touching a component five screens share.
+ */
+const STATUS_TONE: Record<PaymentStatus, { tone: AppPillTone; label: string }> = {
+  PENDING: { tone: 'await', label: 'Awaiting approval' },
+  APPROVED: { tone: 'progress', label: 'Approved' },
+  RELEASED: { tone: 'paid', label: 'Paid' },
+  DISPUTED: { tone: 'attn', label: 'Disputed' },
+};
 
 export default function PaymentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [disputeOpen, setDisputeOpen] = useState(false);
 
   const paymentQ = useAsync<PaymentDetail>(
@@ -38,76 +58,81 @@ export default function PaymentDetailScreen() {
   const canDispute = p?.status === 'APPROVED' || p?.status === 'RELEASED';
   const alreadyDisputed = p?.status === 'DISPUTED';
   const isPending = p?.status === 'PENDING';
+  const statusCfg = p ? STATUS_TONE[p.status] : null;
 
   return (
-    <Screen title="Payment" back scroll>
-      {paymentQ.loading && !p ? (
-        <LoadingState />
-      ) : paymentQ.error && !p ? (
-        <ErrorState message={paymentQ.error} onRetry={paymentQ.reload} />
-      ) : p ? (
-        <>
-          {/* Task + status header */}
-          <View style={styles.header}>
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 18, paddingBottom: insets.bottom + 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <AppBackHeader title="Payment" onBack={() => router.back()} />
+
+        {paymentQ.loading && !p ? (
+          <AppLoadingCards count={1} />
+        ) : paymentQ.error && !p ? (
+          <AppErrorState message={paymentQ.error} onRetry={paymentQ.reload} />
+        ) : p ? (
+          <>
             <Text style={styles.taskTitle}>{p.task.title}</Text>
-            <StatusPill status={p.status} />
-          </View>
+            {statusCfg ? (
+              <View style={styles.statusRow}>
+                <AppStatusPill tone={statusCfg.tone} label={statusCfg.label} />
+              </View>
+            ) : null}
 
-          {/* Gross → WHT → Net breakdown */}
-          <Card style={styles.breakdown}>
-            <Row label="Gross pay" value={p.gross} color={colors.text} />
-            <View style={styles.separator} />
-            <Row
-              label={`Withholding Tax (${(p.whtRate * 100).toFixed(0)}%)`}
-              value={-p.whtAmount}
-              color={colors.textMuted}
-              signed
-            />
-            <View style={styles.dividerFull} />
-            <Row label="Net to wallet" value={p.net} color={colors.money} bold />
-          </Card>
-
-          {/* Filed date */}
-          <Text style={styles.meta}>
-            <Text style={styles.metaLabel}>Filed </Text>
-            {formatDate(p.createdAt)}
-          </Text>
-
-          {/* Dispute section */}
-          <View style={styles.disputeSection}>
-            {isPending ? (
-              <Banner
-                tone="amber"
-                icon="clock"
-                title="Awaiting approval"
-                message="Your payment will appear in your wallet balance once an admin approves it."
+            {/* Gross → WHT → Net breakdown */}
+            <View style={styles.breakdown}>
+              <Row label="Gross pay" value={p.gross} color={obColors.text} />
+              <View style={styles.separator} />
+              <Row
+                label={`Withholding Tax (${(p.whtRate * 100).toFixed(0)}%)`}
+                value={-p.whtAmount}
+                color={obColors.textMut}
+                signed
               />
-            ) : alreadyDisputed ? (
-              <>
+              <View style={styles.dividerFull} />
+              <Row label="Net to wallet" value={p.net} color={obColors.forest} bold />
+            </View>
+
+            <Text style={styles.meta}>Filed {formatDate(p.createdAt)}</Text>
+
+            {/* Dispute section */}
+            <View style={styles.disputeSection}>
+              {isPending ? (
                 <Banner
                   tone="amber"
+                  icon="clock"
+                  title="Awaiting approval"
+                  message="Your payment will appear in your wallet balance once an admin approves it."
+                />
+              ) : alreadyDisputed ? (
+                <>
+                  <Banner
+                    tone="amber"
+                    icon="alert"
+                    title="Dispute open on this payment"
+                    message="Our team is reviewing it. Check Disputes for updates."
+                  />
+                  <AppPrimaryButton
+                    label="View disputes"
+                    variant="outline"
+                    icon="list"
+                    onPress={() => router.push('/disputes')}
+                  />
+                </>
+              ) : canDispute ? (
+                <AppPrimaryButton
+                  label="Raise a dispute"
+                  variant="outline"
                   icon="alert"
-                  title="Dispute open on this payment"
-                  message="Our team is reviewing it. Check Disputes for updates."
+                  onPress={() => setDisputeOpen(true)}
                 />
-                <Button
-                  label="View disputes"
-                  variant="secondary"
-                  icon="list"
-                  onPress={() => router.push('/disputes')}
-                />
-              </>
-            ) : canDispute ? (
-              <Button
-                label="Raise a dispute"
-                variant="secondary"
-                icon="alert"
-                onPress={() => setDisputeOpen(true)}
-              />
-            ) : null}
-          </View>
-        </>
-      ) : null}
+              ) : null}
+            </View>
+          </>
+        ) : null}
+      </ScrollView>
 
       {p && (
         <DisputeSheet
@@ -122,7 +147,7 @@ export default function PaymentDetailScreen() {
           }}
         />
       )}
-    </Screen>
+    </View>
   );
 }
 
@@ -142,10 +167,10 @@ function Row({
 }) {
   return (
     <View style={styles.row}>
-      <Text style={[styles.rowLabel, bold && { fontWeight: '700', color }]}>{label}</Text>
+      <Text style={[styles.rowLabel, bold && { fontWeight: '700', color: obColors.text }]}>{label}</Text>
       <MoneyText
         amount={Math.abs(value)}
-        size={bold ? type.size.lg : type.size.md}
+        size={bold ? 18 : 15}
         color={color}
         weight={bold ? '800' : '600'}
         signed={signed ? 'out' : undefined}
@@ -203,35 +228,35 @@ function DisputeSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
       <Pressable style={styles.backdrop} onPress={close} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}>
           <View style={styles.grabber} />
 
           {done ? (
             <View style={styles.doneWrap}>
               <View style={styles.doneIcon}>
-                <Icon name="check-circle" size={32} color={colors.money} strokeWidth={2} />
+                <Icon name="check-circle" size={32} color={obColors.mgreen} strokeWidth={2} />
               </View>
               <Text style={styles.sheetTitle}>Dispute filed</Text>
               <Text style={styles.sheetSub}>
                 Our team will review within 2 business days.
               </Text>
-              <Button
-                label="View disputes"
-                icon="list"
-                onPress={() => { close(); router.push('/disputes'); }}
-              />
-              <Button label="Done" variant="ghost" onPress={close} />
+              <View style={{ alignSelf: 'stretch', gap: 10, marginTop: 4 }}>
+                <AppPrimaryButton
+                  label="View disputes"
+                  icon="list"
+                  onPress={() => { close(); router.push('/disputes'); }}
+                />
+                <AppPrimaryButton label="Done" variant="outline" onPress={close} />
+              </View>
             </View>
           ) : (
             <>
               <Text style={styles.sheetTitle}>Report an issue</Text>
-              <Text style={styles.sheetSub}>{taskTitle}</Text>
+              <Text style={styles.sheetSub} numberOfLines={2}>{taskTitle}</Text>
 
               <View style={styles.amountRow}>
-                <View>
-                  <Text style={styles.amountLabel}>Net paid</Text>
-                  <Text style={styles.amountValue}>{formatNaira(net)}</Text>
-                </View>
+                <Text style={styles.amountLabel}>Net paid</Text>
+                <Text style={styles.amountValue}>{formatNaira(net)}</Text>
               </View>
 
               <Text style={styles.inputLabel}>Describe the issue</Text>
@@ -240,7 +265,7 @@ function DisputeSheet({
                 value={reason}
                 onChangeText={setReason}
                 placeholder="e.g. I worked 6 hours but was paid for 4."
-                placeholderTextColor={colors.textFaint}
+                placeholderTextColor={obColors.textFaint}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
@@ -249,7 +274,7 @@ function DisputeSheet({
                 <Text style={styles.inputHint}>{10 - reason.trim().length} more characters needed</Text>
               ) : null}
               {error ? <Text style={styles.inputError}>{error}</Text> : null}
-              <Button
+              <AppPrimaryButton
                 label="Submit dispute"
                 icon="alert"
                 onPress={submit}
@@ -265,82 +290,74 @@ function DisputeSheet({
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
+  root: { flex: 1, backgroundColor: obColors.bg },
   taskTitle: {
-    flex: 1,
-    color: colors.text,
-    fontSize: type.size.xl,
-    fontFamily: fontFamily.extrabold,
-    lineHeight: 26,
+    color: obColors.navy,
+    fontSize: 19,
+    fontFamily: 'Raleway_800ExtraBold',
+    lineHeight: 25,
   },
+  statusRow: { flexDirection: 'row', marginTop: 10 },
 
   // Breakdown card
-  breakdown: { gap: spacing.md, marginBottom: spacing.sm },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  rowLabel: { color: colors.textMuted, fontSize: type.size.base },
-  separator: { height: 1, backgroundColor: colors.line, marginVertical: spacing.xs },
-  dividerFull: {
-    height: 2,
-    backgroundColor: colors.line,
-    marginVertical: spacing.xs,
+  breakdown: {
+    backgroundColor: obColors.white,
+    borderWidth: 1,
+    borderColor: obColors.line,
+    borderRadius: obRadii.card,
+    borderTopRightRadius: obRadii.cardCut,
+    padding: 16,
+    gap: 12,
+    marginTop: 18,
   },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  rowLabel: { flex: 1, color: obColors.textMut, fontSize: 13.5 },
+  separator: { height: 1, backgroundColor: obColors.line },
+  dividerFull: { height: 2, backgroundColor: obColors.line },
 
-  meta: { color: colors.textMuted, fontSize: type.size.sm, marginBottom: spacing.xl },
-  metaLabel: { color: colors.textMuted },
+  meta: { color: obColors.textMut, fontSize: 12.5, marginTop: 12, marginBottom: 22 },
 
-  disputeSection: { gap: spacing.md },
+  disputeSection: { gap: 12 },
 
   // Sheet
-  backdrop: { flex: 1, backgroundColor: colors.scrim },
+  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
   sheet: {
-    backgroundColor: colors.bg,
-    borderTopLeftRadius: radii.sheet,
-    borderTopRightRadius: radii.sheet,
-    padding: layout.screenPadding,
-    gap: spacing.md,
+    backgroundColor: obColors.bg,
+    borderTopLeftRadius: obRadii.hero,
+    borderTopRightRadius: obRadii.hero,
+    padding: 20,
+    gap: 10,
   },
-  grabber: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 100,
-    backgroundColor: colors.line,
-    marginBottom: spacing.sm,
-  },
-  sheetTitle: { color: colors.text, fontSize: type.size.xl, fontFamily: fontFamily.extrabold },
-  sheetSub: { color: colors.textMuted, fontSize: type.size.base },
+  grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: 4, backgroundColor: obColors.line, marginBottom: 8 },
+  sheetTitle: { color: obColors.navy, fontSize: 18, fontFamily: 'Raleway_800ExtraBold' },
+  sheetSub: { color: obColors.textMut, fontSize: 13 },
   amountRow: {
-    backgroundColor: colors.surfaceSand,
-    borderRadius: radii.card,
-    padding: spacing.md,
+    backgroundColor: obColors.sand,
+    borderRadius: obRadii.card,
+    padding: 14,
+    marginTop: 2,
   },
-  amountLabel: { color: colors.textMuted, fontSize: type.size.xs, marginBottom: 2 },
-  amountValue: { color: colors.goldInk, fontSize: type.size.xl, fontWeight: '800' },
-  inputLabel: { color: colors.text, fontWeight: '600', fontSize: type.size.base },
+  amountLabel: { color: obColors.textMut, fontSize: 11, marginBottom: 2 },
+  amountValue: { color: obColors.navy, fontSize: 19, fontFamily: 'Raleway_800ExtraBold' },
+  inputLabel: { color: obColors.text, fontWeight: '700', fontSize: 13, marginTop: 2 },
   input: {
     borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radii.input,
-    padding: spacing.md,
-    fontSize: type.size.base,
-    color: colors.text,
-    backgroundColor: colors.surface,
+    borderColor: obColors.line,
+    borderRadius: obRadii.field,
+    padding: 14,
+    fontSize: 14,
+    color: obColors.text,
+    backgroundColor: obColors.white,
     minHeight: 96,
   },
-  inputHint: { color: colors.textMuted, fontSize: type.size.xs },
-  inputError: { color: colors.dangerInk, fontSize: type.size.sm },
-  doneWrap: { gap: spacing.md, alignItems: 'center' },
+  inputHint: { color: obColors.textMut, fontSize: 11.5 },
+  inputError: { color: obColors.danger, fontSize: 12.5 },
+  doneWrap: { gap: 10, alignItems: 'center', paddingVertical: 8 },
   doneIcon: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.moneySoft,
+    backgroundColor: obColors.mgreenBg,
     alignItems: 'center',
     justifyContent: 'center',
   },

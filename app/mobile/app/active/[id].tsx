@@ -1,20 +1,30 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Location from 'expo-location';
-import { Screen } from '../../src/components/Screen';
-import { Card } from '../../src/components/Card';
-import { Button } from '../../src/components/Button';
-import { Banner, LoadingState } from '../../src/components/Feedback';
+import { AppBackHeader, AppPrimaryButton, AppLoadingCards } from '../../src/appui/AppUI';
+import { Banner } from '../../src/components/Feedback';
 import { ClockInButton, GeofenceState } from '../../src/components/ClockInButton';
-import { TierBadge } from '../../src/components/TierBadge';
 import { Icon } from '../../src/components/Icon';
-import { colors, spacing, type, radii } from '../../src/theme';
+import { obColors, obRadii } from '../../src/onboarding/onboardingTheme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { formatElapsed, payLabel, formatDate } from '../../src/lib/format';
 import type { Task, Timesheet } from '../../src/api/types';
 
+/**
+ * Restyled onto the navy/gold palette. Every piece of behaviour below - the
+ * clock-state resume, the GPS geofence watch, the elapsed tick, the clock
+ * toggle and the timesheet submit - is unchanged.
+ *
+ * The task title moved out of the header and into the context card. The
+ * header holds one line, and a real task title ("Warehouse picker - Ikeja,
+ * evening shift") truncated there while the card below had room for all of
+ * it. TierBadge is gone from the card for the same reason it left the task
+ * cards: category and tier are usually the same word in practice, and the
+ * pair rendered as a visible duplicate.
+ */
 function haversineMetres(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6_371_000;
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -28,6 +38,8 @@ function haversineMetres(lat1: number, lng1: number, lat2: number, lng2: number)
 
 export default function ActiveTaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   // Task context: fetched once on mount for the header card.
   const taskQ = useAsync<Task | null>(
@@ -183,142 +195,148 @@ export default function ActiveTaskScreen() {
     : null;
 
   return (
-    <Screen title={t?.title ?? 'Active task'} back scroll>
-      {error ? (
-        <Banner tone="danger" icon="alert" title="Something went wrong" message={error} />
-      ) : null}
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 18, paddingBottom: insets.bottom + 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <AppBackHeader title="Active task" onBack={() => router.back()} />
 
-      {/* Task context card */}
-      {taskQ.loading && !t ? (
-        <View style={{ marginTop: spacing.lg }}>
-          <LoadingState />
-        </View>
-      ) : t ? (
-        <Card style={styles.contextCard}>
-          <View style={styles.contextTop}>
-            <TierBadge tier={t.tier} small />
-            <Text style={styles.category}>{t.category}</Text>
-          </View>
+        {error ? (
+          <Banner tone="danger" icon="alert" title="Something went wrong" message={error} />
+        ) : null}
 
-          <View style={styles.contextMeta}>
-            {/* Pay */}
-            <View style={styles.metaItem}>
-              <Icon name="wallet" size={14} color={colors.money} />
-              <Text style={[styles.metaText, { color: colors.moneyInk, fontWeight: '700' }]}>
-                {pay}
-              </Text>
+        {taskQ.loading && !t ? (
+          <AppLoadingCards count={1} />
+        ) : t ? (
+          <View style={styles.contextCard}>
+            <Text style={styles.title}>{t.title}</Text>
+            <View style={styles.tagRow}>
+              <Text style={styles.tag}>{t.category}</Text>
             </View>
 
-            {/* Location */}
-            <View style={styles.metaDot} />
-            <View style={styles.metaItem}>
-              <Icon name={remote ? 'globe' : 'map-pin'} size={14} color={colors.textMuted} />
-              <Text style={styles.metaText} numberOfLines={1}>
+            <View style={styles.metaRow}>
+              <Icon name="wallet" size={14} color={obColors.forest} />
+              <Text style={styles.payText}>{pay}</Text>
+            </View>
+
+            <View style={styles.metaRow}>
+              <Icon name={remote ? 'globe' : 'map-pin'} size={14} color={obColors.textMut} />
+              <Text style={styles.metaText} numberOfLines={2}>
                 {remote ? 'Remote' : (t.address ?? 'Physical')}
               </Text>
             </View>
-          </View>
 
-          {/* Shift dates */}
-          {(t.startDate || t.endDate) ? (
-            <View style={styles.metaItem}>
-              <Icon name="clock" size={14} color={colors.textMuted} />
-              <Text style={styles.metaText}>
-                {t.startDate ? formatDate(t.startDate) : ''}
-                {t.startDate && t.endDate ? ' – ' : ''}
-                {t.endDate ? formatDate(t.endDate) : ''}
-              </Text>
-            </View>
-          ) : null}
-        </Card>
-      ) : null}
-
-      {/* Timer */}
-      <View style={styles.timerWrap}>
-        <Text style={styles.timerLabel}>{clockedIn ? 'On the clock' : 'Elapsed today'}</Text>
-        <Text style={styles.timer}>{formatElapsed(elapsed)}</Text>
-        {clockedIn ? (
-          <View style={styles.livePill}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>Live</Text>
+            {(t.startDate || t.endDate) ? (
+              <View style={styles.metaRow}>
+                <Icon name="clock" size={14} color={obColors.textMut} />
+                <Text style={styles.metaText}>
+                  {t.startDate ? formatDate(t.startDate) : ''}
+                  {t.startDate && t.endDate ? ' – ' : ''}
+                  {t.endDate ? formatDate(t.endDate) : ''}
+                </Text>
+              </View>
+            ) : null}
           </View>
         ) : null}
-      </View>
 
-      {/* Clock button */}
-      <View style={styles.clock}>
-        <ClockInButton
-          clockedIn={clockedIn}
-          geofence={geofence}
-          busy={busy}
-          onToggle={toggleClock}
-        />
-      </View>
-
-      {/* Timesheet submission */}
-      {submitted ? (
-        <Banner
-          tone="money"
-          icon="check-circle"
-          title="Timesheet submitted"
-          message="Awaiting approval: check status in Profile › Timesheets."
-        />
-      ) : (
-        <View style={{ marginTop: spacing.xxl, gap: spacing.md }}>
-          <Button
-            label="Submit timesheet"
-            variant="secondary"
-            icon="check"
-            onPress={submitTimesheet}
-            disabled={clockedIn || elapsed === 0 || busy}
-          />
+        {/* Timer */}
+        <View style={styles.timerWrap}>
+          <Text style={styles.timerLabel}>{clockedIn ? 'On the clock' : 'Elapsed today'}</Text>
+          <Text style={styles.timer}>{formatElapsed(elapsed)}</Text>
           {clockedIn ? (
-            <Text style={styles.hint}>Clock out before submitting your hours.</Text>
+            <View style={styles.livePill}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>Live</Text>
+            </View>
           ) : null}
         </View>
-      )}
-    </Screen>
+
+        {/* Clock button */}
+        <View style={styles.clock}>
+          <ClockInButton
+            clockedIn={clockedIn}
+            geofence={geofence}
+            busy={busy}
+            onToggle={toggleClock}
+          />
+        </View>
+
+        {/* Timesheet submission */}
+        {submitted ? (
+          <View style={{ marginTop: 28 }}>
+            <Banner
+              tone="money"
+              icon="check-circle"
+              title="Timesheet submitted"
+              message="Awaiting approval: check status in Profile › Timesheets."
+            />
+          </View>
+        ) : (
+          <View style={{ marginTop: 28, gap: 10 }}>
+            <AppPrimaryButton
+              label="Submit timesheet"
+              icon="check"
+              variant="outline"
+              onPress={submitTimesheet}
+              disabled={clockedIn || elapsed === 0 || busy}
+            />
+            {clockedIn ? (
+              <Text style={styles.hint}>Clock out before submitting your hours.</Text>
+            ) : null}
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  contextCard: { gap: spacing.sm, marginTop: spacing.md },
-  contextTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  category: { color: colors.textMuted, fontSize: type.size.sm, fontWeight: '700' },
-  contextMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metaDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 99,
-    backgroundColor: colors.line,
+  root: { flex: 1, backgroundColor: obColors.bg },
+  contextCard: {
+    backgroundColor: obColors.white,
+    borderWidth: 1,
+    borderColor: obColors.line,
+    borderRadius: obRadii.card,
+    borderTopRightRadius: obRadii.cardCut,
+    padding: 16,
+    gap: 8,
   },
-  metaText: { color: colors.textMuted, fontSize: type.size.sm },
-  timerWrap: { alignItems: 'center', marginTop: spacing.xxl, gap: spacing.xs },
-  timerLabel: { color: colors.textMuted, fontSize: type.size.base, fontWeight: '600' },
+  title: { fontSize: 16.5, fontFamily: 'Raleway_800ExtraBold', color: obColors.navy, lineHeight: 22 },
+  tagRow: { flexDirection: 'row' },
+  tag: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: obColors.navy,
+    backgroundColor: obColors.sand,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  payText: { color: obColors.forest, fontSize: 13, fontWeight: '800' },
+  metaText: { flex: 1, color: obColors.textMut, fontSize: 12.5 },
+  timerWrap: { alignItems: 'center', marginTop: 32, gap: 4 },
+  timerLabel: { color: obColors.textMut, fontSize: 13, fontWeight: '600' },
   timer: {
-    color: colors.text,
+    color: obColors.navy,
     fontSize: 56,
-    fontWeight: '800',
+    fontFamily: 'Raleway_800ExtraBold',
     fontVariant: ['tabular-nums'],
   },
   livePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.moneySoft,
+    backgroundColor: obColors.mgreenBg,
     borderRadius: 99,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: 12,
     paddingVertical: 4,
-    marginTop: spacing.xs,
+    marginTop: 4,
   },
-  liveDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 99,
-    backgroundColor: colors.money,
-  },
-  liveText: { color: colors.moneyInk, fontSize: type.size.sm, fontWeight: '700' },
-  clock: { alignItems: 'center', marginTop: spacing.xl },
-  hint: { color: colors.textMuted, fontSize: type.size.sm, textAlign: 'center' },
+  liveDot: { width: 7, height: 7, borderRadius: 99, backgroundColor: obColors.mgreen },
+  liveText: { color: obColors.forest, fontSize: 12.5, fontWeight: '700' },
+  clock: { alignItems: 'center', marginTop: 26 },
+  hint: { color: obColors.textMut, fontSize: 12.5, textAlign: 'center' },
 });
