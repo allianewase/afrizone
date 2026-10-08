@@ -23,7 +23,7 @@ const MARK_ASPECT = 107 / 113
 
 /**
  * The ladder in `srcSet` exists so the browser never has to reduce the mark by
- * an awkward ratio. At the 38px sidebar it picks the 76w file and halves it
+ * an awkward ratio. At the 34px sidebar it picks the 76w file and scales it
  * exactly, or uses it 1:1 on a 2x screen. Scaling 107 to 38 directly is a 2.8x
  * reduction and it read as muddy. The variants are resampled in linear light
  * with premultiplied alpha, which the browser does not do.
