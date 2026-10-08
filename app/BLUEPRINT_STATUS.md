@@ -8,7 +8,7 @@ out what is done.
 built, delivery — the first item of Phase 2 — is built end to end, and a courier
 can claim an order without waiting for an admin.** All of it is deployed and was
 exercised against the live API on 2 September 2026; see §10. **Ranked matching
-for deliveries is built** (8 October 2026, not yet deployed; see §9). What
+for deliveries is built and deployed** (8 October 2026; see §9). What
 remains is ranked matching for other work, evidence capture and the rest of §14,
 and the operational work of switching Mart on.
 
@@ -304,8 +304,9 @@ migration touching them anyway.
 **Phase 1 is complete, delivery is built end to end, and a courier can claim an
 order themselves.** Everything below is in the order it is worth doing:
 
-1. **Ranked matching — built for deliveries, 8 October 2026, not yet
-   deployed.** Couriers tap "Go online" and the app sends their position every
+1. **Ranked matching — built for deliveries and deployed, 8 October 2026**
+   (D1 migration 0021, API version `4019ad3f`, mobile build version code 5;
+   the per-minute cron was seen running on the live worker). Couriers tap "Go online" and the app sends their position every
    three minutes while it is open; only the latest point is kept
    (`CourierPresence`), deleted on going offline and swept after 30 minutes of
    silence. When an order goes on the board, every online, qualified courier
