@@ -41,6 +41,7 @@ import type {
   CourierReadiness,
   Delivery,
   DeliveryOffers,
+  Presence,
 } from './types';
 
 export class ApiError extends Error {
@@ -642,8 +643,29 @@ export const api = {
    * switched off are four different problems and a rider given one flat
    * "cannot claim" will tap it again on a job that will never be theirs.
    */
-  claimDelivery(id: string, at: { lat: number; lng: number }): Promise<Delivery> {
-    return request<Delivery>(`/deliveries/${id}/claim`, { method: 'POST', body: at });
+  claimDelivery(id: string, at: { lat: number; lng: number } | null): Promise<Delivery> {
+    // Null is allowed for a job held for this courier: they were chosen for
+    // where they went online, and the server skips the circle for them.
+    return request<Delivery>(`/deliveries/${id}/claim`, { method: 'POST', body: at ?? {} });
+  },
+
+  /** GET /api/me/presence: am I online for ranked offers? */
+  presence(): Promise<Presence> {
+    return request<Presence>('/me/presence');
+  },
+
+  /**
+   * PUT /api/me/presence: go online, or say I still am. The server keeps only
+   * this latest point, and deletes it when the courier goes offline or the
+   * app stops sending.
+   */
+  goOnline(at: { lat: number; lng: number }): Promise<Presence> {
+    return request<Presence>('/me/presence', { method: 'PUT', body: at });
+  },
+
+  /** DELETE /api/me/presence: go offline. The position goes with it. */
+  goOffline(): Promise<Presence> {
+    return request<Presence>('/me/presence', { method: 'DELETE' });
   },
 
   /** POST /api/deliveries/:id/picked-up: the goods have left the shop. */

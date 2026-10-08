@@ -24,6 +24,7 @@ import { prisma } from "../prisma";
 import { generateTask } from "./taskGenerator";
 import { reportToMart, verifyDeliveryOtp, type OutboundEvent } from "./martOutbound";
 import { auditData, writeAudit, type AuditActor } from "../util/audit";
+import { freezeRanking } from "./ranking";
 
 export type DeliveryState =
   | "RECEIVED"
@@ -381,6 +382,11 @@ export async function transitionDelivery(
   if (to === "STORE_ACCEPTED" && from === "COURIER_ASSIGNED") {
     data.assignedAt = null;
     data.offeredAt = new Date();
+    // And it is ranked afresh. The old list was for a different moment and
+    // includes the courier who just vanished; postCourierTask sees the empty
+    // column and ranks it again.
+    data.rankedCandidates = null;
+    data.rankedNotified = 0;
   }
 
   await prisma.$transaction([
@@ -439,7 +445,16 @@ export type PostResult =
 export async function postCourierTask(deliveryId: string, actor: AuditActor): Promise<PostResult> {
   const delivery = await prisma.delivery.findUnique({ where: { id: deliveryId } });
   if (!delivery) return { posted: false, reason: "NOT_ACCEPTED", taskId: null };
-  if (delivery.taskId) return { posted: false, reason: "ALREADY_POSTED", taskId: delivery.taskId };
+  if (delivery.taskId) {
+    // A re-opened order comes back this way: it keeps its posting, and
+    // transitionDelivery cleared its ranking along with the courier who
+    // vanished. Rank it again so the next-best courier is asked first. An order
+    // already ranked is left alone, so nobody is told twice it is their turn.
+    if (delivery.status === "STORE_ACCEPTED" && delivery.offeredAt && delivery.rankedCandidates === null) {
+      await freezeRanking(deliveryId, actor);
+    }
+    return { posted: false, reason: "ALREADY_POSTED", taskId: delivery.taskId };
+  }
   if (delivery.status !== "STORE_ACCEPTED") {
     return { posted: false, reason: "NOT_ACCEPTED", taskId: null };
   }
@@ -483,6 +498,9 @@ export async function postCourierTask(deliveryId: string, actor: AuditActor): Pr
         where: { id: deliveryId },
         data: { taskId: result.taskId, offeredAt: delivery.offeredAt ?? new Date() },
       });
+      // Ranked only if it has not been already, so nobody is told twice that
+      // it is their turn.
+      if (delivery.rankedCandidates === null) await freezeRanking(deliveryId, actor);
       return { posted: false, reason: "ALREADY_POSTED", taskId: result.taskId };
     }
     return { posted: false, reason: result.reason, taskId: null };
@@ -498,6 +516,8 @@ export async function postCourierTask(deliveryId: string, actor: AuditActor): Pr
     martOrderId: delivery.martOrderId,
     taskId: result.taskId,
   });
+  // Who gets it first. Never fatal - see freezeRanking.
+  await freezeRanking(deliveryId, actor);
   return { posted: true, taskId: result.taskId };
 }
 

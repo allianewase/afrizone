@@ -490,6 +490,12 @@ function OfferCard({
         writes.push(
           api.putRule('DELIVERY', 'escalateAfterMinutes', String(draft.escalateAfterMinutes)),
         )
+      if (draft.rankedCandidates !== rule.rankedCandidates)
+        writes.push(api.putRule('DELIVERY', 'rankedCandidates', String(draft.rankedCandidates)))
+      if (draft.rankedWindowMinutes !== rule.rankedWindowMinutes)
+        writes.push(
+          api.putRule('DELIVERY', 'rankedWindowMinutes', String(draft.rankedWindowMinutes)),
+        )
       await Promise.all(writes)
       setDraft(null)
       onSaved()
@@ -528,6 +534,44 @@ function OfferCard({
       )}
 
       <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
+        {/* First, because it happens first: before the circle opens, the order
+            goes to the best-placed online couriers one at a time. */}
+        <div>
+          <Label htmlFor="offer-ranked">Offer first to</Label>
+          <Input
+            id="offer-ranked"
+            type="number"
+            min={0}
+            value={String(value.rankedCandidates)}
+            disabled={!canEdit}
+            onChange={(ev) => set('rankedCandidates', Number(ev.target.value))}
+          />
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+            {value.rankedCandidates > 0
+              ? `The ${value.rankedCandidates} best-placed online couriers, one at a time, before anyone else`
+              : 'Off: every order goes straight to the open circle'}
+          </div>
+        </div>
+
+        {value.rankedCandidates > 0 && (
+          <div>
+            <Label htmlFor="offer-window">Each has it for</Label>
+            <Input
+              id="offer-window"
+              type="number"
+              min={1}
+              value={String(value.rankedWindowMinutes)}
+              disabled={!canEdit}
+              onChange={(ev) => set('rankedWindowMinutes', Number(ev.target.value))}
+            />
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+              {value.rankedWindowMinutes} min each &mdash; at most{' '}
+              {value.rankedCandidates * value.rankedWindowMinutes} min before the circle below opens.
+              Fewer online means fewer turns.
+            </div>
+          </div>
+        )}
+
         <div>
           <Label htmlFor="offer-base">Opening radius</Label>
           <Input
@@ -554,8 +598,8 @@ function OfferCard({
             onChange={(ev) => set('stepMinutes', Number(ev.target.value))}
           />
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-            Doubles every {value.stepMinutes} min &mdash; reaches {km(value.maxRadiusMetres)} after{' '}
-            {doublings * value.stepMinutes} min
+            Doubles every {value.stepMinutes} min &mdash; reaches {km(value.maxRadiusMetres)}{' '}
+            {doublings * value.stepMinutes} min after it opens
           </div>
         </div>
 

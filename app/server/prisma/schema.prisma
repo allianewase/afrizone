@@ -92,6 +92,7 @@ model User {
   notifications       Notification[]
   skills              WorkerSkill[]
   courierProfile      CourierProfile?
+  courierPresence     CourierPresence?
   credentials         Credential[]         @relation("WorkerCredentials")
   credentialsReviewed Credential[]         @relation("CredentialsReviewed")
   orgMemberships      OrganizationMember[]
@@ -987,6 +988,35 @@ model CourierProfile {
   user User @relation(fields: [userId], references: [id])
 }
 
+/// A courier who is online, and where they last were (services/ranking.ts).
+///
+/// THE ONLY STORED COURIER POSITION ON THE PLATFORM, and it is held as tightly
+/// as it can be while still answering "who is nearest?" before anybody asks.
+/// One row per courier, overwritten in place, so there is never a trail - only
+/// the latest point. Going offline deletes the row. A row whose `seenAt` is
+/// older than PRESENCE_TTL_MINUTES counts as offline at read time and is
+/// deleted by the per-minute cron, so a phone that dies, or a courier who
+/// forgets to go offline, does not stay on the map.
+///
+/// Not shown to staff, stores or other couriers. It is read for one purpose:
+/// deciding who gets an order first.
+model CourierPresence {
+  userId String @id
+
+  lat Float
+  lng Float
+
+  /// When this online session began. Not a position history.
+  onlineSince DateTime @default(now())
+  /// The last heartbeat. Whether this row is live is arithmetic on this.
+  seenAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// The sweep deletes on exactly this.
+  @@index([seenAt])
+}
+
 
 /// One Mart order, from confirmed to delivered (MART_INTEGRATION.md §3.1, §4).
 ///
@@ -1078,6 +1108,17 @@ model Delivery {
   /// wrong value here is a circle that opens too wide and an operations board
   /// flagging orders that only just arrived.
   offeredAt      DateTime?
+  /// Who gets this order first, best first, frozen when it goes on the board
+  /// (services/ranking.ts). JSON: [{ workerId, score, distanceMetres }].
+  /// Null or "[]" means nobody was online to rank, and the order goes straight
+  /// to the open circle. Whose turn it is is arithmetic on `offeredAt`, the same
+  /// way the circle is - see services/deliveryOffer.ts.
+  rankedCandidates String?
+  /// How many of those candidates have been told it is their turn. The only
+  /// thing about the ranked phase that is stored rather than derived, because a
+  /// push notification is an event, not a state: the per-minute cron uses it so
+  /// nobody is told twice.
+  rankedNotified   Int       @default(0)
   assignedAt     DateTime?
   pickedUpAt     DateTime?
   deliveredAt    DateTime?

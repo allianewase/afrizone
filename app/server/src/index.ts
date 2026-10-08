@@ -32,6 +32,11 @@ import searchRouter from "./routes/search";
 import healthRouter from "./routes/health";
 import fundingRouter from "./routes/funding";
 import { purgeCustomerData } from "./services/deliveryPurge";
+import { advanceRankedOffers } from "./services/ranking";
+import presenceRouter from "./routes/presence";
+
+/** Must match wrangler.jsonc's triggers.crons entry character for character. */
+const EVERY_MINUTE = "* * * * *";
 import { SYSTEM_ACTORS } from "./util/audit";
 
 const app = express();
@@ -203,6 +208,8 @@ app.use("/api/settings", settingsRouter);
 
 // v3: worker-facing (mobile app)
 app.use("/api/credentials", credentialsRouter);
+// Going online for ranked delivery offers (services/ranking.ts).
+app.use("/api/me/presence", presenceRouter);
 app.use("/api/me", meRouter);
 // Skills + credentials, also under /api/me (see routes/meTalent.ts).
 app.use("/api/me", meTalentRouter);
@@ -290,7 +297,7 @@ export default {
   },
 
   /**
-   * The only scheduled work in the platform, and it exists because
+   * Scheduled work. The daily run below exists because
    * MART_INTEGRATION.md §5 makes a deletion promise that nothing else can keep.
    *
    * Everything else that could have been a job is derived at read time instead -
@@ -305,7 +312,28 @@ export default {
    * runs - so a Worker that was not invoked on Tuesday deletes Tuesday's rows on
    * Wednesday rather than skipping them.
    */
-  async scheduled(_controller, _env, ctx) {
+  async scheduled(controller, _env, ctx) {
+    // Two schedules, one handler. The per-minute one moves ranked delivery
+    // offers on to their next courier and forgets couriers whose app went
+    // quiet (services/ranking.ts) - it is a notification, not a state change,
+    // because whose turn it is is already derived at read time. Missing a run
+    // delays one "it's your turn" push by a minute and nothing else.
+    if (controller.cron === EVERY_MINUTE) {
+      ctx.waitUntil(
+        advanceRankedOffers()
+          .then(async (r) => {
+            await Promise.all(r.pushes);
+            if (r.notified > 0 || r.swept > 0) {
+              console.log(`[ranked-offers] told ${r.notified} courier(s), swept ${r.swept} stale presence row(s)`);
+            }
+          })
+          .catch((e) => {
+            console.error(`[ranked-offers] FAILED: ${e instanceof Error ? e.message : String(e)}`);
+          })
+      );
+      return;
+    }
+
     ctx.waitUntil(
       purgeCustomerData(SYSTEM_ACTORS.deliveryPurge)
         .then((r) => {

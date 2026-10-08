@@ -34,7 +34,11 @@ import {
   minutesUntilInRange,
   offerRule,
   offerStateAt,
+  parseRanked,
+  rankedPhaseMinutes,
   reach,
+  type OfferRule,
+  type OfferState,
 } from "../services/deliveryOffer";
 import {
   blockingBlockers,
@@ -57,6 +61,52 @@ import { RETENTION_DAYS, purgeCustomerData, purgeStatus } from "../services/deli
 
 const router = Router();
 export const adminRouter = Router();
+
+/**
+ * Where this courier stands against the ranked phase of one order.
+ *
+ * OTHERS_TURN carries the words, because "somebody else has first refusal" and
+ * "you are next, in about two minutes" are different things to be told, and
+ * the second keeps a courier on the app.
+ */
+type TurnView =
+  | { kind: "OPEN" }
+  | { kind: "YOUR_TURN"; secondsLeft: number }
+  | { kind: "OTHERS_TURN"; message: string; opensToYouInMinutes: number };
+
+function turnFor(
+  state: OfferState,
+  ranked: { workerId: string }[],
+  workerId: string,
+  offeredAt: Date,
+  rule: OfferRule,
+  now: Date
+): TurnView {
+  if (!state.turn) return { kind: "OPEN" };
+  if (state.turn.workerId === workerId) {
+    return { kind: "YOUR_TURN", secondsLeft: state.turn.secondsLeft };
+  }
+
+  const MINUTE = 60_000;
+  const mine = ranked.findIndex((c) => c.workerId === workerId);
+  const counted = Math.min(ranked.length, rule.rankedCandidates);
+  if (mine > state.turn.index && mine < counted) {
+    const startsAt = offeredAt.getTime() + mine * rule.rankedWindowMinutes * MINUTE;
+    const minutes = Math.max(1, Math.ceil((startsAt - now.getTime()) / MINUTE));
+    return {
+      kind: "OTHERS_TURN",
+      message: `Offered to another courier first. If they pass, it is yours in about ${minutes} min`,
+      opensToYouInMinutes: minutes,
+    };
+  }
+  const opensAt = state.turn.opensToAllAt.getTime();
+  const minutes = Math.max(1, Math.ceil((opensAt - now.getTime()) / MINUTE));
+  return {
+    kind: "OTHERS_TURN",
+    message: `Offered to the best-placed couriers first. Opens to everyone nearby in about ${minutes} min`,
+    opensToYouInMinutes: minutes,
+  };
+}
 
 /**
  * The order as everyone but the assigned courier and staff sees it: where it
@@ -323,7 +373,8 @@ router.get("/me/delivery-offers", requireAuth, async (req: AuthedRequest, res: R
     // showing one fewer.
     if (!task) return [];
 
-    const state = offerStateAt(d.offeredAt, now, rule);
+    const ranked = parseRanked(d.rankedCandidates);
+    const state = offerStateAt(d.offeredAt, now, rule, ranked);
     if (!state) return [];
 
     const eligibility = decide(profile, requirements.get(task.id)!);
@@ -333,6 +384,7 @@ router.get("/me/delivery-offers", requireAuth, async (req: AuthedRequest, res: R
       { lat: req.query.lat, lng: req.query.lng },
       state
     );
+    const turn = turnFor(state, ranked, req.user!.id, d.offeredAt!, rule, now);
 
     // One reason, and the most fixable one first. A courier looking at a job
     // they cannot take needs to know which single thing to do about it, not a
@@ -340,16 +392,18 @@ router.get("/me/delivery-offers", requireAuth, async (req: AuthedRequest, res: R
     let reason: string | null = null;
     if (!rule.selfClaim) reason = "Jobs are being assigned by the team just now";
     else if (blockers.length > 0) reason = blockers[0].message;
-    else if (!near.inRange) {
+    else if (turn.kind === "OTHERS_TURN") reason = turn.message;
+    else if (turn.kind === "OPEN" && !near.inRange) {
       reason = Number.isFinite(near.distanceMetres)
         ? `You are ${formatDistance(near.distanceMetres)} away; this job is open to couriers within ${formatDistance(near.radiusMetres)}`
         : "Turn on location to take jobs near you";
     }
 
-    const waiting =
-      near.inRange || !Number.isFinite(near.distanceMetres)
-        ? null
-        : minutesUntilInRange(near.distanceMetres, d.offeredAt!, now, rule);
+    let waiting: number | null = null;
+    if (turn.kind === "OTHERS_TURN") waiting = turn.opensToYouInMinutes;
+    else if (turn.kind === "OPEN" && !near.inRange && Number.isFinite(near.distanceMetres)) {
+      waiting = minutesUntilInRange(near.distanceMetres, d.offeredAt!, now, rule, ranked.length);
+    }
 
     return [
       {
@@ -361,9 +415,17 @@ router.get("/me/delivery-offers", requireAuth, async (req: AuthedRequest, res: R
           near.distanceMetres !== null && Number.isFinite(near.distanceMetres)
             ? formatDistance(near.distanceMetres)
             : null,
-        claimable: rule.selfClaim && blockers.length === 0 && near.inRange,
+        // Your turn means it is yours to take wherever you are standing: you
+        // were ranked from the position you went online with, and the circle is
+        // for everyone else.
+        claimable:
+          rule.selfClaim &&
+          blockers.length === 0 &&
+          (turn.kind === "YOUR_TURN" || (turn.kind === "OPEN" && near.inRange)),
         reason,
         blockers,
+        // Seconds left on a window held for this courier; null when it is not theirs.
+        yourTurnSecondsLeft: turn.kind === "YOUR_TURN" ? turn.secondsLeft : null,
         // Null when they are outside even the widest circle this order will
         // reach. "Wait four minutes" keeps a courier on the app; a promise that
         // never comes true does not.
@@ -416,27 +478,40 @@ router.post("/deliveries/:id/claim", requireAuth, async (req: AuthedRequest, res
     });
   }
 
-  const state = offerStateAt(delivery.offeredAt, now, rule);
+  const ranked = parseRanked(delivery.rankedCandidates);
+  const state = offerStateAt(delivery.offeredAt, now, rule, ranked);
   if (!state) {
     return res.status(409).json({ error: "This job is not on the board", code: "NOT_OFFERED" });
   }
 
+  // While the order is with its ranked candidates, only the one whose turn it
+  // is may take it - that is what "offered to the best-placed courier" means.
+  const turn = turnFor(state, ranked, req.user!.id, delivery.offeredAt!, rule, now);
+  if (turn.kind === "OTHERS_TURN") {
+    return res.status(409).json({
+      error: turn.message,
+      code: "RANKED_TURN",
+      opensToYouInMinutes: turn.opensToYouInMinutes,
+    });
+  }
+
   // The distance gate, before the assignment. This is the only check the shared
   // assignment path does not make - it knows about qualifications and slots, and
-  // nothing about where anybody is standing.
+  // nothing about where anybody is standing. Skipped on your own turn: you
+  // were chosen for where you are, and the circle is for everyone else.
   const near = reach(
     { lat: delivery.pickupLat, lng: delivery.pickupLng },
     { lat: req.body?.lat, lng: req.body?.lng },
     state
   );
-  if (!near.inRange) {
+  if (turn.kind === "OPEN" && !near.inRange) {
     if (!Number.isFinite(near.distanceMetres)) {
       return res.status(400).json({
         error: "Turn on location to take jobs near you",
         code: "NO_LOCATION",
       });
     }
-    const opensIn = minutesUntilInRange(near.distanceMetres, delivery.offeredAt!, now, rule);
+    const opensIn = minutesUntilInRange(near.distanceMetres, delivery.offeredAt!, now, rule, ranked.length);
     return res.status(403).json({
       error: `You are ${formatDistance(near.distanceMetres)} from the shop; this job is open to couriers within ${formatDistance(near.radiusMetres)}`,
       code: "TOO_FAR",
@@ -470,6 +545,8 @@ router.post("/deliveries/:id/claim", requireAuth, async (req: AuthedRequest, res
     waitingMinutes: state.waitingMinutes,
     radiusMetres: state.radiusMetres,
     distanceMetres: near.distanceMetres,
+    // Which ranked candidate took it, or null if it went on the open board.
+    rankedTurn: turn.kind === "YOUR_TURN" ? state.turn!.index : null,
   });
 
   // The full view, customer included - it is theirs now, and the next thing they
@@ -657,7 +734,7 @@ adminRouter.get(
     const decorated = rows.map((d) => ({
       ...withCustomer(d),
       // Null for anything not on the board, which is most of them.
-      offer: offerStateAt(d.offeredAt, now, rule),
+      offer: offerStateAt(d.offeredAt, now, rule, parseRanked(d.rankedCandidates)),
     }));
 
     res.json({
@@ -831,10 +908,14 @@ adminRouter.post(
     // The posting has to go back on the board, or a re-opened order is one
     // nobody can see. postCourierTask adopts the existing task where there is
     // one, so this does not mint a second job for the same order.
-    const posted = await postCourierTask(delivery.id, actor);
+    //
+    // The task is reopened FIRST: posting ranks the order and tells the first
+    // candidate it is theirs, and a courier who taps straight away must not
+    // find the slot still marked filled.
     if (delivery.taskId) {
       await prisma.task.update({ where: { id: delivery.taskId }, data: { status: "OPEN" } });
     }
+    const posted = await postCourierTask(delivery.id, actor);
 
     const fresh = await prisma.delivery.findUnique({
       where: { id: delivery.id },

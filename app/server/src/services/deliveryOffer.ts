@@ -24,8 +24,18 @@
  * measures the store map from a point supplied per request. This is the third
  * use of the same shape rather than a new one.
  *
- * EVERYTHING HERE IS DERIVED AT READ TIME. There is no timer, no queue and no
- * second cron. The radius at any moment is arithmetic on how long the order has
+ * RANKING IS THE ONE EXCEPTION, AND IT IS OPT-IN. Asking the best-placed
+ * courier first (services/ranking.ts) needs to know who is near before anybody
+ * asks, and nothing per-request can answer that. So a courier who taps "Go
+ * online" leaves one point in CourierPresence, overwritten by each heartbeat and
+ * deleted when they go offline or go quiet. The circle below still reads only
+ * the position sent with the request; the stored one is used to rank and for
+ * nothing else.
+ *
+ * EVERYTHING HERE IS DERIVED AT READ TIME. There is no timer and no queue -
+ * including for the ranked phase: whose turn it is is the same arithmetic. The
+ * per-minute cron only SENDS the "it is your turn" push; if it stopped, turns
+ * would still pass on time, just silently. The radius at any moment is arithmetic on how long the order has
  * been waiting, which means it cannot drift, cannot be stale, and cannot stop
  * firing - the failure mode the delivery purge needs an audit row to make
  * visible does not exist for this. It is the same reason expired postings and
@@ -56,6 +66,12 @@ export interface OfferRule {
   maxRadiusMetres: number;
   /** How long an unclaimed order waits before the operations board flags it. */
   escalateAfterMinutes: number;
+  /** How many of the best-placed online couriers get the order to themselves,
+   *  one after another, before the circle opens. 0 switches ranking off and the
+   *  board behaves exactly as it did before services/ranking.ts existed. */
+  rankedCandidates: number;
+  /** How long each of them has it. */
+  rankedWindowMinutes: number;
 }
 
 /**
@@ -72,6 +88,11 @@ export const DEFAULT_OFFER_RULE: OfferRule = {
   stepMinutes: 5,
   maxRadiusMetres: 15_000,
   escalateAfterMinutes: 20,
+  // Three turns of two minutes: six minutes at most before the order opens to
+  // everyone in range, which is short enough that a top three who are all
+  // looking at something else cost the customer very little.
+  rankedCandidates: 3,
+  rankedWindowMinutes: 2,
 };
 
 const KEYS = {
@@ -80,6 +101,8 @@ const KEYS = {
   stepMinutes: "rules.DELIVERY.radiusStepMinutes",
   maxRadiusMetres: "rules.DELIVERY.maxRadiusMetres",
   escalateAfterMinutes: "rules.DELIVERY.escalateAfterMinutes",
+  rankedCandidates: "rules.DELIVERY.rankedCandidates",
+  rankedWindowMinutes: "rules.DELIVERY.rankedWindowMinutes",
 } as const;
 
 export const OFFER_SETTING_KEYS = Object.values(KEYS);
@@ -106,6 +129,15 @@ export async function offerRule(p: any): Promise<OfferRule> {
     return Number.isFinite(n) && n > 0 ? n : fallback;
   };
 
+  // Zero is a meaningful answer for a count - it switches ranking off - where
+  // for a radius or a duration it would be a misconfiguration.
+  const count = (key: string, fallback: number): number => {
+    const raw = set.get(key);
+    if (raw === undefined) return fallback;
+    const n = Number(raw);
+    return Number.isInteger(n) && n >= 0 ? n : fallback;
+  };
+
   const claim = set.get(KEYS.selfClaim);
   return {
     selfClaim: claim === undefined ? true : claim.toLowerCase() !== "off",
@@ -116,6 +148,8 @@ export async function offerRule(p: any): Promise<OfferRule> {
       KEYS.escalateAfterMinutes,
       DEFAULT_OFFER_RULE.escalateAfterMinutes
     ),
+    rankedCandidates: count(KEYS.rankedCandidates, DEFAULT_OFFER_RULE.rankedCandidates),
+    rankedWindowMinutes: num(KEYS.rankedWindowMinutes, DEFAULT_OFFER_RULE.rankedWindowMinutes),
   };
 }
 
@@ -126,7 +160,7 @@ export async function offerRule(p: any): Promise<OfferRule> {
  * job stays claimable by anyone in range - stopping couriers from taking an
  * order at the exact moment it is agreed nobody has taken it would be perverse.
  */
-export type OfferStage = "OFFERED" | "WIDENED" | "ESCALATED";
+export type OfferStage = "RANKED" | "OFFERED" | "WIDENED" | "ESCALATED";
 
 export interface OfferState {
   stage: OfferStage;
@@ -142,6 +176,47 @@ export interface OfferState {
   escalated: boolean;
   /** Wording for people. The enum name tells a courier nothing. */
   label: string;
+  /** Whose turn it is, while the order is with its ranked candidates one at a
+   *  time. Null once the circle is open to everyone. */
+  turn: RankedTurn | null;
+}
+
+/** One candidate's exclusive window. */
+export interface RankedTurn {
+  /** Zero-based position in the frozen ranking. */
+  index: number;
+  workerId: string;
+  /** Whole seconds left on this candidate's window. Seconds, not minutes: a
+   *  two-minute window shown as "1 min" for its whole second half is useless
+   *  to the person it belongs to. */
+  secondsLeft: number;
+  /** When the circle opens to everyone if none of the ranked candidates takes it. */
+  opensToAllAt: Date;
+}
+
+/**
+ * How many minutes the ranked phase lasts for a list of this length.
+ *
+ * Only as many turns as there are candidates: two couriers online is two turns,
+ * not three with a dead one at the end that keeps everybody else waiting.
+ */
+export function rankedPhaseMinutes(rankedCount: number, rule: OfferRule): number {
+  return Math.min(rankedCount, rule.rankedCandidates) * rule.rankedWindowMinutes;
+}
+
+/**
+ * The frozen ranking as stored on the delivery. Tolerant by design: a column
+ * that fails to parse means no ranking, which is the old open board, rather
+ * than an order nobody can see.
+ */
+export function parseRanked(raw: string | null | undefined): { workerId: string; score: number; distanceMetres: number | null }[] {
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v.filter((c) => c && typeof c.workerId === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 const MINUTE = 60_000;
@@ -157,17 +232,49 @@ const MINUTE = 60_000;
 export function offerStateAt(
   offeredAt: Date | null | undefined,
   now: Date,
-  rule: OfferRule
+  rule: OfferRule,
+  ranked: { workerId: string }[] = []
 ): OfferState | null {
   if (!offeredAt) return null;
 
   const elapsed = Math.max(0, now.getTime() - offeredAt.getTime());
   const waitingMinutes = Math.floor(elapsed / MINUTE);
 
+  // THE RANKED PHASE COMES FIRST, AND THE CIRCLE WAITS FOR IT. Escalation is
+  // still measured from offeredAt - a customer waiting is a customer waiting,
+  // whoever the order was with - but the circle only starts widening once it
+  // opens to everyone. Otherwise six minutes of exclusive offers would open the
+  // board at double the radius, to couriers twice as far away as it needed.
+  const hold = rankedPhaseMinutes(ranked.length, rule) * MINUTE;
+  if (elapsed < hold) {
+    const index = Math.floor(elapsed / (rule.rankedWindowMinutes * MINUTE));
+    const windowEnds = offeredAt.getTime() + (index + 1) * rule.rankedWindowMinutes * MINUTE;
+    const escalated = waitingMinutes >= rule.escalateAfterMinutes;
+    return {
+      stage: escalated ? "ESCALATED" : "RANKED",
+      radiusMetres: rule.baseRadiusMetres,
+      waitingMinutes,
+      widenings: 0,
+      atMaxRadius: false,
+      escalated,
+      label: escalated
+        ? `Unclaimed for ${waitingMinutes} min - needs a person`
+        : `Offered to the best-placed courier (${index + 1} of ${Math.min(ranked.length, rule.rankedCandidates)})`,
+      turn: {
+        index,
+        workerId: ranked[index].workerId,
+        secondsLeft: Math.max(0, Math.ceil((windowEnds - now.getTime()) / 1000)),
+        opensToAllAt: new Date(offeredAt.getTime() + hold),
+      },
+    };
+  }
+
+  const open = elapsed - hold;
+
   // Doubling rather than adding, because a courier who is not in the first
   // circle is usually well outside it, and stepping out in equal increments
   // spends the whole escalation window covering ground nobody is standing on.
-  const steps = Math.floor(elapsed / (rule.stepMinutes * MINUTE));
+  const steps = Math.floor(open / (rule.stepMinutes * MINUTE));
   const uncapped = rule.baseRadiusMetres * Math.pow(2, steps);
   const radiusMetres = Math.min(uncapped, rule.maxRadiusMetres);
   const atMaxRadius = uncapped >= rule.maxRadiusMetres;
@@ -191,6 +298,7 @@ export function offerStateAt(
       : widenings > 0
         ? `Offered ${waitingMinutes} min ago, circle widened`
         : "Offered to couriers nearby",
+    turn: null,
   };
 }
 
@@ -247,7 +355,8 @@ export function minutesUntilInRange(
   distanceMetres: number,
   offeredAt: Date,
   now: Date,
-  rule: OfferRule
+  rule: OfferRule,
+  rankedCount = 0
 ): number | null {
   if (!Number.isFinite(distanceMetres)) return null;
   if (distanceMetres > rule.maxRadiusMetres) return null;
@@ -256,6 +365,9 @@ export function minutesUntilInRange(
     0,
     Math.ceil(Math.log2(distanceMetres / rule.baseRadiusMetres))
   );
-  const readyAt = offeredAt.getTime() + stepsNeeded * rule.stepMinutes * MINUTE;
+  const readyAt =
+    offeredAt.getTime() +
+    rankedPhaseMinutes(rankedCount, rule) * MINUTE +
+    stepsNeeded * rule.stepMinutes * MINUTE;
   return Math.max(0, Math.ceil((readyAt - now.getTime()) / MINUTE));
 }

@@ -7,9 +7,10 @@ out what is done.
 **Headline: every one of the ten things Blueprint §15 lists for Phase 1 is
 built, delivery — the first item of Phase 2 — is built end to end, and a courier
 can claim an order without waiting for an admin.** All of it is deployed and was
-exercised against the live API on 2 September 2026; see §10. What remains is
-ranked matching, evidence capture and the rest of §14, and the operational work
-of switching Mart on.
+exercised against the live API on 2 September 2026; see §10. **Ranked matching
+for deliveries is built** (8 October 2026, not yet deployed; see §9). What
+remains is ranked matching for other work, evidence capture and the rest of §14,
+and the operational work of switching Mart on.
 
 Three things are built to a deliberate limit, and pretending otherwise would be
 the more expensive mistake: **CAC verification is a manual check** until a
@@ -264,9 +265,8 @@ distinguishable from a quiet week.
 
 ## 7. Substantial features not started
 
-- **Ranked matching** (§11). The build gates *qualified / not qualified*; the
-  blueprint wants candidates **scored** on skill, proximity, reliability and
-  current load. Different problem.
+- **Ranked matching for anything but deliveries** (§11). Deliveries are done
+  (§9); every other task is still apply-then-approve with no ordering.
 - **Proof-of-work evidence** (§14). Geo-tagged photos, signatures and timestamps,
   required per task type, so verification is largely automatic.
 - **Reputation tiers and badges** (§9). Note this is a *third* meaning of "tier"
@@ -304,11 +304,31 @@ migration touching them anyway.
 **Phase 1 is complete, delivery is built end to end, and a courier can claim an
 order themselves.** Everything below is in the order it is worth doing:
 
-1. **Ranked matching** (§11). The build gates qualified / not qualified; the
+1. **Ranked matching — built for deliveries, 8 October 2026, not yet
+   deployed.** Couriers tap "Go online" and the app sends their position every
+   three minutes while it is open; only the latest point is kept
+   (`CourierPresence`), deleted on going offline and swept after 30 minutes of
+   silence. When an order goes on the board, every online, qualified courier
+   within the widest circle is scored — distance 45%, finishing what they take
+   25%, rating 15%, current load 15%, with unknowns neutral so a new rider is
+   not last — and the top three get it to themselves for two minutes each,
+   with a push. Then it opens to the circle as before. Nobody online means no
+   ranked phase at all. Both numbers are on the admin Mart page
+   (`rules.DELIVERY.rankedCandidates`, `rankedWindowMinutes`; 0 turns it off).
+   Whose turn it is is derived from `offeredAt` like the circle; a new
+   per-minute cron only sends the "your turn" push and sweeps stale presence.
+   Code: `services/ranking.ts`, `routes/presence.ts`, migration
+   `0021_ranked_offers.sql`, 25 tests in `test/ranking.test.ts`.
+   **Still open:** no "pass" button (a courier who does not want it just lets
+   the two minutes run), no background location (put the app away and you drop
+   off after 30 minutes), and the weights are constants until there is real
+   order data to tune them against. Other task kinds still have no ranking.
+
+   What the blueprint asked for, for the record: the build gated qualified / not qualified; the
    blueprint wants candidates scored on skill, proximity, reliability and load.
    The delivery offer answers a crude version of proximity — inside the circle or
    not — and nothing orders the couriers inside it. "Who is nearest and free?" is
-   the question an order asks, and it is still first-come.
+   the question an order asks, and until this it was first-come.
 2. **Proof-of-work evidence** (§14) — geo-tagged photos, signatures, timestamps,
    required per task type, so verification is largely automatic.
 3. **Reputation tiers and badges** (§9). Note this is a *third* meaning of

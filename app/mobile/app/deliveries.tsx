@@ -21,6 +21,11 @@
  * admin, and the first question somebody opens this screen with on a slow
  * afternoon is "what can I pick up", not "what am I holding".
  *
+ * GOING ONLINE PUTS A RIDER FIRST IN LINE. While online, an order from a shop
+ * they are among the best placed for is held for them alone for a couple of
+ * minutes before anyone else may take it, and the card counts that down. The
+ * toggle sits above everything because it decides whether any of that happens.
+ *
  * A JOB THAT CANNOT BE CLAIMED IS STILL SHOWN, with the reason on it. An empty
  * screen looks the same whether there is no work or the phone would not say
  * where it is, and a rider deciding whether to go home needs those to look
@@ -43,6 +48,7 @@ import { AppBackHeader, AppPrimaryButton, AppEmptyState, AppErrorState, AppLoadi
 import { Icon, IconName } from '../src/components/Icon';
 import { obColors, obRadii } from '../src/onboarding/onboardingTheme';
 import { api, ApiError } from '../src/api/client';
+import { goOffline, goOnline, usePresence } from '../src/lib/presence';
 import { useAsync } from '../src/lib/useAsync';
 import type { Delivery, DeliveryOffer, DeliveryStatus } from '../src/api/types';
 
@@ -469,6 +475,90 @@ function Stat({ icon, children }: { icon: 'navigation' | 'cart'; children: React
   );
 }
 
+/** 105 -> "1:45". */
+function mmss(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Count a server-given number of seconds down locally, once a second, and ask
+ * for a refresh when it runs out - the job has moved on to the next courier,
+ * and leaving a button that will be refused on screen helps nobody.
+ */
+function useCountdown(start: number | null, onDone: () => void): number | null {
+  const [left, setLeft] = useState(start);
+  useEffect(() => {
+    setLeft(start);
+    if (start === null) return;
+    const began = Date.now();
+    const t = setInterval(() => {
+      const next = start - Math.floor((Date.now() - began) / 1000);
+      setLeft(next);
+      if (next <= 0) {
+        clearInterval(t);
+        onDone();
+      }
+    }, 1000);
+    return () => clearInterval(t);
+    // onDone is the screen's refresh and changes identity every render; the
+    // countdown restarts only when the server gives a new number.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [start]);
+  return left;
+}
+
+/**
+ * Online or offline for ranked offers.
+ *
+ * Says what being online DOES, in a line, because "Go online" alone reads like
+ * a chat status. The position it shares is explained in the same breath: a
+ * rider deciding whether to tap this should know what they are agreeing to.
+ */
+function OnlineCard() {
+  const online = usePresence();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function toggle() {
+    setBusy(true);
+    setError(null);
+    try {
+      if (online) await goOffline();
+      else await goOnline();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not change that. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (online === null) return null;
+  return (
+    <View style={[styles.card, styles.onlineCard]}>
+      <View style={styles.onlineHead}>
+        <View style={[styles.dot, online ? styles.dotOn : styles.dotOff]} />
+        <Text style={styles.onlineTitle}>{online ? 'You are online' : 'You are offline'}</Text>
+      </View>
+      <Text style={styles.onlineBody}>
+        {online
+          ? 'Orders from shops near you come to you first, held for you for a couple of minutes. Your location is shared while the app is open and deleted when you go offline.'
+          : 'Go online to be offered orders first when you are one of the nearest riders. Your location is shared only while you are online.'}
+      </Text>
+      <Pressable
+        onPress={toggle}
+        disabled={busy}
+        style={[styles.onlineButton, online ? styles.onlineButtonOff : styles.onlineButtonOn]}
+      >
+        <Text style={[styles.onlineButtonText, online ? styles.onlineButtonTextOff : null]}>
+          {busy ? 'One moment…' : online ? 'Go offline' : 'Go online'}
+        </Text>
+      </Pressable>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+    </View>
+  );
+}
+
 /**
  * One order nobody has taken yet.
  *
@@ -495,9 +585,13 @@ function OfferCard({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const held = o.yourTurnSecondsLeft !== null;
+  const secondsLeft = useCountdown(o.yourTurnSecondsLeft, onTaken);
 
   async function claim() {
-    if (!at) return;
+    // Location is needed to take a job off the open board, not one held for
+    // you - you were chosen for where you went online.
+    if (!at && !held) return;
     setBusy(true);
     setError(null);
     try {
@@ -514,7 +608,15 @@ function OfferCard({
   }
 
   return (
-    <View style={[styles.card, styles.offerCard]}>
+    <View style={[styles.card, styles.offerCard, held && styles.offerCardHeld]}>
+      {held ? (
+        <View style={styles.heldBanner}>
+          <Icon name="clock" size={14} color={obColors.amberInk} />
+          <Text style={styles.heldText}>
+            Held for you · {mmss(secondsLeft ?? 0)}
+          </Text>
+        </View>
+      ) : null}
       <Text style={styles.offerFee}>{naira(o.fee)}</Text>
       <Text style={styles.offerStore} numberOfLines={1}>
         {o.storeName ?? 'Pickup'}
@@ -546,7 +648,7 @@ function OfferCard({
       {/* The server writes this. It says how long the order has waited and
           whether the circle has widened - a job nobody has taken for twenty
           minutes is worth knowing about before riding to it. */}
-      {o.offer.stage !== 'OFFERED' ? (
+      {o.offer.stage !== 'OFFERED' && !held ? (
         <View style={styles.waitingRow}>
           <Icon name="clock" size={13} color={obColors.orangeInk} />
           <Text style={styles.waiting}>{o.offer.label}</Text>
@@ -560,7 +662,9 @@ function OfferCard({
       ) : (
         <View style={styles.blocked}>
           <Text style={styles.blockedText}>{o.reason}</Text>
-          {o.opensToYouInMinutes !== null && o.opensToYouInMinutes > 0 ? (
+          {/* While it is with the best-placed couriers, the reason already says
+              when it comes round; saying it twice is noise. */}
+          {o.offer.stage !== 'RANKED' && o.opensToYouInMinutes !== null && o.opensToYouInMinutes > 0 ? (
             <Text style={styles.blockedHint}>
               Opens to you in about {o.opensToYouInMinutes} min if nobody takes it.
             </Text>
@@ -627,6 +731,15 @@ export default function DeliveriesScreen() {
     void loadOffers();
   }, [loadOffers]);
 
+  // While online, look again every 20 seconds. A job held for this rider lasts
+  // two minutes; one that only appears on a pull-to-refresh is one they miss.
+  const online = usePresence();
+  useEffect(() => {
+    if (!online) return;
+    const t = setInterval(() => void loadOffers(), 20_000);
+    return () => clearInterval(t);
+  }, [online, loadOffers]);
+
   function refreshAll() {
     load.reload();
     void loadOffers();
@@ -660,6 +773,7 @@ export default function DeliveriesScreen() {
       >
         <AppBackHeader title="Deliveries" onBack={() => router.back()} />
         {live.length > 0 ? <Text style={styles.subtitle}>{live.length} on the go</Text> : null}
+        <OnlineCard />
 
         {load.loading && !jobs ? (
           <AppLoadingCards count={2} />
@@ -872,6 +986,46 @@ const styles = StyleSheet.create({
   // the cut corner every other card uses, so the two read apart at a glance
   // in a mixed list.
   offerCard: { borderLeftWidth: 3, borderLeftColor: obColors.goldDeep },
+  // Held for this rider: the gold edge widens and a banner leads, so it reads
+  // as different from every other offer before a word of it is read.
+  offerCardHeld: { borderLeftWidth: 5 },
+  heldBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: obRadii.pill,
+    backgroundColor: obColors.orangeInkBg,
+  },
+  heldText: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: obColors.amberInk,
+    fontVariant: ['tabular-nums'],
+  },
+
+  // ── OnlineCard
+  onlineCard: { gap: 8 },
+  onlineHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  dotOn: { backgroundColor: obColors.forest },
+  dotOff: { backgroundColor: obColors.line },
+  onlineTitle: { fontSize: 15, fontFamily: 'Raleway_800ExtraBold', color: obColors.navy },
+  onlineBody: { fontSize: 12.5, color: obColors.textMut, lineHeight: 18 },
+  onlineButton: {
+    minHeight: 46,
+    borderRadius: obRadii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  onlineButtonOn: { backgroundColor: obColors.navy },
+  onlineButtonOff: { backgroundColor: obColors.white, borderWidth: 1, borderColor: obColors.line },
+  onlineButtonText: { fontFamily: 'Raleway_800ExtraBold', fontSize: 14.5, color: obColors.white },
+  onlineButtonTextOff: { color: obColors.navy },
   // Deliberately larger than the standard `.strong`/`.order` text anywhere
   // else on this screen — three digits of Naira is the single fact a rider
   // decides on, and it should read from an arm's length before anything

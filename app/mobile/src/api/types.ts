@@ -671,7 +671,7 @@ export interface Delivery {
  * a Delivery would put four fields on this object that the server never sends
  * and that a screen could then read as blank rather than absent.
  */
-export type OfferStage = 'OFFERED' | 'WIDENED' | 'ESCALATED';
+export type OfferStage = 'RANKED' | 'OFFERED' | 'WIDENED' | 'ESCALATED';
 
 export interface OfferState {
   stage: OfferStage;
@@ -717,6 +717,18 @@ export interface DeliveryOffer {
   /** Minutes until the widening circle reaches this courier, or null if it
    *  never will. A countdown that never ends is worse than being told no. */
   opensToYouInMinutes: number | null;
+  /** Seconds left on a window held for THIS courier as one of the best-placed
+   *  riders for the shop; null when it is not theirs. */
+  yourTurnSecondsLeft: number | null;
+}
+
+/** Whether a courier is online for ranked offers (GET/PUT/DELETE /api/me/presence). */
+export interface Presence {
+  online: boolean;
+  onlineSince: string | null;
+  seenAt: string | null;
+  expiresAt: string | null;
+  ttlMinutes: number;
 }
 
 export interface DeliveryOffers {

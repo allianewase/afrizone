@@ -76,7 +76,7 @@
       "bucket_name": "afrizone-kyc-docs"
     }
   ],
-  // The platform's only scheduled work. MART_INTEGRATION.md §5 commits us to
+  // The daily entry: MART_INTEGRATION.md §5 commits us to
   // deleting a delivery customer's name, number and door seven days after the
   // order finishes, and an absence of data is the one thing that cannot be
   // derived at read time the way expired postings and credentials are.
@@ -85,8 +85,12 @@
   // many crons at :00, and there is nothing about this that needs to be in that
   // crowd. Missing a run is safe - the sweep works from a cutoff rather than
   // from "since last time" - so an hour of drift costs nothing.
+  //
+  // The second entry is ranked delivery offers (services/ranking.ts): each
+  // minute, tell the next courier it is their turn and drop couriers whose app
+  // stopped sending heartbeats. src/index.ts matches on this exact string.
   "triggers": {
-    "crons": ["17 3 * * *"]
+    "crons": ["17 3 * * *", "* * * * *"]
   },
   "observability": {
     "enabled": true

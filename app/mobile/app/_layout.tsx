@@ -15,13 +15,14 @@ import {
   registerPushToken,
   subscribeToTokenRefresh,
 } from '../src/lib/notifications';
+import { usePresenceHeartbeat } from '../src/lib/presence';
 
 // Configure foreground notification display before any component mounts.
 configureNotificationHandler();
 
 /**
  * Listens for notification taps and routes to the relevant screen.
- * data.screen: "tasks" | "wallet" | "home" | "task" (+ data.id) | "kyc" | "disputes"
+ * data.screen: "tasks" | "wallet" | "home" | "task" (+ data.id) | "kyc" | "disputes" | "deliveries"
  */
 function NotificationHandler() {
   const router = useRouter();
@@ -73,6 +74,11 @@ function NotificationHandler() {
           case 'disputes':
             router.push('/disputes');
             break;
+          // "A delivery is yours to take" - the window is two minutes, so this
+          // goes straight to the offer rather than to home.
+          case 'deliveries':
+            router.push('/deliveries');
+            break;
           default:
             router.push('/(tabs)/home');
         }
@@ -92,6 +98,16 @@ function NotificationHandler() {
  *   afrizone:///reset?token=<jwt>
  * The reset screen already reads params.token, so we just navigate there.
  */
+/**
+ * Keeps an online courier online while the app is open (src/lib/presence.ts).
+ * Couriers only: nobody else is ranked, so nobody else sends a position.
+ */
+function PresenceHeartbeat() {
+  const { user } = useAuth();
+  usePresenceHeartbeat(user?.accountType === 'COURIER');
+  return null;
+}
+
 function DeepLinkHandler() {
   const router = useRouter();
   const url = Linking.useURL();
@@ -171,6 +187,7 @@ export default function RootLayout() {
         <AuthProvider>
           <StatusBar style="dark" />
           <NotificationHandler />
+          <PresenceHeartbeat />
           <DeepLinkHandler />
           <AuthGate>
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: obColors.bg } }}>

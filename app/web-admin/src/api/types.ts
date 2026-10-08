@@ -645,6 +645,10 @@ export interface DeliveryOfferRule {
   stepMinutes: number
   maxRadiusMetres: number
   escalateAfterMinutes: number
+  /** How many of the best-placed online couriers get it to themselves first. 0 = off. */
+  rankedCandidates: number
+  /** How long each of them has it. */
+  rankedWindowMinutes: number
 }
 
 export interface MartRules {
@@ -724,7 +728,7 @@ export interface Delivery {
   offer: OfferState | null
 }
 
-export type OfferStage = 'OFFERED' | 'WIDENED' | 'ESCALATED'
+export type OfferStage = 'RANKED' | 'OFFERED' | 'WIDENED' | 'ESCALATED'
 
 export interface OfferState {
   stage: OfferStage

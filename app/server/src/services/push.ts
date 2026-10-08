@@ -37,7 +37,7 @@ interface PushTicket {
 }
 
 /**
- * Fire-and-forget push to one or more Expo push tokens.
+ * Best-effort push to one or more Expo push tokens.
  * Invalid tokens (non-Expo, empty) are dropped before sending.
  * Network failures are logged but never thrown: push is always best-effort.
  *
@@ -48,13 +48,17 @@ interface PushTicket {
  * cannot exist. Expo returns tickets positionally, so the response index maps
  * back to the message that produced it.
  */
-export function sendPush(messages: PushMessage[], prismaClient?: Prisma): void {
+export function sendPush(messages: PushMessage[], prismaClient?: Prisma): Promise<void> {
   const valid = messages.filter(
     (m) => typeof m.to === "string" && m.to.startsWith("ExponentPushToken[")
   );
-  if (valid.length === 0) return;
+  if (valid.length === 0) return Promise.resolve();
 
-  fetch(EXPO_PUSH_URL, {
+  // Returned, and never rejects, so a caller with no response to send - the
+  // per-minute cron - can hand it to waitUntil. Routes still ignore it, which
+  // is what best effort means; a scheduled handler that ignored it could be torn
+  // down before the request left.
+  return fetch(EXPO_PUSH_URL, {
     method: "POST",
     headers: {
       Accept: "application/json",
