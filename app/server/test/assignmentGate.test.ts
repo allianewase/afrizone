@@ -3,9 +3,21 @@
 // any relationship to it. These tests assert the attack directly: a worker who
 // was never given the task must not be able to clock in on it, nor bill hours
 // against it - and an application that is merely APPLIED is not an assignment.
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { apiPost } from "./http";
 import { createUserWithToken, testPrisma } from "./helpers";
+
+// Proof-of-work photos have their own tests in evidence.test.ts. These are
+// about who may clock in at all, so the photo gate is switched off rather than every test here
+// uploading a picture first.
+beforeAll(async () => {
+  await (testPrisma() as any).setting.upsert({
+    where: { key: "evidence.enforce" },
+    create: { key: "evidence.enforce", value: "off" },
+    update: { value: "off" },
+  });
+});
+
 
 async function makeTask() {
   const { token: adminToken } = await createUserWithToken("SUPER_ADMIN");

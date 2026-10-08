@@ -1,5 +1,6 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
+import { requireEvidence } from "../services/evidence";
 import { requireAuth, requireRole, AuthedRequest } from "../auth";
 import { requireAssignedTask } from "../util/assignment";
 import { tiersToArray } from "../types";
@@ -96,6 +97,10 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
   const assignment = await requireAssignedTask(workerId, taskId);
   if (!assignment.ok) return res.status(assignment.status).json({ error: assignment.error });
   const { task } = assignment;
+
+  // Field and media work is handed in with a photo of the result.
+  const shown = await requireEvidence(task, workerId, "WORK");
+  if (!shown.ok) return res.status(400).json(shown);
 
   const created = await prisma.timesheet.create({
     data: {

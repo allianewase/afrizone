@@ -722,6 +722,38 @@ export interface DeliveryOffer {
   yourTurnSecondsLeft: number | null;
 }
 
+/** A step of a job that needs a photo (server: services/evidence.ts). */
+export type EvidenceStage = 'PICKUP' | 'DROPOFF' | 'CLOCK_IN' | 'CLOCK_OUT' | 'WORK' | 'AUDIT';
+
+/** One proof-of-work photo, as the server checked it on arrival. */
+export interface Evidence {
+  id: string;
+  taskId: string;
+  stage: EvidenceStage;
+  stageLabel: string;
+  /** Behind auth: fetch with the session token, never as a bare URL. */
+  url: string;
+  capturedAt: string | null;
+  receivedAt: string;
+  /** Already formatted: "40 m". Null when there was no site to measure from. */
+  distance: string | null;
+  /** Sentences, one per check that failed. Empty means every check passed. */
+  flags: string[];
+  flagged: boolean;
+}
+
+export interface EvidenceRequirement {
+  stage: EvidenceStage;
+  label: string;
+  count: number;
+  have: number;
+}
+
+export interface EvidenceList {
+  requirements: EvidenceRequirement[];
+  evidence: Evidence[];
+}
+
 /** Whether a courier is online for ranked offers (GET/PUT/DELETE /api/me/presence). */
 export interface Presence {
   online: boolean;

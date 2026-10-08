@@ -93,6 +93,7 @@ model User {
   skills              WorkerSkill[]
   courierProfile      CourierProfile?
   courierPresence     CourierPresence?
+  evidence            Evidence[]
   credentials         Credential[]         @relation("WorkerCredentials")
   credentialsReviewed Credential[]         @relation("CredentialsReviewed")
   orgMemberships      OrganizationMember[]
@@ -167,6 +168,7 @@ model Task {
   /// The order this posting exists to deliver, when it is a DELIVERY task.
   /// At most one: a delivery posting has one slot and one order behind it.
   delivery               Delivery?
+  evidence               Evidence[]
 
   @@index([status])
   /// "Which audit tasks are open?" and "what is this store's task?" are both
@@ -986,6 +988,68 @@ model CourierProfile {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+}
+
+/// One photo a worker took to show the work was done (Blueprint §14,
+/// services/evidence.ts).
+///
+/// WHERE AND WHEN COME WITH IT, AND ARE CHECKED ON ARRIVAL. The photo alone
+/// proves little; a photo taken at the shop, during the job, is most of what a
+/// reviewer would otherwise phone somebody to ask. So the position and the time
+/// are stored with every one, the distance from the site is worked out when it
+/// arrives, and anything that does not add up is written down as a flag in
+/// words a reviewer can act on. A flag never refuses the photo - GPS drifts and
+/// phones lie about the time - it only tells a person where to look.
+///
+/// The bytes live in R2 under evidence/<objectKey>; this row is what says whose
+/// they are and who may see them.
+model Evidence {
+  id       String @id @default(cuid())
+  taskId   String
+  workerId String
+
+  /// PICKUP | DROPOFF | CLOCK_IN | CLOCK_OUT | WORK | AUDIT - the moment in the
+  /// job this photo is for. What each task kind requires is in
+  /// services/evidence.ts, not here.
+  stage String
+
+  /// Server-generated, never from the client. Unique so one object is never
+  /// claimed by two rows.
+  objectKey   String @unique
+  /// The SNIFFED type, never the declared one - it is served back as a header.
+  contentType String
+  sizeBytes   Int
+
+  lat            Float?
+  lng            Float?
+  /// The phone's own estimate of how far off its fix is, in metres.
+  accuracyMetres Float?
+  /// When the phone says the photo was taken. Device-reported: it is compared
+  /// with when it arrived, and a gap is a flag, not a rejection.
+  capturedAt     DateTime?
+
+  /// From the site this stage is checked against - the shop for a pickup, the
+  /// door for a drop-off, the task's own location otherwise. Null when either
+  /// end has no position.
+  distanceMetres Float?
+  /// JSON array of sentences, one per check that failed. Null or "[]" means
+  /// every check passed.
+  flags          String?
+
+  /// The clock event this photo was taken for, once used. Unique, so one photo
+  /// cannot clock somebody in twice.
+  clockEventId String? @unique
+
+  createdAt DateTime @default(now())
+
+  task   Task @relation(fields: [taskId], references: [id])
+  worker User @relation(fields: [workerId], references: [id])
+
+  /// "What has this worker shown for this stage of this job?" - every gate
+  /// asks exactly this.
+  @@index([taskId, workerId, stage])
+  /// The upload quota counts on this.
+  @@index([workerId, createdAt])
 }
 
 /// A courier who is online, and where they last were (services/ranking.ts).

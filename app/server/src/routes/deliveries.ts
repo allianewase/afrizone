@@ -57,6 +57,7 @@ import {
   transitionDelivery,
 } from "../services/delivery";
 import { isMartOutboundConfigured } from "../services/martOutbound";
+import { requireEvidence } from "../services/evidence";
 import { RETENTION_DAYS, purgeCustomerData, purgeStatus } from "../services/deliveryPurge";
 
 const router = Router();
@@ -201,6 +202,12 @@ async function requireStoreSide(req: AuthedRequest, deliveryId: string) {
  * The courier's guard: the one person holding a contract on this order's
  * posting. Not a role check - every courier account answers that the same way.
  */
+async function deliveryEvidence(taskId: string, workerId: string, stage: "PICKUP" | "DROPOFF") {
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task) return { ok: true as const };
+  return requireEvidence(task, workerId, stage);
+}
+
 async function requireAssignedCourier(req: AuthedRequest, deliveryId: string) {
   const delivery = await prisma.delivery.findUnique({
     where: { id: deliveryId },
@@ -614,6 +621,10 @@ router.post("/deliveries/:id/picked-up", requireAuth, async (req: AuthedRequest,
   const guard = await requireAssignedCourier(req, req.params.id);
   if (!guard.ok) return res.status(guard.status).json({ error: guard.error });
 
+  // A photo at the shop, so "collected" is something a store can be shown.
+  const shown = await deliveryEvidence(guard.delivery.taskId!, req.user!.id, "PICKUP");
+  if (!shown.ok) return res.status(400).json(shown);
+
   const moved = await transitionDelivery(guard.delivery.id, "PICKED_UP", userActor(req.user!.id), {
     meta: { contractId: guard.contract.id },
   });
@@ -636,6 +647,12 @@ router.post("/deliveries/:id/picked-up", requireAuth, async (req: AuthedRequest,
 router.post("/deliveries/:id/complete", requireAuth, async (req: AuthedRequest, res: Response) => {
   const guard = await requireAssignedCourier(req, req.params.id);
   if (!guard.ok) return res.status(guard.status).json({ error: guard.error });
+
+  // The door photo BEFORE the code, which spends one of the customer's
+  // attempts at Mart - asking for the photo afterwards would burn an attempt
+  // on a completion that was always going to be refused.
+  const shown = await deliveryEvidence(guard.delivery.taskId!, req.user!.id, "DROPOFF");
+  if (!shown.ok) return res.status(400).json(shown);
 
   const result = await completeDelivery(
     guard.delivery.id,

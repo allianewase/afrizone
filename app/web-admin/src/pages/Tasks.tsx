@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent
 import { useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import { useApi } from '../lib/useApi'
+import EvidenceButton from '../components/EvidenceButton'
 import {
   TIER_COLORS,
   TIER_LABELS,
@@ -96,6 +97,9 @@ function TaskCard({ task, delay }: { task: Task; delay: string }) {
         <span>
           {filled} of {task.slots} filled
         </span>
+        {/* Store audits have no screen of their own yet, so this is where
+            their photos are reviewed - along with every other job's. */}
+        {filled > 0 && <EvidenceButton taskId={task.id} />}
         <StatusPill variant={pill.variant} label={pill.label} />
       </div>
     </div>

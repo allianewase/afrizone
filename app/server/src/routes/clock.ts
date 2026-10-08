@@ -10,6 +10,7 @@ import { transitionContract, type ContractState } from "../services/contractStat
 // a shop.
 import { haversineMetres } from "../util/geo";
 import { userActor, type AuditActor } from "../util/audit";
+import { claimClockPhoto } from "../services/evidence";
 
 const router = Router();
 
@@ -65,6 +66,13 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
   if (!assignment.ok) return res.status(assignment.status).json({ error: assignment.error });
   const { task } = assignment;
 
+  // Hourly on-site work clocks with a fresh photo each time (services/
+  // evidence.ts). The app uploads it first and passes its id here.
+  const photo = await claimClockPhoto(task, workerId, type as ClockType, req.body?.evidenceId);
+  if (!photo.ok) {
+    return res.status(400).json({ error: photo.error, code: photo.code, stage: photo.stage });
+  }
+
   const hasWorkerCoords = lat != null && lng != null;
   const hasTaskCoords = task.lat != null && task.lng != null;
   let withinFence: boolean;
@@ -94,6 +102,10 @@ router.post("/", requireAuth, async (req: AuthedRequest, res: Response) => {
       note: note != null ? String(note) : null,
     },
   });
+
+  if (photo.evidenceId) {
+    await prisma.evidence.update({ where: { id: photo.evidenceId }, data: { clockEventId: event.id } });
+  }
 
   if (event.type === "IN") {
     await advanceContract(task.id, workerId, "IN_PROGRESS", userActor(workerId), {

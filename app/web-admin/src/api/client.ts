@@ -7,6 +7,7 @@ import type {
   Application,
   AppStatus,
   AuthSuccess,
+  EvidenceReview,
   Candidate,
   Category,
   DashboardStats,
@@ -296,6 +297,11 @@ export const api = {
     request<Timesheet[]>(
       `/timesheets${status ? `?status=${status}` : ''}`,
       { signal },
+    ),
+  /** The photos behind a job, for review. */
+  evidence: (taskId: string, workerId?: string) =>
+    request<EvidenceReview>(
+      `/admin/evidence?taskId=${encodeURIComponent(taskId)}${workerId ? `&workerId=${encodeURIComponent(workerId)}` : ''}`,
     ),
   approveTimesheet: (id: string) =>
     request<Timesheet>(`/timesheets/${id}/approve`, { method: 'POST' }),

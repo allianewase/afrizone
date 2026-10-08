@@ -1,5 +1,6 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
+import { requireEvidence } from "../services/evidence";
 import { requireAuth, AuthedRequest } from "../auth";
 import { tiersToArray, tiersToString, Tier, TIERS } from "../types";
 import { isSmileConfigured, submitDocumentVerification, NgIdType, NG_ID_TYPES } from "../services/smileIdentity";
@@ -421,6 +422,10 @@ router.post("/audits", requireAuth, async (req: AuthedRequest, res: Response) =>
   if (task.kind !== "STORE_AUDIT" || !task.organizationId) {
     return res.status(400).json({ error: "That task is not a store audit" });
   }
+
+  // A score with nothing behind it is an opinion. Photos of the premises first.
+  const shown = await requireEvidence(task, workerId, "AUDIT");
+  if (!shown.ok) return res.status(400).json(shown);
 
   const row = await recordAudit({
     organizationId: task.organizationId,

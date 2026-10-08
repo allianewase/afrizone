@@ -44,6 +44,13 @@ const SECRET = "local-dev-mart-inbound-secret";
 let admin: Awaited<ReturnType<typeof createUserWithToken>>;
 beforeAll(async () => {
   admin = await createUserWithToken("SUPER_ADMIN");
+  // Proof-of-work photos have their own tests in evidence.test.ts; these are
+  // about the order's lifecycle, so the photo gate is switched off here.
+  await (testPrisma() as any).setting.upsert({
+    where: { key: "evidence.enforce" },
+    create: { key: "evidence.enforce", value: "off" },
+    update: { value: "off" },
+  });
 });
 
 let seq = 0;

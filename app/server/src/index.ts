@@ -34,6 +34,11 @@ import fundingRouter from "./routes/funding";
 import { purgeCustomerData } from "./services/deliveryPurge";
 import { advanceRankedOffers } from "./services/ranking";
 import presenceRouter from "./routes/presence";
+import evidenceRouter, {
+  adminRouter as adminEvidenceRouter,
+  handleEvidenceUpload,
+  handleEvidenceFileGet,
+} from "./routes/evidence";
 
 /** Must match wrangler.jsonc's triggers.crons entry character for character. */
 const EVERY_MINUTE = "* * * * *";
@@ -210,6 +215,10 @@ app.use("/api/settings", settingsRouter);
 app.use("/api/credentials", credentialsRouter);
 // Going online for ranked delivery offers (services/ranking.ts).
 app.use("/api/me/presence", presenceRouter);
+// Proof-of-work photos. Upload and file reads are intercepted before Express,
+// like KYC documents - see the fetch handler below.
+app.use("/api/me/evidence", evidenceRouter);
+app.use("/api/admin/evidence", adminEvidenceRouter);
 app.use("/api/me", meRouter);
 // Skills + credentials, also under /api/me (see routes/meTalent.ts).
 app.use("/api/me", meTalentRouter);
@@ -277,6 +286,14 @@ export default {
     // documents as supported (their own file-upload examples always use
     // request.formData(), never multer). See routes/kycDocuments.ts.
     const url = new URL(request.url);
+    // Proof-of-work photos, for the same reasons as the KYC routes below.
+    if (url.pathname === "/api/me/evidence" && request.method === "POST") {
+      return handleEvidenceUpload(request);
+    }
+    const evidenceFile = request.method === "GET" && url.pathname.match(/^\/api\/evidence\/([^/]+)\/file$/);
+    if (evidenceFile) {
+      return handleEvidenceFileGet(request, evidenceFile[1]);
+    }
     if (url.pathname === "/api/me/kyc/documents" && request.method === "POST") {
       return handleKycUpload(request);
     }

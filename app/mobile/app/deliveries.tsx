@@ -49,6 +49,7 @@ import { Icon, IconName } from '../src/components/Icon';
 import { obColors, obRadii } from '../src/onboarding/onboardingTheme';
 import { api, ApiError } from '../src/api/client';
 import { goOffline, goOnline, usePresence } from '../src/lib/presence';
+import EvidencePanel from '../src/components/EvidencePanel';
 import { useAsync } from '../src/lib/useAsync';
 import type { Delivery, DeliveryOffer, DeliveryStatus } from '../src/api/types';
 
@@ -209,6 +210,11 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
   const [code, setCode] = useState('');
   const [failing, setFailing] = useState(false);
   const [reason, setReason] = useState('');
+  // Whether this step's photo is in. Starts true so a job that asks for none,
+  // or a panel that has not answered yet, never locks the button - the server
+  // is what refuses a missing photo.
+  const [pickupShown, setPickupShown] = useState(true);
+  const [doorShown, setDoorShown] = useState(true);
 
   async function pickUp() {
     setBusy('pickup');
@@ -360,11 +366,15 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
 
       {d.status === 'COURIER_ASSIGNED' ? (
         <View style={styles.action}>
-          <PillAction
-            label="Collected from the store"
-            onPress={pickUp}
-            loading={busy === 'pickup'}
-          />
+          {d.taskId ? <EvidencePanel taskId={d.taskId} stage="PICKUP" onReady={setPickupShown} /> : null}
+          <View style={styles.gap}>
+            <PillAction
+              label="Collected from the store"
+              onPress={pickUp}
+              loading={busy === 'pickup'}
+              disabled={!pickupShown}
+            />
+          </View>
         </View>
       ) : null}
 
@@ -391,7 +401,12 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
             </View>
           </View>
 
-          <View style={styles.codePanel}>
+          {/* The door photo before the code: checking the code spends one of
+              the customer's attempts, and a completion that was always going to
+              be refused for a missing photo should not cost them one. */}
+          {d.taskId ? <EvidencePanel taskId={d.taskId} stage="DROPOFF" onReady={setDoorShown} /> : null}
+
+          <View style={[styles.codePanel, styles.gap]}>
             <Text style={styles.fieldLabel}>The customer&apos;s code</Text>
             <TextInput
               value={code}
@@ -413,7 +428,7 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
               label="Complete delivery"
               onPress={complete}
               loading={busy === 'complete'}
-              disabled={code.trim().length === 0}
+              disabled={code.trim().length === 0 || !doorShown}
               lifted
             />
           </View>

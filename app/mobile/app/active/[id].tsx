@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Location from 'expo-location';
@@ -11,12 +11,19 @@ import { obColors, obRadii } from '../../src/onboarding/onboardingTheme';
 import { api, ApiError } from '../../src/api/client';
 import { useAsync } from '../../src/lib/useAsync';
 import { formatElapsed, payLabel, formatDate } from '../../src/lib/format';
-import type { Task, Timesheet } from '../../src/api/types';
+import type { EvidenceRequirement, Task, Timesheet } from '../../src/api/types';
+import EvidencePanel, { takeEvidencePhoto } from '../../src/components/EvidencePanel';
 
 /**
  * Restyled onto the navy/gold palette. Every piece of behaviour below - the
  * clock-state resume, the GPS geofence watch, the elapsed tick, the clock
  * toggle and the timesheet submit - is unchanged.
+ *
+ * PROOF OF WORK (server: services/evidence.ts). What this job asks for comes
+ * from GET /me/evidence, never from the app: hourly on-site work clocks with a
+ * fresh photo each way, field and media work is handed in with a photo of the
+ * result, and a store audit is filed with photos of the premises - which is
+ * the one job this screen files rather than timesheets.
  *
  * The task title moved out of the header and into the context card. The
  * header holds one line, and a real task title ("Warehouse picker - Ikeja,
@@ -54,6 +61,15 @@ export default function ActiveTaskScreen() {
   const [busy, setBusy] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Which steps of this job need photos. Empty until the server answers, and
+  // empty for a job that needs none - both mean "do not ask for one".
+  const [needs, setNeeds] = useState<EvidenceRequirement[]>([]);
+  const [workShown, setWorkShown] = useState(true);
+  const [auditShown, setAuditShown] = useState(true);
+  const [score, setScore] = useState('');
+  const [notes, setNotes] = useState('');
+  const [filed, setFiled] = useState<string | null>(null);
+  const needsStage = (s: EvidenceRequirement['stage']) => needs.some((n) => n.stage === s);
 
   const startedAt = useRef<number | null>(null);
   const periodStart = useRef<string | null>(null);
@@ -90,6 +106,16 @@ export default function ActiveTaskScreen() {
       active = false;
       ctrl.abort();
     };
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    const ctrl = new AbortController();
+    api
+      .myEvidence(id, ctrl.signal)
+      .then((r) => setNeeds(r.requirements))
+      .catch(() => undefined);
+    return () => ctrl.abort();
   }, [id]);
 
   // GPS geofence check: starts once task data loads.
@@ -143,11 +169,20 @@ export default function ActiveTaskScreen() {
     setError(null);
     const clockType = clockedIn ? 'OUT' : 'IN';
     try {
+      // A fresh photo every time this job asks for one: the camera opens as
+      // part of tapping the button, so there is no separate step to forget.
+      let evidenceId: string | null = null;
+      if (needsStage(clockType === 'IN' ? 'CLOCK_IN' : 'CLOCK_OUT')) {
+        const photo = await takeEvidencePhoto(id, clockType === 'IN' ? 'CLOCK_IN' : 'CLOCK_OUT');
+        if (!photo) return; // backed out of the camera: not clocked, nothing to say
+        evidenceId = photo.id;
+      }
       const res = await api.clock({
         taskId: id,
         type: clockType,
         lat: workerCoords.current?.lat ?? null,
         lng: workerCoords.current?.lng ?? null,
+        evidenceId,
       });
       if (res.clockedIn) {
         startedAt.current = Date.now() - res.elapsedSeconds * 1000;
@@ -189,6 +224,26 @@ export default function ActiveTaskScreen() {
     }
   }
 
+  async function fileAudit() {
+    if (!id) return;
+    const n = Number(score);
+    if (!Number.isInteger(n) || n < 0 || n > 100) {
+      setError('Give the store a score from 0 to 100.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await api.submitAudit({ taskId: id, score: n, notes: notes.trim() || undefined });
+      setFiled(res.outcome);
+    } catch (e) {
+      setError(e instanceof ApiError || e instanceof Error ? e.message : 'Could not file the audit.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const isAudit = needsStage('AUDIT');
   const remote = t?.locationType === 'REMOTE';
   const pay = t
     ? payLabel(t.payModel, t.payModel === 'HOURLY' ? t.rate : t.budget)
@@ -262,8 +317,61 @@ export default function ActiveTaskScreen() {
           />
         </View>
 
+        {/* A store audit is filed here: photos of the premises, then the score. */}
+        {isAudit && id ? (
+          filed ? (
+            <View style={{ marginTop: 28 }}>
+              <Banner
+                tone="money"
+                icon="check-circle"
+                title="Audit filed"
+                message={filed === 'PASS' ? 'The store passed.' : 'The store did not reach the pass mark.'}
+              />
+            </View>
+          ) : (
+            <View style={{ marginTop: 28 }}>
+              <Text style={styles.sectionTitle}>File the audit</Text>
+              <EvidencePanel taskId={id} stage="AUDIT" onReady={setAuditShown} />
+              <Text style={styles.fieldLabel}>Score (0–100)</Text>
+              <TextInput
+                value={score}
+                onChangeText={setScore}
+                keyboardType="number-pad"
+                placeholder="80"
+                placeholderTextColor={obColors.textMut}
+                style={styles.input}
+                maxLength={3}
+              />
+              <Text style={styles.fieldLabel}>Notes</Text>
+              <TextInput
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Clean shelves, fridge not working"
+                placeholderTextColor={obColors.textMut}
+                style={[styles.input, styles.inputMulti]}
+                multiline
+              />
+              <View style={{ marginTop: 14 }}>
+                <AppPrimaryButton
+                  label="File audit"
+                  icon="check"
+                  onPress={fileAudit}
+                  disabled={!auditShown || score.trim() === '' || busy}
+                />
+              </View>
+            </View>
+          )
+        ) : null}
+
+        {/* Field and media work: a photo of the result before handing it in. */}
+        {!submitted && id && needsStage('WORK') ? (
+          <View style={{ marginTop: 28 }}>
+            <EvidencePanel taskId={id} stage="WORK" onReady={setWorkShown} />
+          </View>
+        ) : null}
+
         {/* Timesheet submission */}
-        {submitted ? (
+        {isAudit ? null : submitted ? (
           <View style={{ marginTop: 28 }}>
             <Banner
               tone="money"
@@ -279,7 +387,7 @@ export default function ActiveTaskScreen() {
               icon="check"
               variant="outline"
               onPress={submitTimesheet}
-              disabled={clockedIn || elapsed === 0 || busy}
+              disabled={clockedIn || elapsed === 0 || busy || !workShown}
             />
             {clockedIn ? (
               <Text style={styles.hint}>Clock out before submitting your hours.</Text>
@@ -339,4 +447,17 @@ const styles = StyleSheet.create({
   liveText: { color: obColors.forest, fontSize: 12.5, fontWeight: '700' },
   clock: { alignItems: 'center', marginTop: 26 },
   hint: { color: obColors.textMut, fontSize: 12.5, textAlign: 'center' },
+  sectionTitle: { fontSize: 15.5, fontFamily: 'Raleway_800ExtraBold', color: obColors.navy },
+  fieldLabel: { fontSize: 12.5, fontWeight: '700', color: obColors.text, marginTop: 14, marginBottom: 6 },
+  input: {
+    borderWidth: 1,
+    borderColor: obColors.line,
+    borderRadius: obRadii.field,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: obColors.text,
+    backgroundColor: obColors.white,
+  },
+  inputMulti: { minHeight: 72, textAlignVertical: 'top' },
 });

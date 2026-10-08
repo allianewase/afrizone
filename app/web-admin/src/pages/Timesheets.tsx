@@ -7,6 +7,7 @@ import Glass from '../components/ui/Glass'
 import Button from '../components/ui/Button'
 import StatusPill from '../components/ui/StatusPill'
 import Modal from '../components/ui/Modal'
+import EvidenceButton from '../components/EvidenceButton'
 import Icon from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateView'
 import Textarea from '../components/ui/Textarea'
@@ -147,6 +148,7 @@ export default function Timesheets() {
                     <TableCell>
                       {t.status === 'SUBMITTED' ? (
                         <div style={{ display: 'flex', gap: 8 }}>
+                          <EvidenceButton taskId={t.taskId} workerId={t.workerId} />
                           <Button
                             variant="money"
                             size="sm"

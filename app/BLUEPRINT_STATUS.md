@@ -267,8 +267,8 @@ distinguishable from a quiet week.
 
 - **Ranked matching for anything but deliveries** (§11). Deliveries are done
   (§9); every other task is still apply-then-approve with no ordering.
-- **Proof-of-work evidence** (§14). Geo-tagged photos, signatures and timestamps,
-  required per task type, so verification is largely automatic.
+- **Signatures as proof of work** (§14). Photos are built (§9); a customer or
+  store signature on the phone is not.
 - **Reputation tiers and badges** (§9). Note this is a *third* meaning of "tier"
   in the project — bronze/silver/gold reputation standing, distinct from both the
   work-category tiers (`STUDENT`, `DISPATCH`…) and any store tier from §14.
@@ -330,8 +330,21 @@ order themselves.** Everything below is in the order it is worth doing:
    The delivery offer answers a crude version of proximity — inside the circle or
    not — and nothing orders the couriers inside it. "Who is nearest and free?" is
    the question an order asks, and until this it was first-come.
-2. **Proof-of-work evidence** (§14) — geo-tagged photos, signatures, timestamps,
-   required per task type, so verification is largely automatic.
+2. **Proof-of-work photos — built 9 October 2026, not yet deployed.** Camera-only
+   photos with position and time, checked on arrival (`services/evidence.ts`):
+   distance from the site, accuracy of the fix, age, phone clock. A failed
+   check is a flag in words for the reviewer, never a refusal; only a missing
+   photo refuses the step. Required: deliveries one at the shop before
+   "collected" and one at the door before the customer code is spent; store
+   audits three before the score is filed; MEDIA work and on-site SOURCING one
+   before hand-in; hourly on-site work a fresh, single-use photo at each clock
+   in and out. `evidence.enforce` = off switches the gate off in one row. Door
+   photos are customer data and are deleted by the §5 purge; shop photos stay.
+   The worker app gained the photo panel and an audit-filing form (there was
+   none); the admin site shows photos, flagged first, from Timesheets,
+   Deliveries and each task card. Migration `0022_evidence.sql`, 21 tests in
+   `test/evidence.test.ts`. **Not built:** signatures, and an admin screen for
+   store audit results generally (photos are reviewed from the task card).
 3. **Reputation tiers and badges** (§9). Note this is a *third* meaning of
    "tier"; the naming needs settling before it is built.
 4. **Surge pay, crew contracts, referral loop** (§10, §14), **shared identity

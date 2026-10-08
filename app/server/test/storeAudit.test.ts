@@ -5,11 +5,23 @@
 // produces a document that looks like verification and is not one. So most of
 // this file is about who can claim it, who can file a finding against it, and
 // what happens when the credential that gates it is missing.
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { apiGet, apiPost } from "./http";
 import { createUserWithToken, testPrisma } from "./helpers";
 
 const prisma = () => testPrisma() as any;
+
+// Proof-of-work photos have their own tests in evidence.test.ts. These are
+// about scoring and outcomes, so the photo gate is switched off rather than every test here
+// uploading a picture first.
+beforeAll(async () => {
+  await (testPrisma() as any).setting.upsert({
+    where: { key: "evidence.enforce" },
+    create: { key: "evidence.enforce", value: "off" },
+    update: { value: "off" },
+  });
+});
+
 
 let seq = 0;
 

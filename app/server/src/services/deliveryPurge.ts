@@ -23,6 +23,7 @@
  * was worth and who carried it - and no longer says who it went to.
  */
 import { prisma } from "../prisma";
+import { deleteEvidence } from "./storage";
 import { writeAudit, type AuditActor } from "../util/audit";
 import { TERMINAL_STATES } from "./delivery";
 
@@ -73,12 +74,28 @@ export async function purgeCustomerData(
 
   const due = await prisma.delivery.findMany({
     where,
-    select: { id: true, martOrderId: true },
+    select: { id: true, martOrderId: true, taskId: true },
     orderBy: { updatedAt: "asc" },
     take: BATCH,
   });
 
   for (const row of due) {
+    // Door photos first (services/evidence.ts). They show where the customer
+    // lives, which is exactly what this sweep promises to stop holding. The
+    // object goes before the row, so a failure in between leaves a row pointing
+    // at nothing rather than an image nothing points at - the second would be
+    // undeletable by anybody who did not already know its key. Pickup photos
+    // show a shop, not a person, and are kept with the job.
+    if (row.taskId) {
+      const photos = await prisma.evidence.findMany({
+        where: { taskId: row.taskId, stage: "DROPOFF" },
+        select: { id: true, objectKey: true },
+      });
+      await deleteEvidence(photos.map((p) => p.objectKey));
+      if (photos.length > 0) {
+        await prisma.evidence.deleteMany({ where: { id: { in: photos.map((p) => p.id) } } });
+      }
+    }
     await prisma.delivery.update({
       where: { id: row.id },
       data: {

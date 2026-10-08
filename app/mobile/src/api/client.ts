@@ -41,6 +41,9 @@ import type {
   CourierReadiness,
   Delivery,
   DeliveryOffers,
+  Evidence,
+  EvidenceList,
+  EvidenceStage,
   Presence,
 } from './types';
 
@@ -386,6 +389,8 @@ export const api = {
     type: 'IN' | 'OUT';
     lat?: number | null;
     lng?: number | null;
+    /** The photo taken for this clock event, where the job asks for one. */
+    evidenceId?: string | null;
   }): Promise<ClockResult> {
     return request<ClockResult>('/clock', { method: 'POST', body: input });
   },
@@ -524,6 +529,71 @@ export const api = {
       throw new ApiError(msg, res.status);
     }
     return data as { id: string; docType: string };
+  },
+
+  /**
+   * POST /api/me/evidence: a proof-of-work photo for one step of a job.
+   *
+   * Multipart, like KYC uploads. Where and when travel with it as the phone
+   * reports them; the server checks both on arrival and the result comes back
+   * with the photo, so a "taken 600 m from the shop" can be shown while the
+   * worker is still there to take another.
+   */
+  async uploadEvidence(params: {
+    taskId: string;
+    stage: EvidenceStage;
+    uri: string;
+    mimeType: string;
+    at: { lat: number; lng: number; accuracy: number | null } | null;
+    capturedAt: Date;
+  }): Promise<Evidence> {
+    const token = await getItem(SECURE_TOKEN_KEY);
+    const form = new FormData();
+    form.append('taskId', params.taskId);
+    form.append('stage', params.stage);
+    if (params.at) {
+      form.append('lat', String(params.at.lat));
+      form.append('lng', String(params.at.lng));
+      if (params.at.accuracy != null) form.append('accuracy', String(params.at.accuracy));
+    }
+    form.append('capturedAt', params.capturedAt.toISOString());
+    form.append('file', {
+      uri: params.uri,
+      type: params.mimeType,
+      name: `photo${params.mimeType === 'image/png' ? '.png' : '.jpg'}`,
+    } as unknown as Blob);
+
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE_URL}/me/evidence`, {
+        method: 'POST',
+        headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: form,
+      });
+    } catch {
+      throw new ApiError('Could not reach the Afrizone server.', 0);
+    }
+    const text = await res.text();
+    let data: unknown;
+    try { data = JSON.parse(text); } catch { data = text; }
+    if (!res.ok) {
+      const msg =
+        data && typeof data === 'object' && 'error' in data
+          ? String((data as { error: unknown }).error)
+          : `Upload failed (${res.status})`;
+      throw new ApiError(msg, res.status);
+    }
+    return data as Evidence;
+  },
+
+  /** GET /api/me/evidence?taskId=: my photos for a job, and what it still asks for. */
+  myEvidence(taskId: string, signal?: AbortSignal): Promise<EvidenceList> {
+    return request<EvidenceList>(`/me/evidence?taskId=${encodeURIComponent(taskId)}`, { signal });
+  },
+
+  /** POST /api/me/audits: file a store audit. Needs its photos first. */
+  submitAudit(input: { taskId: string; score: number; notes?: string }): Promise<{ id: string; score: number; outcome: string }> {
+    return request('/me/audits', { method: 'POST', body: input });
   },
 
   /** PATCH /api/me/push-token: register or refresh the Expo push token. */

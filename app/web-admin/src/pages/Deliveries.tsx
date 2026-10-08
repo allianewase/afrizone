@@ -6,6 +6,7 @@ import { formatDateTime, formatNaira } from '../lib/format'
 import type { Delivery, DeliveryStatus } from '../api/types'
 import PageHeader from '../components/PageHeader'
 import Glass from '../components/ui/Glass'
+import EvidenceButton from '../components/EvidenceButton'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
@@ -336,6 +337,9 @@ export default function Deliveries() {
                           >
                             Cancel
                           </button>
+                        )}
+                        {d.taskId && d.status !== 'STORE_ACCEPTED' && d.status !== 'RECEIVED' && (
+                          <EvidenceButton taskId={d.taskId} />
                         )}
                         {d.taskId && (
                           <a className="dv-link" href={`/tasks?task=${d.taskId}`}>

@@ -651,6 +651,33 @@ export interface DeliveryOfferRule {
   rankedWindowMinutes: number
 }
 
+/* ===== Proof of work (server: services/evidence.ts) ===== */
+export interface EvidenceItem {
+  id: string
+  taskId: string
+  workerId: string
+  stage: string
+  stageLabel: string
+  /** Behind auth: load with fetchAuthedObjectUrl. */
+  url: string
+  lat: number | null
+  lng: number | null
+  accuracyMetres: number | null
+  capturedAt: string | null
+  receivedAt: string
+  distanceMetres: number | null
+  distance: string | null
+  /** The server's sentences, one per failed check. */
+  flags: string[]
+  flagged: boolean
+}
+
+export interface EvidenceReview {
+  requirements: { stage: string; count: number; label: string }[]
+  evidence: EvidenceItem[]
+  flaggedCount: number
+}
+
 export interface MartRules {
   kinds: TaskRules
   offer: DeliveryOfferRule

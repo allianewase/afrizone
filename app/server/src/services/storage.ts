@@ -46,6 +46,28 @@ export async function getFileStream(
   return { body: obj.body, contentType: obj.httpMetadata?.contentType };
 }
 
+// ── Evidence photos (services/evidence.ts) ──
+// A prefix of their own, so a KYC key can never resolve to a work photo or the
+// other way round, whatever either route is handed.
+const EVIDENCE_PREFIX = "evidence/";
+
+export async function putEvidence(key: string, bytes: ArrayBuffer | Buffer, contentType: string): Promise<void> {
+  await env.BUCKET.put(`${EVIDENCE_PREFIX}${key}`, bytes, { httpMetadata: { contentType } });
+}
+
+export async function getEvidenceStream(
+  key: string
+): Promise<{ body: ReadableStream; contentType: string | undefined } | null> {
+  const obj = await env.BUCKET.get(`${EVIDENCE_PREFIX}${key}`);
+  if (!obj) return null;
+  return { body: obj.body, contentType: obj.httpMetadata?.contentType };
+}
+
+export async function deleteEvidence(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+  await env.BUCKET.delete(keys.map((k) => `${EVIDENCE_PREFIX}${k}`));
+}
+
 /** Relative URL the API's own authenticated route serves this file at. */
 export function resolveUrl(filename: string): string {
   return `/api/me/kyc/documents/file/${filename}`;
