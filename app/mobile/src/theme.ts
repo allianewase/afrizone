@@ -145,16 +145,23 @@ export const spacing = {
   xxxl: 32,
 } as const;
 
+/**
+ * The same shape as onboardingTheme.ts's `obRadii`, which every restyled
+ * screen uses. These used to be tighter (card 16, button 12, cut 4) and gave
+ * the few older components still on this set a different silhouette; on
+ * 2026-10-09 the larger set was chosen for the whole app. Change the two
+ * together.
+ */
 export const radii = {
-  input: 12,
-  button: 12,
-  card: 16,
+  input: 12, // obRadii.field
+  button: 16, // obRadii.btn
+  card: 20, // obRadii.card
   sheet: 22,
-  pill: 100,
+  pill: 999, // obRadii.pill
   /** "Sunrise Cut" signature: the sharp corner paired with `card`/`button`
    * on the opposite corner to give every surface an asymmetric, angular
-   * silhouette instead of a uniform rounded rectangle. */
-  cut: 4,
+   * silhouette instead of a uniform rounded rectangle. obRadii.cardCut. */
+  cut: 6,
 } as const;
 
 /**

@@ -83,11 +83,9 @@ export const obColors = {
  * corner against a larger radius everywhere else), at this prototype's own
  * radius values rather than the previous mock's.
  *
- * These are still a second set of shape tokens alongside src/theme.ts's
- * `radii`, which the palette merge did NOT touch: the two disagree about
- * card (20 vs 16) and button (16 vs 12) radii, and reconciling shape is a
- * visual decision about which silhouette is right, not a duplicate-hex
- * cleanup. The live app's shapes all come from here.
+ * src/theme.ts's `radii` is a second set of names for the same shape: on
+ * 2026-10-09 these larger values (card 20, button 16, cut 6) were chosen for
+ * the whole app and `radii` was brought into line. Change the two together.
  */
 export const obRadii = {
   card: 20,
