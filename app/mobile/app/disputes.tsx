@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   reasonText: { color: obColors.text, fontSize: 12.5, lineHeight: 18 },
   resolutionBox: { backgroundColor: obColors.mgreenBg, borderRadius: 12, padding: 12, gap: 6 },
   resolutionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  resolutionLabel: { color: obColors.mgreen, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  resolutionLabel: { color: obColors.mgreenInk, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   resolutionText: { color: obColors.text, fontSize: 12.5, lineHeight: 18 },
   pendingNote: { color: obColors.textMut, fontSize: 11.5, fontStyle: 'italic' },
   bottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2, flexWrap: 'wrap', gap: 8 },

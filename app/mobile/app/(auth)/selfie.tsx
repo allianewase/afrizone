@@ -69,6 +69,9 @@ export default function SelfieScreen() {
     >
       {error ? <Banner tone="danger" icon="alert" title="Couldn't submit" message={error} /> : null}
 
+      {/* Deliberately off-palette: this is a camera viewport standing in for
+          a live preview, and it should read as hardware rather than as the
+          app. Brand navy would make it look like a surface you could tap. */}
       <LinearGradient colors={['#2a2a3d', '#111119']} style={styles.cam}>
         <View style={styles.oval} />
         <Text style={styles.tip}>Center your face in the frame</Text>

@@ -185,7 +185,7 @@ function ApplySheet({ visible, task, onClose, onApplied }: { visible: boolean; t
           onChangeText={setPitch}
           multiline
           placeholder="Why you're a good fit, and when you're free…"
-          placeholderTextColor={obColors.textFaint}
+          placeholderTextColor={obColors.textMut}
           style={styles.pitch}
           accessibilityLabel="Pitch"
         />
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   section: { fontSize: 15.5, fontFamily: 'Raleway_800ExtraBold', color: obColors.navy, marginTop: 20, marginBottom: 8 },
   desc: { fontSize: 14, color: obColors.text, lineHeight: 22 },
   stickyCta: { paddingHorizontal: 18, paddingTop: 10, backgroundColor: obColors.bg },
-  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
+  backdrop: { flex: 1, backgroundColor: obColors.scrim },
   sheet: { backgroundColor: obColors.bg, borderTopLeftRadius: obRadii.hero, borderTopRightRadius: obRadii.hero, padding: 20, gap: 10 },
   grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: 4, backgroundColor: obColors.line, marginBottom: 8 },
   sheetTitle: { color: obColors.navy, fontSize: 18, fontFamily: 'Raleway_800ExtraBold' },

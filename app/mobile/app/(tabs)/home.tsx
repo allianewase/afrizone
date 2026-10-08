@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
 });
 
 const sheetStyles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
+  backdrop: { flex: 1, backgroundColor: obColors.scrim },
   sheet: {
     backgroundColor: obColors.bg,
     borderTopLeftRadius: obRadii.hero,

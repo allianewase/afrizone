@@ -1,3 +1,4 @@
+import { colors } from '../theme';
 /** Whole-Naira integer formatting. Amounts are NEVER kobo (API_CONTRACT.md). */
 export function formatNaira(amount: number | null | undefined): string {
   const n = Math.round(Number(amount ?? 0));
@@ -68,12 +69,16 @@ export function isValidNgNumber(local: string): boolean {
  * a worker's avatar color is deterministic by id, so it matches across both
  * apps instead of mobile defaulting every avatar to the same navy/gold.
  */
+// The blue, green and coral pairs are deliberately OFF-palette: the point is
+// that two workers rarely get the same avatar. The gold pairs are the brand,
+// so they reference it - they had been carrying #C98518, a clayDeep that
+// src/theme.ts retired as having no source behind it.
 const AVATAR_GRADIENTS: [string, string][] = [
-  ['#C98518', '#FBAC34'],
+  [colors.clayDeep, colors.gold],
   ['#5B8BFF', '#7C5CFF'],
   ['#27C08A', '#1F8F68'],
-  ['#FBAC34', '#C98518'],
-  ['#FF6B5E', '#C98518'],
+  [colors.gold, colors.clayDeep],
+  ['#FF6B5E', colors.clayDeep],
 ];
 
 export function avatarGradient(seed: string): [string, string] {

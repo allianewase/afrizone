@@ -137,7 +137,7 @@ export default function ContractDetailScreen() {
                   value={signerName}
                   onChangeText={setSignerName}
                   placeholder="Full name"
-                  placeholderTextColor={obColors.textFaint}
+                  placeholderTextColor={obColors.textMut}
                   autoCapitalize="words"
                 />
                 <Text style={styles.footerHint}>

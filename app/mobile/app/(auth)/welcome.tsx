@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   footer: { gap: 14 },
   primaryBtn: { minHeight: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   primaryBtnText: { fontFamily: 'Raleway_800ExtraBold', fontSize: 15, color: obColors.navyPress },
-  forgot: { color: obColors.textFaint, fontSize: 13, textAlign: 'center' },
-  footnote: { color: obColors.textFaint, fontSize: 13, textAlign: 'center' },
+  forgot: { color: obColors.onNavyMuted, fontSize: 13, textAlign: 'center' },
+  footnote: { color: obColors.onNavyMuted, fontSize: 13, textAlign: 'center' },
   footnoteLink: { color: obColors.gold, fontWeight: '700' },
 });

@@ -311,7 +311,7 @@ function AddCredentialSheet({
                 value={issuer}
                 onChangeText={setIssuer}
                 placeholder={type.issuerHint ?? 'Name of the issuer'}
-                placeholderTextColor={obColors.textFaint}
+                placeholderTextColor={obColors.textMut}
               />
             </>
           ) : null}
@@ -325,7 +325,7 @@ function AddCredentialSheet({
                 onChangeText={setReference}
                 autoCapitalize="characters"
                 placeholder="As printed on the document"
-                placeholderTextColor={obColors.textFaint}
+                placeholderTextColor={obColors.textMut}
               />
             </>
           ) : null}
@@ -338,7 +338,7 @@ function AddCredentialSheet({
                 value={expiresAt}
                 onChangeText={setExpiresAt}
                 placeholder="YYYY-MM-DD"
-                placeholderTextColor={obColors.textFaint}
+                placeholderTextColor={obColors.textMut}
               />
             </>
           ) : null}
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
   removeBtn: { alignSelf: 'flex-start', paddingVertical: 4 },
   removeText: { color: obColors.dangerInk, fontSize: 12.5, fontWeight: '800' },
   error: { color: obColors.dangerInk, fontSize: 12.5 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
+  backdrop: { flex: 1, backgroundColor: obColors.scrim },
   sheet: {
     backgroundColor: obColors.bg,
     borderTopLeftRadius: obRadii.hero,

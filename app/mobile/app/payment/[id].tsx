@@ -265,7 +265,7 @@ function DisputeSheet({
                 value={reason}
                 onChangeText={setReason}
                 placeholder="e.g. I worked 6 hours but was paid for 4."
-                placeholderTextColor={obColors.textFaint}
+                placeholderTextColor={obColors.textMut}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
   disputeSection: { gap: 12 },
 
   // Sheet
-  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
+  backdrop: { flex: 1, backgroundColor: obColors.scrim },
   sheet: {
     backgroundColor: obColors.bg,
     borderTopLeftRadius: obRadii.hero,

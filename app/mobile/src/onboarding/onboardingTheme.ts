@@ -1,71 +1,79 @@
+import { colors } from '../theme';
+
 /**
- * Colors and shapes matching C:\Users\hb\Downloads\afrizone-mobile-prototype
- * (1).html - a full interactive prototype (Home, My Tasks, Wallet, Jobs,
- * Profile, Store dashboard, task detail, notifications, a withdraw sheet,
- * loading/empty/error states) using the SAME real navy/gold Afrizone brand
- * as the earlier onboarding mock (afrizone-onboarding-screens.html), not a
- * new palette - this file's exact values now come from that prototype's own
- * `:root` CSS variables, not estimated from a screenshot.
+ * `obColors` is now an ALIAS MAP onto src/theme.ts, not a palette.
  *
- * This supersedes the brief AgriPlant-green version of this file (that
- * detour is fully reverted - every value below is back to real navy/gold).
+ * It used to hold its own hexes, taken from the interactive prototype's
+ * `:root` variables, and its header explained that it deliberately was not
+ * merged into src/theme.ts because that file "stays the source of truth for
+ * every screen not yet touched by this restyle". The 2026-09-22 restyle
+ * emptied that list - every screen reads AppUI or ObUI, and both read this
+ * file - so the two palettes were simply both live at once. They are now one,
+ * and the prototype's values are the ones that survived: see src/theme.ts's
+ * header for what moved, what was dropped on contrast grounds, and what that
+ * costs in agreement with web-admin and web-portal.
  *
- * Despite the file's path, it is no longer onboarding-only: this is also
- * the palette the main app screens (Home first, per rollout order) are
- * being restyled to, reusing these tokens rather than inventing a second
- * set. Not merged into src/theme.ts (the pre-existing app-wide system) -
- * that stays the source of truth for every screen not yet touched by this
- * restyle, same reasoning as before, just a wider "not yet" list now.
+ * The names below are kept because ~60 files use them, and renaming the
+ * vocabulary of two component kits is a different change from unifying their
+ * colours. New code can use either name; `colors` is the one that will
+ * outlive this file.
+ *
+ * NOTE the deliberate gap: there is no `obColors.textFaint`. Its old value
+ * (#A6A5BD) measured 2.23:1 on the page ground, and it was carrying 22
+ * placeholders, the inactive tab tint and a dozen 11px timestamps. Light
+ * grounds now use `textMut`; the navy ones use `onNavyMuted`, which is that
+ * same value under a name that says where it works. If a future call site
+ * reaches for `textFaint`, the typechecker should stop it - that is the point.
  */
 export const obColors = {
-  navy: '#000066',
-  navyPress: '#00004D',
-  gold: '#FBAC34',
-  goldDeep: '#E8901A',
-  bg: '#FAF6EF',
-  sand: '#F1E8D6',
-  white: '#FFFFFF',
-  text: '#1B1A2E',
-  textMut: '#6C6B85',
-  textFaint: '#A6A5BD',
-  line: '#EAE2CF',
-  violet: '#7C6FE0',
-  violetBg: '#EFEDFC',
-  /** Prototype's "in progress" pill tone - amber/orange, distinct from `gold`
-   * (which is a fill only, illegible as small text - see design-decisions.md
-   * on the same problem with the app-wide --amber). Good for a glyph or a
-   * fill; it is 3.57:1 on white and 3.12:1 on its own tint, so it is NOT the
-   * one to write words in - use `amberInk`. */
-  orangeInk: '#C2760F',
-  orangeInkBg: '#FCEEDA',
-  /** Amber as TEXT: 5.92:1 on white, 5.18:1 on orangeInkBg. Same story as
-   * dangerInk - this is the old theme's `goldInk`, which the palette swap
-   * left behind, and without it every amber label had to fall back to plain
-   * `text` and lose the state colour entirely. */
-  amberInk: '#8A5A0F',
-  indigo: '#4A4FA0',
-  indigoBg: '#ECEDF8',
-  mgreen: '#1E9E5A',
-  mgreenBg: '#E6F7EE',
-  /** Prototype's "paid out" pill tone - settled/terminal, deliberately
-   * distinct from the active mgreen (mirrors web-admin's Paid/forest choice,
-   * see global.css). */
-  forest: '#215B3B',
-  forestBg: '#E3EEE7',
-  /** Fills, borders and icons only. `danger` is 4.38:1 on white and 3.77:1
-   * on its own tint, so it cannot legibly carry small text either way -
-   * exactly the same trap `gold` has, and the reason `orangeInk` exists. */
-  danger: '#D64545',
-  dangerBg: '#FBEAEA',
-  /** Red as TEXT: 6.59:1 on white, 5.67:1 on dangerBg. Not a new colour -
-   * this is the old theme's own `dangerInk`, which the palette swap dropped
-   * while keeping the fill, leaving every error message and destructive
-   * label below the 4.5 floor. */
-  dangerInk: '#A6362C',
-  roleSelectedBg: '#FFF8EC',
-  /** The mint-green splash-only ground (screen 01 in the earlier reference) -
+  navy: colors.navy,
+  navyPress: colors.navyDeep,
+  gold: colors.gold,
+  goldDeep: colors.clayDeep,
+  bg: colors.bg,
+  sand: colors.surfaceSand,
+  white: colors.white,
+  text: colors.text,
+  textMut: colors.textMuted,
+  /** Secondary text on NAVY grounds only, where it is 7.33:1. On light it is
+   * 2.23:1, which is what retired the old `textFaint`. */
+  onNavyMuted: colors.onNavyMuted,
+  line: colors.line,
+  violet: colors.pending,
+  violetBg: colors.pendingSoft,
+  violetInk: colors.pendingInk,
+  violetInkMut: colors.pendingInkMuted,
+  violetLine: colors.pendingLine,
+  /** Fill and glyph only - 3.56:1 on white. Words go in `amberInk`. */
+  orangeInk: colors.amber,
+  orangeInkBg: colors.amberSoft,
+  /** Amber as TEXT: 5.92:1 on white, 5.18:1 on its own tint. */
+  amberInk: colors.goldInk,
+  indigo: colors.indigo,
+  indigoBg: colors.indigoSoft,
+  /** Fill and glyph only - 3.45:1 on white. Words go in `mgreenInk`. */
+  mgreen: colors.money,
+  /** Green as TEXT: 6.59:1 on white, 5.93:1 on its own tint. Added when four
+   * screens were found writing words in `mgreen`. */
+  mgreenInk: colors.moneyInk,
+  mgreenBg: colors.moneySoft,
+  /** Translucent `mgreen`, for the one circle that sits on a dark ground. */
+  mgreenVeil: colors.moneyVeil,
+  /** Settled/terminal green, deliberately distinct from the active `mgreen`
+   * (mirrors web-admin's Paid/forest choice, see global.css). */
+  forest: colors.forest,
+  forestBg: colors.forestSoft,
+  /** Fills, borders and icons only - 4.38:1 on white, 3.77:1 on its tint. */
+  danger: colors.danger,
+  dangerBg: colors.dangerSoft,
+  /** Red as TEXT: 6.59:1 on white, 5.67:1 on dangerBg. */
+  dangerInk: colors.dangerInk,
+  roleSelectedBg: colors.claySoft,
+  /** Backdrop behind sheets and modals. Ten screens had this inlined. */
+  scrim: colors.scrim,
+  /** The mint-green splash-only ground (screen 01 in the earliest reference) -
    * unused now that Splash reverted to navy, kept in case that changes back. */
-  splashBg: '#E3F5E1',
+  splashBg: colors.splashBg,
 } as const;
 
 /**
@@ -74,6 +82,12 @@ export const obColors = {
  * "Sunrise Cut" already does it (a small border-radius on just the top-right
  * corner against a larger radius everywhere else), at this prototype's own
  * radius values rather than the previous mock's.
+ *
+ * These are still a second set of shape tokens alongside src/theme.ts's
+ * `radii`, which the palette merge did NOT touch: the two disagree about
+ * card (20 vs 16) and button (16 vs 12) radii, and reconciling shape is a
+ * visual decision about which silhouette is right, not a duplicate-hex
+ * cleanup. The live app's shapes all come from here.
  */
 export const obRadii = {
   card: 20,

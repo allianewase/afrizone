@@ -328,7 +328,7 @@ export default function KycScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Select bank"
                 >
-                  <Text style={[styles.bankPickerText, !selectedBank && { color: obColors.textFaint }]}>
+                  <Text style={[styles.bankPickerText, !selectedBank && { color: obColors.textMut }]}>
                     {selectedBank ? selectedBank.name : 'Select your bank…'}
                   </Text>
                   <Icon name="chevron-down" size={18} color={obColors.textMut} />
@@ -346,7 +346,7 @@ export default function KycScreen() {
               {acct.length > 0 && acct.length < 10 ? (
                 <Text style={styles.acctHint}>{10 - acct.length} more digits needed</Text>
               ) : acct.length === 10 ? (
-                <Text style={[styles.acctHint, { color: obColors.mgreen }]}>✓ Valid NUBAN</Text>
+                <Text style={[styles.acctHint, { color: obColors.mgreenInk }]}>✓ Valid NUBAN</Text>
               ) : null}
             </View>
           )}
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   bankPickerText: { fontSize: 15, color: obColors.text, flex: 1 },
   acctHint: { fontSize: 12, color: obColors.textMut, marginTop: -8 },
 
-  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
+  backdrop: { flex: 1, backgroundColor: obColors.scrim },
   pickerSheet: {
     backgroundColor: obColors.bg,
     borderTopLeftRadius: obRadii.hero,

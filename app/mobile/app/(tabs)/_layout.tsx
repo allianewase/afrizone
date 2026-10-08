@@ -56,7 +56,7 @@ export default function TabsLayout() {
         // with clay at 1.90:1 (see src/theme.ts). Navy is 17:1, and the gold
         // affordance survives in the bar, which is a graphic and not 10px type.
         tabBarActiveTintColor: obColors.navy,
-        tabBarInactiveTintColor: obColors.textFaint,
+        tabBarInactiveTintColor: obColors.textMut,
         tabBarStyle: {
           backgroundColor: obColors.white,
           // The prototype's hairline, not the lifted/shadowed bar this had

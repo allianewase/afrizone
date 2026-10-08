@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginTop: 4,
   },
-  date: { color: obColors.textFaint, fontSize: 11, marginTop: 4 },
+  date: { color: obColors.textMut, fontSize: 11, marginTop: 4 },
 
   aggCard: {
     alignItems: 'center',

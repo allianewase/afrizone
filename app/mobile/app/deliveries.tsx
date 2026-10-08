@@ -187,7 +187,7 @@ function Line({
   return (
     <View style={styles.line}>
       <View style={styles.lineHead}>
-        <Icon name={icon} size={13} color={obColors.textFaint} />
+        <Icon name={icon} size={13} color={obColors.textMut} />
         <Text style={styles.lineLabel}>{label}</Text>
       </View>
       <View style={styles.lineBody}>{children}</View>
@@ -392,7 +392,7 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
               onChangeText={setCode}
               keyboardType="number-pad"
               placeholder="4821"
-              placeholderTextColor={obColors.textFaint}
+              placeholderTextColor={obColors.textMut}
               style={styles.codeInput}
               accessibilityLabel="The code the customer received"
             />
@@ -424,7 +424,7 @@ function JobCard({ d, onChange }: { d: Delivery; onChange: (next: Delivery) => v
             value={reason}
             onChangeText={setReason}
             placeholder="Nobody at the address after three calls"
-            placeholderTextColor={obColors.textFaint}
+            placeholderTextColor={obColors.textMut}
             style={styles.input}
             multiline
           />
@@ -749,7 +749,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
-    color: obColors.textFaint,
+    color: obColors.textMut,
   },
   lineBody: { gap: 2 },
 

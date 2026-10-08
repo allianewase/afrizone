@@ -325,7 +325,7 @@ function WithdrawSheet({
                   onChangeText={(t) => setAmount(t.replace(/\D/g, ''))}
                   keyboardType="number-pad"
                   placeholder="0.00"
-                  placeholderTextColor={obColors.textFaint}
+                  placeholderTextColor={obColors.textMut}
                   style={styles.amountInput}
                   autoFocus
                 />
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
   statementText: { flex: 1, color: obColors.text, fontWeight: '600', fontSize: 13.5 },
   dlError: { color: obColors.dangerInk, fontSize: 12.5, marginTop: 6 },
   // sheet
-  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
+  backdrop: { flex: 1, backgroundColor: obColors.scrim },
   sheet: {
     backgroundColor: obColors.bg,
     borderTopLeftRadius: obRadii.hero,

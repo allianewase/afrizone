@@ -113,18 +113,18 @@ export function AppSearchBar({
 }) {
   return (
     <View style={styles.searchBar}>
-      <Icon name="search" size={15} color={obColors.textFaint} />
+      <Icon name="search" size={15} color={obColors.textMut} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={obColors.textFaint}
+        placeholderTextColor={obColors.textMut}
         style={styles.searchInput}
         returnKeyType="search"
       />
       {onFilterPress ? (
         <Pressable onPress={onFilterPress} hitSlop={8} accessibilityLabel="Filters">
-          <Icon name="filter" size={16} color={filterActive ? obColors.goldDeep : obColors.textFaint} />
+          <Icon name="filter" size={16} color={filterActive ? obColors.goldDeep : obColors.textMut} />
         </Pressable>
       ) : null}
     </View>
@@ -448,10 +448,10 @@ const styles = StyleSheet.create({
     borderTopRightRadius: obRadii.heroCut,
     padding: 22,
   },
-  heroLabel: { fontSize: 12, color: '#B9B9E8', fontWeight: '600' },
+  heroLabel: { fontSize: 12, color: obColors.onNavyMuted, fontWeight: '600' },
   heroAmt: { fontFamily: 'Raleway_800ExtraBold', fontSize: 30, color: obColors.white, marginTop: 6, marginBottom: 4 },
   heroSplit: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)', paddingTop: 14, marginTop: 12 },
-  heroSplitLabel: { fontSize: 10.5, color: '#9C9CD6' },
+  heroSplitLabel: { fontSize: 10.5, color: obColors.onNavyMuted },
   heroSplitValue: { fontSize: 14, fontWeight: '800', fontFamily: 'Raleway_800ExtraBold', color: obColors.white, marginTop: 3 },
 
   primaryBtn: {
@@ -509,13 +509,13 @@ const styles = StyleSheet.create({
     gap: 11,
     backgroundColor: obColors.violetBg,
     borderWidth: 1,
-    borderColor: '#DBD5F7',
+    borderColor: obColors.violetLine,
     padding: 13,
     borderRadius: 16,
     borderTopRightRadius: 5,
   },
-  bannerTitle: { fontSize: 13.5, fontWeight: '700', color: '#3f3a7a' },
-  bannerMsg: { fontSize: 12, color: '#5f5a92', marginTop: 1 },
+  bannerTitle: { fontSize: 13.5, fontWeight: '700', color: obColors.violetInk },
+  bannerMsg: { fontSize: 12, color: obColors.violetInkMut, marginTop: 1 },
 
   searchBar: {
     flexDirection: 'row',

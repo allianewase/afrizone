@@ -153,5 +153,5 @@ const styles = StyleSheet.create({
     borderBottomColor: obColors.line,
     backgroundColor: obColors.mgreenBg,
   },
-  paymentLinkText: { flex: 1, fontSize: 12, fontWeight: '700', color: obColors.mgreen },
+  paymentLinkText: { flex: 1, fontSize: 12, fontWeight: '700', color: obColors.mgreenInk },
 });

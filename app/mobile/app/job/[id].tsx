@@ -250,7 +250,7 @@ function ApplySheet({
                 value={name}
                 onChangeText={setName}
                 placeholder="Your full name"
-                placeholderTextColor={obColors.textFaint}
+                placeholderTextColor={obColors.textMut}
                 style={styles.input}
                 autoCapitalize="words"
               />
@@ -262,7 +262,7 @@ function ApplySheet({
                 keyboardType="email-address"
                 autoCapitalize="none"
                 placeholder="you@email.com"
-                placeholderTextColor={obColors.textFaint}
+                placeholderTextColor={obColors.textMut}
                 style={styles.input}
               />
             </SheetField>
@@ -272,7 +272,7 @@ function ApplySheet({
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
                 placeholder="+234 800 000 0000"
-                placeholderTextColor={obColors.textFaint}
+                placeholderTextColor={obColors.textMut}
                 style={styles.input}
               />
             </SheetField>
@@ -283,7 +283,7 @@ function ApplySheet({
                   onChangeText={setCvNote}
                   multiline
                   placeholder="Tell us why you're a great fit…"
-                  placeholderTextColor={obColors.textFaint}
+                  placeholderTextColor={obColors.textMut}
                   style={styles.pitch}
                   textAlignVertical="top"
                 />
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   reqText: { color: obColors.forest, fontSize: 12.5, fontWeight: '700' },
   desc: { color: obColors.text, fontSize: 14, lineHeight: 22 },
   // sheet
-  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
+  backdrop: { flex: 1, backgroundColor: obColors.scrim },
   sheet: {
     backgroundColor: obColors.bg,
     borderTopLeftRadius: obRadii.hero,

@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { api } from '../api/client';
+import { colors } from '../theme';
 
 /**
  * Configure how notifications appear when the app is in the foreground.
@@ -30,7 +31,7 @@ export async function ensureAndroidChannel() {
     name: 'Afrizone alerts',
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: '#FBAC34',
+    lightColor: colors.gold,
     sound: 'default',
   });
 }

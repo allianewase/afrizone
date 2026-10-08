@@ -79,7 +79,7 @@ function NotificationRow({ item, onPress, last }: { item: Notification; onPress:
         <Text style={styles.when}>{formatDate(item.createdAt)}</Text>
       </View>
 
-      {target ? <Icon name="chevron-right" size={16} color={obColors.textFaint} /> : null}
+      {target ? <Icon name="chevron-right" size={16} color={obColors.textMut} /> : null}
     </Pressable>
   );
 }
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   titleUnread: { fontFamily: 'Raleway_800ExtraBold' },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: obColors.goldDeep },
   message: { color: obColors.textMut, fontSize: 12.5, lineHeight: 18 },
-  when: { color: obColors.textFaint, fontSize: 11, marginTop: 2 },
+  when: { color: obColors.textMut, fontSize: 11, marginTop: 2 },
   markAll: { color: obColors.goldDeep, fontSize: 13, fontWeight: '700' },
   markAllBusy: { opacity: 0.5 },
   actionError: {

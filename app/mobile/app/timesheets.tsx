@@ -177,7 +177,7 @@ function DisputeSheet({
                 value={reason}
                 onChangeText={setReason}
                 placeholder="e.g. I clocked 8 hours but only 6 were recorded. GPS dropped during the last shift."
-                placeholderTextColor={obColors.textFaint}
+                placeholderTextColor={obColors.textMut}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
@@ -279,16 +279,16 @@ const styles = StyleSheet.create({
   taskTitle: { flex: 1, color: obColors.text, fontSize: 14, fontFamily: 'Raleway_800ExtraBold', lineHeight: 19 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   hours: { color: obColors.navy, fontSize: 13, fontWeight: '800' },
-  dot: { color: obColors.textFaint, fontSize: 12.5 },
+  dot: { color: obColors.textMut, fontSize: 12.5 },
   period: { color: obColors.textMut, fontSize: 12.5, flex: 1 },
-  filed: { color: obColors.textFaint, fontSize: 11 },
+  filed: { color: obColors.textMut, fontSize: 11 },
   disputedNote: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
   disputedText: { color: obColors.amberInk, fontSize: 11.5, flex: 1 },
   disputeBtn: { marginTop: 4, alignSelf: 'flex-start' },
   disputeBtnText: { color: obColors.goldDeep, fontSize: 12.5, fontWeight: '700' },
 
   // Sheet
-  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
+  backdrop: { flex: 1, backgroundColor: obColors.scrim },
   sheet: {
     backgroundColor: obColors.bg,
     borderTopLeftRadius: obRadii.hero,

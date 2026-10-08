@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   wordDark: { color: colors.white },
   wordLight: { color: colors.navy },
   tag: { fontSize: 11, fontStyle: 'italic', marginTop: 3 },
-  tagDark: { color: colors.railMuted },
+  tagDark: { color: colors.onNavyMuted },
   tagLight: { color: colors.textMuted },
   tagBelow: { marginTop: 4, textAlign: 'center' },
 });

@@ -165,7 +165,7 @@ export function ObField({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={obColors.textFaint}
+          placeholderTextColor={obColors.textMut}
           style={styles.fieldInput}
           {...rest}
         />
@@ -206,7 +206,7 @@ export function ObPasswordField({
           secureTextEntry={!visible}
           autoCapitalize="none"
           placeholder={placeholder ?? 'Password'}
-          placeholderTextColor={obColors.textFaint}
+          placeholderTextColor={obColors.textMut}
           style={styles.fieldInput}
           {...rest}
         />
@@ -264,12 +264,12 @@ export function ObChip({ label, selected, onPress }: { label: string; selected: 
 /** The mock's `.check-circle` + optional `.pill` beneath, for outcome screens. */
 export function ObCheckCircle({ tone, dark, icon = 'check' }: { tone: 'money' | 'gold' | 'danger'; dark?: boolean; icon?: IconName }) {
   const bg = dark
-    ? 'rgba(47,174,96,0.16)'
+    ? obColors.mgreenVeil
     : tone === 'money'
       ? obColors.mgreenBg
       : tone === 'danger'
         ? obColors.dangerBg
-        : 'rgba(47,174,96,0.16)';
+        : obColors.mgreenBg;
   const fg = dark ? obColors.gold : tone === 'money' ? obColors.mgreen : tone === 'danger' ? obColors.danger : obColors.goldDeep;
   return (
     <View style={[styles.checkCircle, { backgroundColor: bg }]}>
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
 
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(31,41,55,0.55)',
+    backgroundColor: obColors.scrim,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,

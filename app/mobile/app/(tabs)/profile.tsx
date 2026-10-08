@@ -339,10 +339,10 @@ function EditProfileSheet({ visible, user, onClose, onSaved }: { visible: boolea
           <Text style={styles.sheetTitle}>Edit profile</Text>
           <View style={styles.fields}>
             <SheetField label="Full name">
-              <TextInput value={name} onChangeText={setName} placeholder="Your full name" placeholderTextColor={obColors.textFaint} style={styles.input} autoCapitalize="words" />
+              <TextInput value={name} onChangeText={setName} placeholder="Your full name" placeholderTextColor={obColors.textMut} style={styles.input} autoCapitalize="words" />
             </SheetField>
             <SheetField label="Email">
-              <TextInput value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="you@email.com" placeholderTextColor={obColors.textFaint} style={styles.input} />
+              <TextInput value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="you@email.com" placeholderTextColor={obColors.textMut} style={styles.input} />
             </SheetField>
           </View>
           {error ? <Banner tone="danger" title="Error" message={error} /> : null}
@@ -397,11 +397,11 @@ function EditBankSheet({ visible, user, onClose, onSaved }: { visible: boolean; 
               </Pressable>
             </SheetField>
             <SheetField label="Account number (NUBAN)" hint="10-digit number: payouts go here">
-              <TextInput value={acct} onChangeText={(t) => setAcct(t.replace(/\D/g, '').slice(0, 10))} keyboardType="number-pad" placeholder="0123456789" placeholderTextColor={obColors.textFaint} style={styles.input} maxLength={10} />
+              <TextInput value={acct} onChangeText={(t) => setAcct(t.replace(/\D/g, '').slice(0, 10))} keyboardType="number-pad" placeholder="0123456789" placeholderTextColor={obColors.textMut} style={styles.input} maxLength={10} />
               {acct.length > 0 && acct.length < 10 ? (
                 <Text style={styles.fieldHint}>{10 - acct.length} more digits needed</Text>
               ) : acct.length === 10 ? (
-                <Text style={[styles.fieldHint, { color: obColors.mgreen }]}>✓ Valid NUBAN</Text>
+                <Text style={[styles.fieldHint, { color: obColors.mgreenInk }]}>✓ Valid NUBAN</Text>
               ) : null}
             </SheetField>
           </View>
@@ -466,7 +466,7 @@ function EditTinSheet({ visible, user, onClose, onSaved }: { visible: boolean; u
           <Text style={styles.sheetSub}>Used on WHT deduction statements issued to you.</Text>
           <View style={styles.fields}>
             <SheetField label="TIN" hint="e.g. 12345678-0001">
-              <TextInput value={tin} onChangeText={setTin} placeholder="12345678-0001" placeholderTextColor={obColors.textFaint} style={styles.input} autoCapitalize="none" />
+              <TextInput value={tin} onChangeText={setTin} placeholder="12345678-0001" placeholderTextColor={obColors.textMut} style={styles.input} autoCapitalize="none" />
             </SheetField>
           </View>
           {error ? <Banner tone="danger" title="Error" message={error} /> : null}
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
   version: { color: obColors.textMut, fontSize: 12.5, textAlign: 'center', marginTop: 16 },
 
   // sheets
-  backdrop: { flex: 1, backgroundColor: 'rgba(10,10,30,0.42)' },
+  backdrop: { flex: 1, backgroundColor: obColors.scrim },
   sheet: { backgroundColor: obColors.bg, borderTopLeftRadius: obRadii.hero, borderTopRightRadius: obRadii.hero, padding: 20, gap: 12 },
   grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: 4, backgroundColor: obColors.line, marginBottom: 8 },
   sheetTitle: { color: obColors.navy, fontSize: 18, fontFamily: 'Raleway_800ExtraBold' },

@@ -175,7 +175,7 @@ export default function CourierScreen() {
                     value={plate}
                     onChangeText={setPlate}
                     placeholder="ABC 123 DE"
-                    placeholderTextColor={obColors.textFaint}
+                    placeholderTextColor={obColors.textMut}
                     autoCapitalize="characters"
                     autoCorrect={false}
                     style={styles.input}
