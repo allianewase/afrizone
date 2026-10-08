@@ -367,11 +367,14 @@ rebuilds against an API that has not learned the routes it is about to call.
 `app/web-admin` is the opposite: GitHub-connected, so pushing is the deploy and
 deploying by hand is wrong. `app/web-portal` is direct-upload only.
 
-**`app/mobile` deploys nowhere.** It ships in an EAS build that has not been
-made, which has a consequence worth stating plainly: **the courier's self-claim
-screen is not in anybody's hands.** The endpoints behind it are live and a claim
-is an API call; the button is not. Operations can watch orders arrive and
-escalate; a rider cannot yet take one from a phone.
+**`app/mobile` ships as a sideloaded APK, not through a store.** The current
+build is EAS `82dce36b` (`preview` profile, version code 4), made from
+`25db605` on 8 October 2026 and pointed at the live API. It was installed and
+opened on a real Android phone the same day. **The courier's self-claim screen
+is therefore in a rider's hands**, but only for whoever has been sent the APK
+link, and nobody gets updates automatically: each new build means sending a
+new link. The link is an EAS artifact, which does not last forever. There is
+no Play Store listing and no iOS build.
 
 **Secrets on the worker are `JWT_SECRET`, `TERMII_API_KEY` and
 `MART_INBOUND_SECRET`.** The inbound secret was set and verified on 2 September:
