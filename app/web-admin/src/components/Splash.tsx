@@ -13,7 +13,7 @@ export default function Splash() {
       <div className="splash-motif" aria-hidden="true" />
       <div className="splash-inner">
         <div className="splash-logo">
-          <Logo size={56} tone="dark" tagline />
+          <Logo size={60} tone="dark" tagline overlap />
         </div>
         <div className="splash-spinner" aria-hidden="true" />
         <div className="splash-caption">Operations console</div>

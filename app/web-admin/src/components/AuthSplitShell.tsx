@@ -17,7 +17,7 @@ export default function AuthSplitShell({ children }: { children: ReactNode }) {
     <div className="auth-split">
       <div className="auth-panel">
         <div className="auth-panel-brand">
-          <Logo size={40} tone="dark" />
+          <Logo size={48} tone="dark" tagline overlap />
         </div>
         <div className="auth-panel-rule" />
         <div className="auth-panel-copy">
