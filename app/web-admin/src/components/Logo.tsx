@@ -12,6 +12,9 @@ interface LogoProps {
   tagline?: boolean
   /** dark = light wordmark for dark backgrounds (default); light = navy wordmark */
   tone?: Tone
+  /** Sit the wordmark back over the mark and centre the tagline underneath,
+   *  as the workers' app does on its welcome and splash screens. */
+  overlap?: boolean
   className?: string
 }
 
@@ -72,8 +75,10 @@ export default function Logo({
   wordmark = true,
   tagline = false,
   tone = 'dark',
+  overlap = false,
   className = '',
 }: LogoProps) {
+  if (overlap && wordmark) return <OverlapLogo size={size} tagline={tagline} tone={tone} className={className} />
   return (
     <span className={`az-logo ${className}`} aria-label="AfriZoneMart.com">
       <LogoMark size={size} />
@@ -87,6 +92,56 @@ export default function Logo({
               Made in Africa, delivered worldwide
             </span>
           )}
+        </span>
+      )}
+    </span>
+  )
+}
+
+
+/**
+ * The lockup exactly as the workers' app draws it (mobile src/components/
+ * Logo.tsx with `overlap`): the wordmark starts at the mark's midpoint, over
+ * the coastline the artwork leaves clear for it, and the tagline is one line
+ * centred under the whole thing. Same numbers as mobile - change both together.
+ */
+const OVERLAP_FRACTION = 0.5
+const TAGLINE_RESERVE = 18
+
+function OverlapLogo({
+  size,
+  tagline,
+  tone,
+  className,
+}: {
+  size: number
+  tagline: boolean
+  tone: Tone
+  className: string
+}) {
+  const markHeight = Math.round(size / MARK_ASPECT)
+  // The row's 11px gap is cancelled along with half the mark's width.
+  const pull = -Math.round(11 + size * OVERLAP_FRACTION)
+  return (
+    <span
+      className={`az-lockup ${className}`}
+      style={tagline ? { paddingBottom: TAGLINE_RESERVE } : undefined}
+      aria-label="AfriZoneMart.com"
+    >
+      <span className="az-logo">
+        <LogoMark size={size} />
+        <span className="az-words" style={{ marginLeft: pull }}>
+          <span className={`az-word ${tone === 'dark' ? 'az-word-dark' : 'az-word-light'}`}>
+            AfriZoneMart.com
+          </span>
+        </span>
+      </span>
+      {tagline && (
+        <span
+          className={`az-tag az-tag-below ${tone === 'dark' ? 'az-tag-below-dark' : 'az-tag-light'}`}
+          style={{ top: markHeight }}
+        >
+          Made in Africa, delivered worldwide
         </span>
       )}
     </span>

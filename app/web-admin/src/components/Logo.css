@@ -50,3 +50,25 @@
 .az-tag-light {
   color: var(--muted);
 }
+
+/* The overlap lockup (Logo overlap). The tagline is out of flow so a line
+   longer than the wordmark does not widen the box; TAGLINE_RESERVE in
+   Logo.tsx keeps the room it needs below. */
+.az-lockup {
+  position: relative;
+  display: inline-block;
+}
+.az-logo .az-words {
+  position: relative; /* paint the wordmark over the mark it overlaps */
+}
+.az-tag-below {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  text-align: center;
+}
+/* The workers' app's onNavyMuted, so the two lockups match exactly. */
+.az-tag-below-dark {
+  color: #a6a5bd;
+}

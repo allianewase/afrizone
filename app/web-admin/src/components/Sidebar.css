@@ -31,25 +31,10 @@
      lockup was squeezed and its top cut off instead of the rail scrolling. */
   flex: none;
 }
-/* The lockup sized for the rail. At its default 19px the wordmark measures
-   ~160px and the tagline ~188px, against ~151px beside the mark here, so both
-   were clipped on the right. 17px fits on one line; the tagline wraps to two
-   rather than shrinking to a size nobody can read. */
-.brand .az-logo {
-  gap: 9px;
-  min-width: 0;
-}
-.brand .az-words {
-  min-width: 0;
-}
-.brand .az-word {
-  font-size: 17px;
-}
-.brand .az-tag {
-  font-size: 10.5px;
-  line-height: 1.3;
-  white-space: normal;
-}
+/* The rail shows the workers' app lockup (Logo overlap). Side by side it never
+   fitted - the wordmark is ~160px and the tagline ~188px against ~151px beside
+   the mark - but overlapping, the wordmark ends ~179px in and the tagline is
+   centred under it, both inside the ~208px here. */
 .brand::after {
   content: '';
   position: absolute;
